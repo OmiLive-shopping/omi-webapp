@@ -1,0 +1,30 @@
+{
+  "name": "omi-webapp",
+  "version": "1.0.0",
+  "description": "OMI Web Application - Full Stack Monorepo",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && pnpm dev",
+    "build": "npm run build:backend && npm run build:frontend",
+    "build:backend": "cd backend && npm run build",
+    "build:frontend": "cd frontend && pnpm build",
+    "test": "npm run test:backend",
+    "test:backend": "cd backend && npm run test",
+    "lint": "npm run lint:backend && npm run lint:frontend",
+    "lint:backend": "cd backend && npm run lint",
+    "lint:frontend": "cd frontend && pnpm lint",
+    "format": "npm run format:backend && npm run format:frontend",
+    "format:backend": "cd backend && npm run format",
+    "format:frontend": "cd frontend && pnpm format",
+    "install:all": "cd backend && npm install && cd ../frontend && pnpm install",
+    "clean": "rm -rf backend/node_modules backend/dist frontend/node_modules frontend/dist"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
