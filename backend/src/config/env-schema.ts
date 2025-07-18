@@ -13,6 +13,9 @@ export const envSchema = z.object({
     .refine(urls => urls.every(url => z.string().url().safeParse(url).success), {
       message: 'Each value in WHITE_LIST_URLS must be a valid URL',
     }),
+  CLIENT_URL: z.string().url().optional(),
+  SOCKET_ADMIN_USERNAME: z.string().optional(),
+  SOCKET_ADMIN_PASSWORD: z.string().optional(),
 });
 
 export type EnvVars = z.infer<typeof envSchema>;

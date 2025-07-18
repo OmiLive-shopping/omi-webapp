@@ -1,22 +1,37 @@
+import { createServer } from 'http';
+
 import { app } from './app';
 import { env } from './config/env-config';
 import { PrismaService } from './config/prisma.config';
+import { SocketService } from './config/socket.config';
 
 class Server {
   private readonly port: number | string;
-  private serverInstance: any; // Holds the server instance
+  private httpServer: any; // HTTP server instance
   private prisma: PrismaService; // Prisma service instance
+  private socket: SocketService; // Socket.io service instance
   private childProcess: any = null; // Placeholder for child processes
 
   constructor(port: number | string) {
     this.port = port;
     this.prisma = PrismaService.getInstance();
+    this.socket = SocketService.getInstance();
   }
 
   // Start the server
   public start(): void {
-    this.serverInstance = app.listen(this.port, () => {
+    // Create HTTP server
+    this.httpServer = createServer(app);
+
+    // Initialize Socket.io
+    this.socket.initialize(this.httpServer);
+
+    // Start listening
+    this.httpServer.listen(this.port, () => {
       console.log(`Server running at http://localhost:${this.port}`);
+      if (env.NODE_ENV !== 'production') {
+        console.log(`Socket.io Admin UI available at http://localhost:${this.port}/admin`);
+      }
     });
 
     // Handle system signals for graceful shutdown
@@ -31,7 +46,7 @@ class Server {
     console.log('Received shutdown signal, shutting down gracefully...');
     try {
       // Stop accepting new connections
-      this.serverInstance.close(async () => {
+      this.httpServer.close(async () => {
         console.log('No new requests are being accepted.');
 
         try {
@@ -79,7 +94,7 @@ class Server {
   private async closeWSConnection(): Promise<void> {
     console.log('Closing WebSocket connections...');
     try {
-      // Add your WebSocket close logic here
+      await this.socket.close();
       console.log('WebSocket connections closed.');
     } catch (err) {
       console.error('Error closing WebSocket connections:', err);
