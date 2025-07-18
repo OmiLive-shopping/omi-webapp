@@ -54,3 +54,8 @@ frontend/dist-ssr/
 *.local
 coverage/
 .nyc_output/
+
+.taskmaster/
+
+.claude/
+.mcp.json
