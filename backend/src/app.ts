@@ -3,6 +3,7 @@ import express, { Application, Request, Response } from 'express';
 import helmet from 'helmet';
 
 import { env } from './config/env-config';
+import productRoutes from './features/product/routes/product.routes';
 import userRoutes from './features/user/routes/user.routes';
 import { apiErrorHandler, unmatchedRoutes } from './middleware/api-error.middleware';
 import { loggerMiddleware, pinoLogger } from './middleware/pino-logger';
@@ -40,6 +41,7 @@ app.get('/heartbeat', (req: Request, res: Response): void => {
 
 // API Routes
 app.use('/v1/users', userRoutes);
+app.use('/v1/products', productRoutes);
 
 // Error Handling Middleware (Optional)
 // For prisma error and other error

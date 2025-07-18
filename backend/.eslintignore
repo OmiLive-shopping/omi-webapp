@@ -1,0 +1,28 @@
+# Scripts directory
+scripts/
+
+# Vitest config files
+vitest.config.*.ts
+
+# Build output
+dist/
+build/
+
+# Dependencies
+node_modules/
+
+# Test coverage
+coverage/
+
+# Environment files
+.env*
+
+# Logs
+*.log
+logs/
+
+# Prisma migrations
+prisma/migrations/
+
+# Test results
+test-results.json
