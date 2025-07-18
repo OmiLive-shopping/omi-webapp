@@ -18,6 +18,21 @@ When working on tasks in this repository, use the Task Master MCP (Model Context
 
 Always default to using Task Master MCP tools when instructed to work on tasks or when implementing features from a specification.
 
+### Phase Completion Workflow
+When all tasks in a phase are completed:
+1. **Backup completed tasks**: Copy `tasks.json` to `task-backup.json`
+   ```bash
+   cp .taskmaster/tasks/tasks.json .taskmaster/tasks/task-backup.json
+   ```
+2. **Archive phase tasks**: Create a phase-specific backup
+   ```bash
+   cp .taskmaster/tasks/tasks.json .taskmaster/tasks/phase-X-completed.json
+   ```
+3. **Clear for next phase**: Either keep completed tasks for reference or start fresh
+4. **Document phase completion**: Update `.taskmaster/docs/` with phase summary
+
+This preserves task history while keeping the active task list manageable for the next phase.
+
 ## Documentation Update Workflow
 
 After completing a major task (marked as "done" in Task Master), update documentation to maintain context for future LLM sessions:
