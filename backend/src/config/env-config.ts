@@ -1,5 +1,5 @@
-import fs from 'fs';
 import dotenv from 'dotenv';
+import fs from 'fs';
 
 import { envSchema, EnvVars } from './env-schema';
 
@@ -34,17 +34,17 @@ const NODE_ENV = process.env.NODE_ENV || 'development';
 console.log(`Loaded environment: .env.${NODE_ENV}`);
 
 // Use parsed data if successful, otherwise fall back to defaults
-export const env: EnvVars = parsedEnv.success 
-  ? parsedEnv.data 
-  : {
+export const env: EnvVars = parsedEnv.success
+  ? parsedEnv.data
+  : ({
       NODE_ENV: 'development',
       PORT: 4000,
       LOG_LEVEL: 'info',
       DATABASE_URL: '',
       SHADOW_DATABASE_URL: '',
       JWT_SECRET: '',
-      WHITE_LIST_URLS: []
-    } as EnvVars;
+      WHITE_LIST_URLS: [],
+    } as EnvVars);
 
 // ✅ Get only user-defined env variables from `.env`
 // eslint-disable-next-line node/no-process-env

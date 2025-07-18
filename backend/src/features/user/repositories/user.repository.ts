@@ -13,6 +13,8 @@ export class UserRepository {
       select: {
         id: true,
         password: true,
+        isAdmin: true,
+        streamKey: true,
         role: { select: { name: true } },
       },
     });
@@ -26,16 +28,41 @@ export class UserRepository {
         firstName: true,
         lastName: true,
         email: true,
+        username: true,
+        isAdmin: true,
+        streamKey: true,
       },
     });
   }
 
-  async createUser(data: { email: string; password: string; firstName: string }) {
+  async createUser(data: { email: string; username: string; password: string; firstName: string }) {
     return this.prisma.user.create({
       data,
       select: {
         id: true,
+        streamKey: true,
         role: { select: { name: true } },
+      },
+    });
+  }
+
+  async findUserByUsername(username: string) {
+    return this.prisma.user.findUnique({
+      where: { username },
+      select: {
+        id: true,
+        username: true,
+      },
+    });
+  }
+
+  async findUserByStreamKey(streamKey: string) {
+    return this.prisma.user.findUnique({
+      where: { streamKey },
+      select: {
+        id: true,
+        username: true,
+        streamKey: true,
       },
     });
   }

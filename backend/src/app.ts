@@ -5,7 +5,7 @@ import helmet from 'helmet';
 import { env } from './config/env-config';
 import userRoutes from './features/user/routes/user.routes';
 import { apiErrorHandler, unmatchedRoutes } from './middleware/api-error.middleware';
-import { pinoLogger, loggerMiddleware } from './middleware/pino-logger';
+import { loggerMiddleware, pinoLogger } from './middleware/pino-logger';
 // import morgan from 'morgan';
 import { hostWhitelist, rateLimiter } from './middleware/security.middleware';
 

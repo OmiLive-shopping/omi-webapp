@@ -31,22 +31,31 @@ export class UserService {
   }
 
   async register(registerInputObj: RegisterInputTypes) {
-    const { email, password, firstName } = registerInputObj;
+    const { email, username, password, firstName } = registerInputObj;
 
     const existingUser = await this.userRepository.findUserByEmail(email);
     if (existingUser) {
       return unifiedResponse(false, ERROR.USER_EXISTS_WITH_EMAIL);
     }
 
+    const existingUsername = await this.userRepository.findUserByUsername(username);
+    if (existingUsername) {
+      return unifiedResponse(false, 'User already exists with this username');
+    }
+
     const hashedPassword = await bcrypt.hash(password, 10);
     const newUser = await this.userRepository.createUser({
       email,
+      username,
       password: hashedPassword,
       firstName,
     });
 
     const token = generateToken(newUser.id, newUser.role?.name || 'user');
-    return unifiedResponse(true, SUCCESS.REGISTRATION_SUCCESSFUL, { token });
+    return unifiedResponse(true, SUCCESS.REGISTRATION_SUCCESSFUL, {
+      token,
+      streamKey: newUser.streamKey,
+    });
   }
 
   async getProfile(userId: string) {

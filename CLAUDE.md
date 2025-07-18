@@ -2,6 +2,57 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Task Management with Task Master
+
+When working on tasks in this repository, use the Task Master MCP (Model Context Protocol) tools for task tracking and management. Task Master provides:
+- Structured task tracking with `.taskmaster/tasks/tasks.json`
+- Subtask generation and dependency management
+- Progress tracking and status updates
+- AI-powered task generation from PRDs
+
+### Default Workflow
+1. **For new features/tasks**: Use `mcp__taskmaster-ai__parse_prd` if a PRD exists, or `mcp__taskmaster-ai__add_task` for individual tasks
+2. **Track progress**: Use `mcp__taskmaster-ai__set_task_status` to update task status as you work
+3. **View tasks**: Use `mcp__taskmaster-ai__get_tasks` to see current tasks and their status
+4. **Find next task**: Use `mcp__taskmaster-ai__next_task` to identify what to work on next based on dependencies
+
+Always default to using Task Master MCP tools when instructed to work on tasks or when implementing features from a specification.
+
+## Documentation Update Workflow
+
+After completing a major task (marked as "done" in Task Master), update documentation to maintain context for future LLM sessions:
+
+### 1. Update `.taskmaster/docs/` (Project-specific documentation)
+Create or update files in `.taskmaster/docs/` with:
+- **implementation-notes.md**: Technical decisions, architecture patterns used, and rationale
+- **api-changes.md**: New endpoints, modified contracts, breaking changes
+- **schema-updates.md**: Database schema changes, migration notes
+- **dependencies.md**: New libraries added, version upgrades, security considerations
+
+Example structure for quick LLM parsing:
+```markdown
+## Feature: [Task Title] - [Date]
+### What Changed
+- Bullet points of key changes
+### Technical Details
+- Implementation approach
+- Files modified: path/to/file.ts:123
+### Dependencies
+- New packages: package@version (reason)
+### Testing
+- Test coverage: path/to/test.spec.ts
+```
+
+### 2. Update CLAUDE.md (LLM instruction file)
+After major milestones, update this file with:
+- New architectural patterns established
+- Updated command workflows
+- New environment variables or configuration
+- Common troubleshooting scenarios discovered
+- Performance considerations or limitations
+
+Keep updates concise and actionable - focus on "what an LLM needs to know" rather than detailed documentation.
+
 ## Repository Overview
 
 This is a full-stack TypeScript monorepo containing:
@@ -109,3 +160,10 @@ Base API path: `/v1`
 - Rate limiting on all endpoints
 - Helmet.js for security headers
 - Host whitelisting available via `WHITE_LIST_URLS` env var
+
+## Prisma Migration Notes
+Claude Code's environment is non-interactive (no TTY), which prevents using `prisma migrate dev`. Alternative approaches:
+- **Development**: Use `npx prisma db push` to sync schema changes directly
+- **Production**: Use `npx prisma migrate deploy` to apply existing migrations
+- **Generate SQL**: Use `npx prisma migrate diff` to create migration SQL manually
+- After schema changes: Always run `npx prisma generate` to update the client
