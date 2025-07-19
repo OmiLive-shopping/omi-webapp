@@ -182,3 +182,11 @@ Claude Code's environment is non-interactive (no TTY), which prevents using `pri
 - **Production**: Use `npx prisma migrate deploy` to apply existing migrations
 - **Generate SQL**: Use `npx prisma migrate diff` to create migration SQL manually
 - After schema changes: Always run `npx prisma generate` to update the client
+
+## CRITICAL: UI Component Strategy
+**DO NOT CREATE CUSTOM UI COMPONENTS**. This project uses bolt.new component library for ALL UI components. 
+- Phase 4 PRD available at: `.taskmaster/docs/PHASE_4_BOLT_NEW_INTEGRATION_PRD.md`
+- All UI components must use `@bolt/ui` imports
+- Custom components were removed to prepare for bolt.new integration
+- Focus on business logic, state management, and integration code only
+- When implementing UI, always refer to the Phase 4 PRD for bolt.new component usage
