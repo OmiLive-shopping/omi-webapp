@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import EnhancedChatContainer from './EnhancedChatContainer';
-import type { ChatMessage, ChatUser } from './EnhancedChatContainer';
+import type { ChatMessage, ChatUser } from './MessageList';
 
 // Mock Socket.io-like event emitter
 class MockSocket {
@@ -44,13 +44,13 @@ export const ChatDemo: React.FC = () => {
   useEffect(() => {
     // Mock viewers
     const mockViewers: ChatUser[] = [
-      { id: '1', username: 'StreamerPro', role: 'streamer', isOnline: true },
-      { id: '2', username: 'ModeratorMike', role: 'moderator', isOnline: true },
-      { id: '3', username: 'ViewerVicky', role: 'viewer', isOnline: true },
-      { id: '4', username: 'ChatterChris', role: 'viewer', isOnline: true },
-      { id: '5', username: 'GamerGary', role: 'viewer', isOnline: true },
-      { id: '6', username: 'TechTina', role: 'viewer', isOnline: false },
-      { id: 'current-user', ...currentUser, isOnline: true }
+      { id: '1', username: 'StreamerPro', role: 'streamer' },
+      { id: '2', username: 'ModeratorMike', role: 'moderator' },
+      { id: '3', username: 'ViewerVicky', role: 'viewer' },
+      { id: '4', username: 'ChatterChris', role: 'viewer' },
+      { id: '5', username: 'GamerGary', role: 'viewer' },
+      { id: '6', username: 'TechTina', role: 'viewer' },
+      currentUser
     ];
     setViewers(mockViewers);
 
@@ -177,6 +177,12 @@ export const ChatDemo: React.FC = () => {
     alert(`User ${viewers.find(v => v.id === userId)?.username} has been timed out for ${duration / 60000} minutes`);
   };
 
+  // Handle report message
+  const handleReportMessage = (messageId: string) => {
+    console.log('Reporting message:', messageId);
+    alert(`Message ${messageId} has been reported`);
+  };
+
   return (
     <div className="h-screen bg-gray-100 dark:bg-gray-900 p-4">
       <div className="max-w-6xl mx-auto h-full bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden">
@@ -189,6 +195,7 @@ export const ChatDemo: React.FC = () => {
             currentUser={currentUser}
             onSendMessage={handleSendMessage}
             onDeleteMessage={handleDeleteMessage}
+            onReportMessage={handleReportMessage}
             onBanUser={handleBanUser}
             onTimeoutUser={handleTimeoutUser}
             showViewerList={true}

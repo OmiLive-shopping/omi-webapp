@@ -1,25 +1,17 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   Send,
   Smile,
   MoreVertical,
   Shield,
-  Video,
-  Trash2,
-  Pause,
-  Play,
   Settings,
   Users,
-  ChevronDown,
-  MoreHorizontal,
-  Clock,
-  Ban,
-  AtSign,
   X,
   AlertCircle,
   Crown
 } from 'lucide-react';
 import clsx from 'clsx';
+import MessageList from './MessageList';
 
 interface ChatUser {
   id: string;
@@ -52,6 +44,7 @@ interface ChatContainerProps {
   viewerCount: number;
   onSendMessage: (message: string, mentions?: string[]) => void;
   onDeleteMessage?: (messageId: string) => void;
+  onReportMessage?: (messageId: string) => void;
   onBanUser?: (userId: string) => void;
   onTimeoutUser?: (userId: string, duration: number) => void;
   messages: ChatMessage[];
@@ -62,10 +55,10 @@ interface ChatContainerProps {
 }
 
 export const EnhancedChatContainer: React.FC<ChatContainerProps> = ({
-  streamId,
   viewerCount,
   onSendMessage,
   onDeleteMessage,
+  onReportMessage,
   onBanUser,
   onTimeoutUser,
   messages,
@@ -78,8 +71,6 @@ export const EnhancedChatContainer: React.FC<ChatContainerProps> = ({
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showViewers, setShowViewers] = useState(showViewerList);
   const [showDropdown, setShowDropdown] = useState(false);
-  const [selectedMessageId, setSelectedMessageId] = useState<string | null>(null);
-  const [isAutoScrollEnabled, setIsAutoScrollEnabled] = useState(true);
   const [showMentionSuggestions, setShowMentionSuggestions] = useState(false);
   const [mentionSearch, setMentionSearch] = useState('');
   const [mentionStartIndex, setMentionStartIndex] = useState(-1);
@@ -91,21 +82,11 @@ export const EnhancedChatContainer: React.FC<ChatContainerProps> = ({
     resetTime: Date.now() + 60000
   });
   
-  const scrollAreaRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Common emojis for quick selection
   const commonEmojis = ['😀', '😂', '❤️', '👍', '🎉', '🔥', '💯', '🚀', '😎', '🤔', '👏', '💪'];
 
-  // Check if current user is moderator or streamer
-  const isModerator = currentUser?.role === 'moderator' || currentUser?.role === 'streamer';
-
-  // Auto-scroll effect
-  useEffect(() => {
-    if (isAutoScrollEnabled && scrollAreaRef.current) {
-      scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
-    }
-  }, [messages, isAutoScrollEnabled]);
 
   // Rate limit reset
   useEffect(() => {
@@ -221,14 +202,6 @@ export const EnhancedChatContainer: React.FC<ChatContainerProps> = ({
     }
   };
 
-  // Format timestamp
-  const formatTimestamp = (date: Date) => {
-    return new Intl.DateTimeFormat('en-US', {
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true
-    }).format(date);
-  };
 
   // Get role badge
   const getRoleBadge = (role?: string) => {
@@ -284,16 +257,6 @@ export const EnhancedChatContainer: React.FC<ChatContainerProps> = ({
                 </button>
                 {showDropdown && (
                   <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50">
-                    <button
-                      onClick={() => {
-                        setIsAutoScrollEnabled(!isAutoScrollEnabled);
-                        setShowDropdown(false);
-                      }}
-                      className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 text-sm"
-                    >
-                      {isAutoScrollEnabled ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-                      {isAutoScrollEnabled ? 'Pause auto-scroll' : 'Resume auto-scroll'}
-                    </button>
                     <button className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 text-sm">
                       <Settings className="w-4 h-4" />
                       Chat settings
@@ -306,148 +269,15 @@ export const EnhancedChatContainer: React.FC<ChatContainerProps> = ({
         </div>
         
         {/* Messages Area */}
-        <div 
-          ref={scrollAreaRef}
-          className="flex-1 overflow-y-auto px-4"
-          onScroll={(e) => {
-            const target = e.target as HTMLDivElement;
-            const isAtBottom = target.scrollHeight - target.scrollTop === target.clientHeight;
-            setIsAutoScrollEnabled(isAtBottom);
-          }}
-        >
-          <div className="py-4 space-y-3">
-            {messages.map((msg) => (
-              <div
-                key={msg.id}
-                className={clsx(
-                  "flex gap-3 p-2 rounded-lg transition-colors group relative",
-                  msg.isHighlighted && "bg-yellow-50 dark:bg-yellow-900/20",
-                  msg.isPinned && "border-l-4 border-primary-500",
-                  msg.isDeleted && "opacity-50",
-                  "hover:bg-gray-50 dark:hover:bg-gray-800"
-                )}
-              >
-                {/* Avatar */}
-                <div className="flex-shrink-0">
-                  {msg.user.avatar ? (
-                    <img 
-                      src={msg.user.avatar} 
-                      alt={msg.user.username}
-                      className="w-8 h-8 rounded-full"
-                    />
-                  ) : (
-                    <div className="w-8 h-8 rounded-full bg-gray-300 dark:bg-gray-700 flex items-center justify-center">
-                      <span className="text-sm font-semibold text-gray-600 dark:text-gray-400">
-                        {msg.user.username[0].toUpperCase()}
-                      </span>
-                    </div>
-                  )}
-                </div>
-                
-                {/* Message Content */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-baseline gap-2 mb-1">
-                    <span className="font-semibold text-sm text-gray-900 dark:text-white">
-                      {msg.user.username}
-                    </span>
-                    {getRoleBadge(msg.user.role)}
-                    <span className="text-xs text-gray-500 dark:text-gray-400">
-                      {formatTimestamp(msg.timestamp)}
-                    </span>
-                  </div>
-                  {msg.isDeleted ? (
-                    <p className="text-sm italic text-gray-500 dark:text-gray-400">
-                      [Message deleted]
-                    </p>
-                  ) : (
-                    <p className="text-sm break-words whitespace-pre-wrap text-gray-800 dark:text-gray-200">
-                      {msg.content.split(/(@\w+)/g).map((part, i) => {
-                        if (part.startsWith('@')) {
-                          return (
-                            <span key={i} className="text-primary-600 dark:text-primary-400 font-medium">
-                              {part}
-                            </span>
-                          );
-                        }
-                        return part;
-                      })}
-                    </p>
-                  )}
-                </div>
-                
-                {/* Message Actions */}
-                {(isModerator || currentUser?.id === msg.user.id) && !msg.isDeleted && (
-                  <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                    <div className="relative">
-                      <button
-                        onClick={() => setSelectedMessageId(msg.id === selectedMessageId ? null : msg.id)}
-                        className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded"
-                      >
-                        <MoreHorizontal className="w-4 h-4 text-gray-500" />
-                      </button>
-                      {selectedMessageId === msg.id && (
-                        <div className="absolute right-0 top-full mt-1 w-40 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50">
-                          <button
-                            onClick={() => {
-                              onDeleteMessage?.(msg.id);
-                              setSelectedMessageId(null);
-                            }}
-                            className="w-full px-3 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 text-sm text-red-600 dark:text-red-400"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                            Delete message
-                          </button>
-                          {isModerator && msg.user.id !== currentUser?.id && (
-                            <>
-                              <button
-                                onClick={() => {
-                                  onTimeoutUser?.(msg.user.id, 5 * 60 * 1000); // 5 min timeout
-                                  setSelectedMessageId(null);
-                                }}
-                                className="w-full px-3 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 text-sm text-orange-600 dark:text-orange-400"
-                              >
-                                <Clock className="w-4 h-4" />
-                                Timeout 5 min
-                              </button>
-                              <button
-                                onClick={() => {
-                                  onBanUser?.(msg.user.id);
-                                  setSelectedMessageId(null);
-                                }}
-                                className="w-full px-3 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 text-sm text-red-600 dark:text-red-400"
-                              >
-                                <Ban className="w-4 h-4" />
-                                Ban user
-                              </button>
-                            </>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-          
-          {/* New Messages Indicator */}
-          {!isAutoScrollEnabled && (
-            <div className="sticky bottom-0 flex justify-center pb-2">
-              <button
-                onClick={() => {
-                  setIsAutoScrollEnabled(true);
-                  if (scrollAreaRef.current) {
-                    scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
-                  }
-                }}
-                className="px-3 py-1 bg-gray-800 text-white text-sm rounded-full hover:bg-gray-700 flex items-center gap-1"
-              >
-                <ChevronDown className="w-4 h-4" />
-                New messages
-              </button>
-            </div>
-          )}
-        </div>
+        <MessageList
+          messages={messages}
+          currentUser={currentUser}
+          onDeleteMessage={onDeleteMessage}
+          onReportMessage={onReportMessage}
+          onTimeoutUser={onTimeoutUser}
+          onBanUser={onBanUser}
+          className="flex-1"
+        />
         
         {/* Input Area */}
         <div className="p-4 border-t border-gray-200 dark:border-gray-700">

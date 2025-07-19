@@ -14,6 +14,7 @@ import {
   AuthPage,
   LiveStreamsPage
 } from '@/pages';
+import MessageListDemo from '@/components/chat/MessageListDemo';
 
 function App() {
   return (
@@ -29,6 +30,7 @@ function App() {
           <Route path="product/:id" element={<ProductDetailPage />} />
           <Route path="stream/:id" element={<StreamPage />} />
           <Route path="schedule" element={<SchedulePage />} />
+          <Route path="message-list-demo" element={<MessageListDemo />} />
           
           {/* Protected Routes */}
           <Route path="studio" element={
