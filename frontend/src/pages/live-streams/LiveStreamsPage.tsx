@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import clsx from 'clsx';
 import { ViewerPlayer } from '@/components/stream/ViewerPlayer';
+import EnhancedChatContainer from '@/components/chat/EnhancedChatContainer';
 
 interface Stream {
   id: string;
@@ -14,6 +15,60 @@ interface Stream {
 
 const LiveStreamsPage = () => {
   const [selectedStream, setSelectedStream] = useState<string | null>(null);
+  const [messages, setMessages] = useState<any[]>([]);
+  const [viewers, setViewers] = useState<any[]>([]);
+  
+  // Initialize mock chat data when a stream is selected
+  useEffect(() => {
+    if (selectedStream) {
+      // Mock viewers
+      const mockViewers = [
+        { id: '1', username: 'StreamerPro', role: 'streamer', isOnline: true },
+        { id: '2', username: 'ModeratorMike', role: 'moderator', isOnline: true },
+        { id: '3', username: 'ViewerVicky', role: 'viewer', isOnline: true },
+        { id: '4', username: 'ChatterChris', role: 'viewer', isOnline: true },
+        { id: '5', username: 'GamerGary', role: 'viewer', isOnline: true },
+        { id: 'current-user', username: 'You', role: 'viewer', isOnline: true }
+      ];
+      setViewers(mockViewers);
+
+      // Mock initial messages
+      const mockMessages = [
+        {
+          id: '1',
+          user: mockViewers[0],
+          content: 'Welcome everyone to the stream! 🎉',
+          timestamp: new Date(Date.now() - 10 * 60 * 1000),
+          isPinned: true
+        },
+        {
+          id: '2',
+          user: mockViewers[2],
+          content: 'Hey! Excited for today\'s content!',
+          timestamp: new Date(Date.now() - 8 * 60 * 1000)
+        },
+        {
+          id: '3',
+          user: mockViewers[3],
+          content: 'This is awesome! 🔥',
+          timestamp: new Date(Date.now() - 5 * 60 * 1000)
+        }
+      ];
+      setMessages(mockMessages);
+    }
+  }, [selectedStream]);
+
+  // Handle sending message
+  const handleSendMessage = (content: string, mentions?: string[]) => {
+    const newMessage = {
+      id: Date.now().toString(),
+      user: viewers.find(v => v.id === 'current-user'),
+      content,
+      timestamp: new Date(),
+      mentions
+    };
+    setMessages(prev => [...prev, newMessage]);
+  };
   
   // Mock data for demonstration - replace with real API call
   const streams: Stream[] = [
@@ -67,31 +122,52 @@ const LiveStreamsPage = () => {
               ← Back to all streams
             </button>
             
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-                {streams.find(s => s.id === selectedStream)?.title}
-              </h2>
-              <div className="aspect-video bg-black rounded-lg overflow-hidden">
-                <ViewerPlayer 
-                  streamKey={selectedStream}
-                  viewerCount={streams.find(s => s.id === selectedStream)?.viewerCount || 0}
-                  isLive={streams.find(s => s.id === selectedStream)?.isLive || false}
-                  streamTitle={streams.find(s => s.id === selectedStream)?.title}
-                  streamerName={streams.find(s => s.id === selectedStream)?.streamerName}
-                />
-              </div>
-              <div className="mt-4 flex items-center justify-between">
-                <div>
-                  <p className="text-gray-700 dark:text-gray-300">
-                    Streamer: {streams.find(s => s.id === selectedStream)?.streamerName}
-                  </p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    {streams.find(s => s.id === selectedStream)?.viewerCount} viewers
-                  </p>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              {/* Video Player Section */}
+              <div className="lg:col-span-2">
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4">
+                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+                    {streams.find(s => s.id === selectedStream)?.title}
+                  </h2>
+                  <div className="aspect-video bg-black rounded-lg overflow-hidden">
+                    <ViewerPlayer 
+                      streamKey={selectedStream}
+                      viewerCount={streams.find(s => s.id === selectedStream)?.viewerCount || 0}
+                      isLive={streams.find(s => s.id === selectedStream)?.isLive || false}
+                      streamTitle={streams.find(s => s.id === selectedStream)?.title}
+                      streamerName={streams.find(s => s.id === selectedStream)?.streamerName}
+                    />
+                  </div>
+                  <div className="mt-4 flex items-center justify-between">
+                    <div>
+                      <p className="text-gray-700 dark:text-gray-300">
+                        Streamer: {streams.find(s => s.id === selectedStream)?.streamerName}
+                      </p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        {streams.find(s => s.id === selectedStream)?.viewerCount} viewers
+                      </p>
+                    </div>
+                    <span className="px-3 py-1 bg-red-500 text-white text-sm rounded-full">
+                      LIVE
+                    </span>
+                  </div>
                 </div>
-                <span className="px-3 py-1 bg-red-500 text-white text-sm rounded-full">
-                  LIVE
-                </span>
+              </div>
+
+              {/* Chat Section */}
+              <div className="lg:col-span-1">
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden h-[600px]">
+                  <EnhancedChatContainer
+                    streamId={selectedStream}
+                    viewerCount={streams.find(s => s.id === selectedStream)?.viewerCount || 0}
+                    messages={messages}
+                    viewers={viewers}
+                    currentUser={viewers.find(v => v.id === 'current-user')}
+                    onSendMessage={handleSendMessage}
+                    showViewerList={false}
+                    maxMessagesPerMinute={10}
+                  />
+                </div>
               </div>
             </div>
           </div>
