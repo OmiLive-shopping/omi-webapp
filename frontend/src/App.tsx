@@ -21,6 +21,7 @@ import ChatLayoutComparison from '@/components/chat/ChatLayoutComparison';
 import MessageListComparison from '@/components/chat/MessageListComparison';
 import ViewerCountDemo from '@/components/stream/ViewerCountDemo';
 import ChatInputDebug from '@/components/chat/ChatInputDebug';
+import StreamLayoutDemo from '@/components/stream/StreamLayoutDemo';
 
 function App() {
   return (
@@ -43,6 +44,7 @@ function App() {
           <Route path="message-list-comparison" element={<MessageListComparison />} />
           <Route path="viewer-count-demo" element={<ViewerCountDemo />} />
           <Route path="chat-input-debug" element={<ChatInputDebug />} />
+          <Route path="stream-layout-demo" element={<StreamLayoutDemo />} />
           
           {/* Protected Routes */}
           <Route path="studio" element={

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import clsx from 'clsx';
 import { ViewerPlayer } from '@/components/stream/ViewerPlayer';
 import EnhancedChatContainer from '@/components/chat/EnhancedChatContainer';
-import ViewerCount from '@/components/stream/ViewerCount';
+import ProductCard from '@/components/products/ProductCard';
 
 interface Stream {
   id: string;
@@ -107,60 +107,95 @@ const LiveStreamsPage = () => {
     },
   ];
 
+  // Mock products data
+  const mockProducts = [
+    {
+      id: '1',
+      name: 'Pantene Gold Series: Moisture Boost Conditioner',
+      price: 12.99,
+      currency: 'USD',
+      image: 'https://via.placeholder.com/200x200?text=Pantene+Gold',
+      description: 'Professional hair care for moisture and shine',
+      stock: 15
+    },
+    {
+      id: '2',
+      name: 'Gold Series: Moisture Boost Conditioner',
+      price: 14.99,
+      currency: 'USD',
+      image: 'https://via.placeholder.com/200x200?text=Gold+Series',
+      description: 'Intensive moisture for dry and damaged hair',
+      stock: 8
+    },
+    {
+      id: '3',
+      name: 'White Tea Shampoo and Conditioner',
+      price: 18.99,
+      currency: 'USD',
+      image: 'https://via.placeholder.com/200x200?text=White+Tea',
+      description: 'Gentle cleansing with white tea extract',
+      stock: 12
+    },
+    {
+      id: '4',
+      name: 'The Ordinary Shampoo and Conditioner',
+      price: 16.99,
+      currency: 'USD',
+      image: 'https://via.placeholder.com/200x200?text=The+Ordinary',
+      description: 'Clean, simple ingredients for everyday use',
+      stock: 20
+    },
+    {
+      id: '5',
+      name: 'Westin Hotels Signature Collection',
+      price: 24.99,
+      currency: 'USD',
+      image: 'https://via.placeholder.com/200x200?text=Westin',
+      description: 'Luxury hotel-quality hair care',
+      stock: 6
+    },
+    {
+      id: '6',
+      name: 'Professional Hair Mask Treatment',
+      price: 22.99,
+      currency: 'USD',
+      image: 'https://via.placeholder.com/200x200?text=Hair+Mask',
+      description: 'Deep conditioning treatment for all hair types',
+      stock: 10
+    }
+  ];
+
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pt-20 px-4">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="max-w-7xl mx-auto px-4 py-8">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-8">
           Live Streams
         </h1>
 
         {selectedStream ? (
-          <div className="space-y-4">
+          <div className="space-y-6">
+            {/* Back button */}
             <button
               onClick={() => setSelectedStream(null)}
-              className="mb-4 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+              className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
             >
               ← Back to all streams
             </button>
             
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-              {/* Video Player Section */}
+            {/* Main content area - Video and Chat */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[600px]">
+              {/* Video Player - Takes 2/3 width on desktop */}
               <div className="lg:col-span-2">
-                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4">
-                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-                    {streams.find(s => s.id === selectedStream)?.title}
-                  </h2>
-                  <div className="aspect-video bg-black rounded-lg overflow-hidden">
-                    <ViewerPlayer 
-                      streamKey={selectedStream}
-                      viewerCount={streams.find(s => s.id === selectedStream)?.viewerCount || 0}
-                      isLive={streams.find(s => s.id === selectedStream)?.isLive || false}
-                      streamTitle={streams.find(s => s.id === selectedStream)?.title}
-                      streamerName={streams.find(s => s.id === selectedStream)?.streamerName}
-                    />
-                  </div>
-                  <div className="mt-4 flex items-center justify-between">
-                    <div>
-                      <p className="text-gray-700 dark:text-gray-300">
-                        Streamer: {streams.find(s => s.id === selectedStream)?.streamerName}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <ViewerCount
-                        count={streams.find(s => s.id === selectedStream)?.viewerCount || 0}
-                        variant="expanded"
-                        showTrend={true}
-                        showAnimation={true}
-                      />
-                      <span className="px-3 py-1 bg-red-500 text-white text-sm rounded-full">
-                        LIVE
-                      </span>
-                    </div>
-                  </div>
-                </div>
+                <ViewerPlayer 
+                  streamKey={selectedStream}
+                  viewerCount={streams.find(s => s.id === selectedStream)?.viewerCount || 0}
+                  isLive={streams.find(s => s.id === selectedStream)?.isLive || false}
+                  streamTitle={streams.find(s => s.id === selectedStream)?.title}
+                  streamerName={streams.find(s => s.id === selectedStream)?.streamerName}
+                />
               </div>
 
-              {/* Chat Section */}
+              {/* Chat Section - Takes 1/3 width on desktop */}
               <div className="lg:col-span-1">
                 <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg h-[600px] flex flex-col">
                   <EnhancedChatContainer
@@ -176,8 +211,28 @@ const LiveStreamsPage = () => {
                 </div>
               </div>
             </div>
+
+            {/* Products Section */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">
+                Featured Products
+              </h2>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+                {mockProducts.map(product => (
+                  <ProductCard
+                    key={product.id}
+                    product={product}
+                    onAddToCart={() => console.log('Add to cart:', product.name)}
+                    onQuickView={() => console.log('Quick view:', product.name)}
+                    isInWishlist={false}
+                    onToggleWishlist={() => console.log('Toggle wishlist:', product.name)}
+                  />
+                ))}
+              </div>
+            </div>
           </div>
         ) : (
+          /* Stream Selection Grid */
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {streams.map((stream) => (
               <div

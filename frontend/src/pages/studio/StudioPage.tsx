@@ -1,88 +1,424 @@
 import React, { useState } from 'react';
 import usePageTitle from '@/hooks/usePageTitle';
 import { StreamerStudio } from '@/components/stream/StreamerStudio';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
+import { 
+  BarChart3, 
+  Calendar, 
+  DollarSign, 
+  Eye, 
+  Heart, 
+  MessageSquare, 
+  Package, 
+  Settings,
+  TrendingUp,
+  Users,
+  Video,
+  Clock,
+  AlertCircle,
+  ChevronRight,
+  Play
+} from 'lucide-react';
+import clsx from 'clsx';
+
+interface StreamStats {
+  totalViews: number;
+  totalFollowers: number;
+  totalRevenue: number;
+  totalStreams: number;
+  avgViewers: number;
+  totalProducts: number;
+}
+
+interface RecentStream {
+  id: string;
+  title: string;
+  date: Date;
+  duration: number;
+  viewers: number;
+  revenue: number;
+  thumbnail: string;
+}
+
+interface ScheduledStream {
+  id: string;
+  title: string;
+  scheduledDate: Date;
+  products: number;
+  description: string;
+}
 
 const StudioPage: React.FC = () => {
   usePageTitle('Creator Studio');
   const navigate = useNavigate();
   const [isStreaming, setIsStreaming] = useState(false);
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'stream' | 'analytics' | 'products'>('dashboard');
   
   // Generate a unique stream key (in production this would come from the backend)
   const streamKey = `stream-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
+  // Mock data - replace with real API calls
+  const stats: StreamStats = {
+    totalViews: 125432,
+    totalFollowers: 8912,
+    totalRevenue: 15678.50,
+    totalStreams: 47,
+    avgViewers: 1243,
+    totalProducts: 89
+  };
+
+  const recentStreams: RecentStream[] = [
+    {
+      id: '1',
+      title: 'Spring Hair Care Essentials',
+      date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+      duration: 125,
+      viewers: 1854,
+      revenue: 432.50,
+      thumbnail: 'https://images.unsplash.com/photo-1522337660859-02fbefca4702?w=400'
+    },
+    {
+      id: '2',
+      title: 'Natural Skincare Routine',
+      date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
+      duration: 98,
+      viewers: 1432,
+      revenue: 287.80,
+      thumbnail: 'https://images.unsplash.com/photo-1556228720-195a672e8a03?w=400'
+    },
+    {
+      id: '3',
+      title: 'Home Decor Haul',
+      date: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+      duration: 87,
+      viewers: 967,
+      revenue: 189.90,
+      thumbnail: 'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=400'
+    }
+  ];
+
+  const scheduledStreams: ScheduledStream[] = [
+    {
+      id: '1',
+      title: 'Summer Beauty Must-Haves',
+      scheduledDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
+      products: 12,
+      description: 'Discover the best beauty products for summer 2025'
+    },
+    {
+      id: '2',
+      title: 'Eco-Friendly Living Tips',
+      scheduledDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
+      products: 8,
+      description: 'Sustainable products for everyday living'
+    }
+  ];
+
   const handleStreamStart = () => {
     setIsStreaming(true);
     console.log('Stream started with key:', streamKey);
-    // TODO: Notify backend that stream has started
-    // TODO: Update stream status in database
   };
 
   const handleStreamEnd = () => {
     setIsStreaming(false);
     console.log('Stream ended');
-    // TODO: Notify backend that stream has ended
-    // TODO: Save stream recording/metrics
+  };
+
+  const formatDuration = (minutes: number) => {
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
+  };
+
+  const formatDate = (date: Date) => {
+    const now = new Date();
+    const diffTime = Math.abs(date.getTime() - now.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     
-    // Optionally redirect to stream analytics page
-    // navigate('/studio/analytics');
+    if (date > now) {
+      return `In ${diffDays} days`;
+    } else {
+      return `${diffDays} days ago`;
+    }
   };
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <div className="container mx-auto px-4 py-8">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Creator Studio</h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-2">
-            Go live and connect with your audience in real-time
-          </p>
-        </div>
+      {/* Header */}
+      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+        <div className="max-w-7xl mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Creator Studio</h1>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Manage your streams and grow your audience
+              </p>
+            </div>
+            
+            {/* Quick Actions */}
+            <div className="flex items-center gap-3">
+              {!isStreaming ? (
+                <button
+                  onClick={() => setActiveTab('stream')}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2"
+                >
+                  <Video className="w-4 h-4" />
+                  Go Live
+                </button>
+              ) : (
+                <div className="flex items-center gap-2 px-4 py-2 bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-300 rounded-lg">
+                  <div className="w-2 h-2 bg-red-600 rounded-full animate-pulse" />
+                  Live Now
+                </div>
+              )}
+              <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+                <Settings className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
 
-        {/* Stream Status Bar */}
-        {isStreaming && (
-          <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-3 h-3 bg-red-600 rounded-full animate-pulse"></div>
-                <span className="text-red-800 dark:text-red-200 font-semibold">You are currently live!</span>
+          {/* Tabs */}
+          <div className="flex gap-6 mt-6">
+            {[
+              { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
+              { id: 'stream', label: 'Go Live', icon: Video },
+              { id: 'analytics', label: 'Analytics', icon: TrendingUp },
+              { id: 'products', label: 'Products', icon: Package }
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
+                className={clsx(
+                  "flex items-center gap-2 px-1 py-2 border-b-2 transition-colors",
+                  activeTab === tab.id
+                    ? "border-primary-600 text-primary-600"
+                    : "border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                )}
+              >
+                <tab.icon className="w-4 h-4" />
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="max-w-7xl mx-auto px-4 py-6">
+        {activeTab === 'dashboard' && (
+          <div className="space-y-6">
+            {/* Stats Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {[
+                { label: 'Total Views', value: stats.totalViews.toLocaleString(), icon: Eye, change: '+12%' },
+                { label: 'Followers', value: stats.totalFollowers.toLocaleString(), icon: Heart, change: '+8%' },
+                { label: 'Revenue', value: `$${stats.totalRevenue.toLocaleString()}`, icon: DollarSign, change: '+15%' },
+                { label: 'Avg. Viewers', value: stats.avgViewers.toLocaleString(), icon: Users, change: '+5%' }
+              ].map((stat) => (
+                <div key={stat.label} className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <stat.icon className="w-8 h-8 text-gray-400" />
+                    <span className="text-sm text-green-600 font-medium">{stat.change}</span>
+                  </div>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white">{stat.value}</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">{stat.label}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Recent Streams */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+              <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Recent Streams</h2>
               </div>
-              <div className="text-sm text-red-700 dark:text-red-300">
-                Stream Key: <code className="bg-red-100 dark:bg-red-800/30 px-2 py-1 rounded">{streamKey.slice(0, 20)}...</code>
+              <div className="divide-y divide-gray-200 dark:divide-gray-700">
+                {recentStreams.map((stream) => (
+                  <div key={stream.id} className="p-6 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                    <div className="flex items-center gap-4">
+                      <img
+                        src={stream.thumbnail}
+                        alt={stream.title}
+                        className="w-24 h-16 object-cover rounded-lg"
+                      />
+                      <div className="flex-1">
+                        <h3 className="font-medium text-gray-900 dark:text-white">{stream.title}</h3>
+                        <div className="flex items-center gap-4 mt-1 text-sm text-gray-600 dark:text-gray-400">
+                          <span>{formatDate(stream.date)}</span>
+                          <span>{formatDuration(stream.duration)}</span>
+                          <span>{stream.viewers.toLocaleString()} viewers</span>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                          ${stream.revenue.toFixed(2)}
+                        </p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">Revenue</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="p-4 text-center">
+                <Link
+                  to="/studio/streams"
+                  className="text-primary-600 hover:text-primary-700 text-sm font-medium"
+                >
+                  View All Streams →
+                </Link>
+              </div>
+            </div>
+
+            {/* Scheduled Streams */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+              <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Scheduled Streams</h2>
+                <button className="text-sm text-primary-600 hover:text-primary-700 font-medium">
+                  Schedule New
+                </button>
+              </div>
+              <div className="divide-y divide-gray-200 dark:divide-gray-700">
+                {scheduledStreams.map((stream) => (
+                  <div key={stream.id} className="p-6">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <h3 className="font-medium text-gray-900 dark:text-white">{stream.title}</h3>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                          {stream.description}
+                        </p>
+                        <div className="flex items-center gap-4 mt-2 text-sm text-gray-600 dark:text-gray-400">
+                          <span className="flex items-center gap-1">
+                            <Calendar className="w-4 h-4" />
+                            {stream.scheduledDate.toLocaleDateString()}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Package className="w-4 h-4" />
+                            {stream.products} products
+                          </span>
+                        </div>
+                      </div>
+                      <button className="px-3 py-1 bg-primary-100 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 rounded-lg text-sm font-medium hover:bg-primary-200 dark:hover:bg-primary-900/30 transition-colors">
+                        Edit
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Quick Actions */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Link
+                to="/studio/products"
+                className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow hover:shadow-lg transition-shadow group"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Package className="w-8 h-8 text-primary-600 mb-2" />
+                    <h3 className="font-semibold text-gray-900 dark:text-white">Manage Products</h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                      {stats.totalProducts} products
+                    </p>
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-gray-600 transition-colors" />
+                </div>
+              </Link>
+
+              <Link
+                to="/studio/audience"
+                className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow hover:shadow-lg transition-shadow group"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Users className="w-8 h-8 text-primary-600 mb-2" />
+                    <h3 className="font-semibold text-gray-900 dark:text-white">Audience Insights</h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                      View demographics
+                    </p>
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-gray-600 transition-colors" />
+                </div>
+              </Link>
+
+              <Link
+                to="/studio/settings"
+                className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow hover:shadow-lg transition-shadow group"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Settings className="w-8 h-8 text-primary-600 mb-2" />
+                    <h3 className="font-semibold text-gray-900 dark:text-white">Studio Settings</h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                      Configure studio
+                    </p>
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-gray-600 transition-colors" />
+                </div>
+              </Link>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'stream' && (
+          <div>
+            {/* Stream Status Bar */}
+            {isStreaming && (
+              <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-3 h-3 bg-red-600 rounded-full animate-pulse"></div>
+                    <span className="text-red-800 dark:text-red-200 font-semibold">You are currently live!</span>
+                  </div>
+                  <div className="text-sm text-red-700 dark:text-red-300">
+                    Stream Key: <code className="bg-red-100 dark:bg-red-800/30 px-2 py-1 rounded">{streamKey.slice(0, 20)}...</code>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Main Studio Component */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden">
+              <StreamerStudio
+                streamKey={streamKey}
+                onStreamStart={handleStreamStart}
+                onStreamEnd={handleStreamEnd}
+              />
+            </div>
+
+            {/* Stream Tips */}
+            <div className="mt-6 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5" />
+                <div>
+                  <h4 className="font-medium text-blue-900 dark:text-blue-100">Streaming Tips</h4>
+                  <ul className="mt-1 text-sm text-blue-800 dark:text-blue-200 space-y-1">
+                    <li>• Test your audio and video before going live</li>
+                    <li>• Engage with your audience through chat</li>
+                    <li>• Feature products at key moments during your stream</li>
+                    <li>• Keep your stream between 30-120 minutes for best engagement</li>
+                  </ul>
+                </div>
               </div>
             </div>
           </div>
         )}
 
-        {/* Main Studio Component */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden">
-          <StreamerStudio
-            streamKey={streamKey}
-            onStreamStart={handleStreamStart}
-            onStreamEnd={handleStreamEnd}
-          />
-        </div>
+        {activeTab === 'analytics' && (
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Analytics</h2>
+            <p className="text-gray-600 dark:text-gray-400">
+              Detailed analytics coming soon. Track your stream performance, audience engagement, and revenue metrics.
+            </p>
+          </div>
+        )}
 
-        {/* Quick Tips */}
-        <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-            <h3 className="font-semibold text-lg mb-2 text-gray-900 dark:text-white">📹 Pro Tip</h3>
+        {activeTab === 'products' && (
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Products</h2>
             <p className="text-gray-600 dark:text-gray-400">
-              Ensure good lighting and a stable internet connection for the best streaming quality.
+              Manage products to feature in your streams. Add, edit, and organize your product catalog.
             </p>
           </div>
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-            <h3 className="font-semibold text-lg mb-2 text-gray-900 dark:text-white">🎯 Engagement</h3>
-            <p className="text-gray-600 dark:text-gray-400">
-              Interact with your viewers through chat to build a loyal community.
-            </p>
-          </div>
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-            <h3 className="font-semibold text-lg mb-2 text-gray-900 dark:text-white">💰 Monetization</h3>
-            <p className="text-gray-600 dark:text-gray-400">
-              Feature products during your stream to maximize sales opportunities.
-            </p>
-          </div>
-        </div>
+        )}
       </div>
     </div>
   );

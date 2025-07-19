@@ -1,290 +1,312 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
+  Maximize2, 
+  Minimize2, 
   Layout, 
-  FullScreen,
-  Button,
-  Icon,
-  Tooltip,
-  Select,
-  Badge,
-  Text
-} from '@bolt/ui';
-import { ViewerPlayer } from './ViewerPlayer';
-import { ChatContainer } from '../chat/ChatContainer';
-import { ProductCarousel } from '../products/ProductCarousel';
+  Monitor,
+  Smartphone,
+  Tablet
+} from 'lucide-react';
+import clsx from 'clsx';
+
+export type LayoutMode = 'default' | 'theater' | 'fullscreen';
+export type DeviceType = 'mobile' | 'tablet' | 'desktop';
 
 interface StreamLayoutProps {
-  streamKey: string;
-  streamTitle: string;
-  streamerName: string;
-  isLive: boolean;
-  viewerCount: number;
-  messages: any[];
-  products: any[];
-  onSendMessage: (message: string) => void;
-  onAddToCart: (productId: string) => void;
-  onToggleWishlist: (productId: string) => void;
-  wishlistItems?: string[];
-  currentUserId?: string;
+  // Components to render
+  videoComponent: React.ReactNode;
+  chatComponent: React.ReactNode;
+  productsComponent?: React.ReactNode;
+  // Layout control
+  defaultMode?: LayoutMode;
+  onModeChange?: (mode: LayoutMode) => void;
+  // Customization
+  className?: string;
+  showLayoutControls?: boolean;
+  showProductsInTheater?: boolean;
 }
 
-type LayoutMode = 'default' | 'theater' | 'fullscreen' | 'chat-only' | 'minimal';
-
 export const StreamLayout: React.FC<StreamLayoutProps> = ({
-  streamKey,
-  streamTitle,
-  streamerName,
-  isLive,
-  viewerCount,
-  messages,
-  products,
-  onSendMessage,
-  onAddToCart,
-  onToggleWishlist,
-  wishlistItems = [],
-  currentUserId
+  videoComponent,
+  chatComponent,
+  productsComponent,
+  defaultMode = 'default',
+  onModeChange,
+  className,
+  showLayoutControls = true,
+  showProductsInTheater = false
 }) => {
-  const [layout, setLayout] = useState<LayoutMode>('default');
+  const [layoutMode, setLayoutMode] = useState<LayoutMode>(defaultMode);
+  const [deviceType, setDeviceType] = useState<DeviceType>('desktop');
   const [isChatCollapsed, setIsChatCollapsed] = useState(false);
-  const [isProductsCollapsed, setIsProductsCollapsed] = useState(false);
-  const [chatWidth, setChatWidth] = useState(320);
+  const [isFullscreenActive, setIsFullscreenActive] = useState(false);
 
-  // Handle keyboard shortcuts
+  // Detect device type based on viewport width
   useEffect(() => {
-    const handleKeyPress = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
-        return;
-      }
-
-      switch (e.key.toLowerCase()) {
-        case 't':
-          setLayout(prev => prev === 'theater' ? 'default' : 'theater');
-          break;
-        case 'f':
-          if (!e.metaKey && !e.ctrlKey) {
-            setLayout(prev => prev === 'fullscreen' ? 'default' : 'fullscreen');
-          }
-          break;
-        case 'c':
-          setIsChatCollapsed(prev => !prev);
-          break;
+    const checkDeviceType = () => {
+      const width = window.innerWidth;
+      if (width < 768) {
+        setDeviceType('mobile');
+      } else if (width < 1024) {
+        setDeviceType('tablet');
+      } else {
+        setDeviceType('desktop');
       }
     };
 
-    window.addEventListener('keydown', handleKeyPress);
-    return () => window.removeEventListener('keydown', handleKeyPress);
+    checkDeviceType();
+    window.addEventListener('resize', checkDeviceType);
+    return () => window.removeEventListener('resize', checkDeviceType);
   }, []);
 
-  const layoutOptions = [
-    { value: 'default', label: 'Default', icon: 'layout' },
-    { value: 'theater', label: 'Theater', icon: 'maximize-2' },
-    { value: 'fullscreen', label: 'Fullscreen', icon: 'maximize' },
-    { value: 'chat-only', label: 'Chat Focus', icon: 'message-square' },
-    { value: 'minimal', label: 'Minimal', icon: 'minimize-2' }
-  ];
+  // Handle fullscreen changes
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreenActive(!!document.fullscreenElement);
+      if (!document.fullscreenElement && layoutMode === 'fullscreen') {
+        setLayoutMode('default');
+      }
+    };
 
-  const getLayoutConfig = () => {
-    switch (layout) {
-      case 'theater':
-        return {
-          videoSpan: 12,
-          chatSpan: 3,
-          productSpan: 12,
-          showProducts: !isProductsCollapsed,
-          chatPosition: 'overlay' as const
-        };
-      case 'fullscreen':
-        return {
-          videoSpan: 12,
-          chatSpan: 0,
-          productSpan: 0,
-          showProducts: false,
-          chatPosition: 'hidden' as const
-        };
-      case 'chat-only':
-        return {
-          videoSpan: 6,
-          chatSpan: 6,
-          productSpan: 0,
-          showProducts: false,
-          chatPosition: 'side' as const
-        };
-      case 'minimal':
-        return {
-          videoSpan: 12,
-          chatSpan: 0,
-          productSpan: 0,
-          showProducts: false,
-          chatPosition: 'hidden' as const
-        };
-      default:
-        return {
-          videoSpan: 8,
-          chatSpan: 4,
-          productSpan: 12,
-          showProducts: !isProductsCollapsed,
-          chatPosition: 'side' as const
-        };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, [layoutMode]);
+
+  // Handle layout mode changes
+  const handleModeChange = useCallback((mode: LayoutMode) => {
+    setLayoutMode(mode);
+    onModeChange?.(mode);
+
+    // Handle fullscreen mode
+    if (mode === 'fullscreen') {
+      document.documentElement.requestFullscreen().catch(err => {
+        console.error('Fullscreen request failed:', err);
+        setLayoutMode('theater'); // Fallback to theater mode
+      });
+    } else if (isFullscreenActive) {
+      document.exitFullscreen();
     }
+
+    // Auto-collapse chat in theater mode
+    if (mode === 'theater') {
+      setIsChatCollapsed(true);
+    } else if (mode === 'default') {
+      setIsChatCollapsed(false);
+    }
+  }, [onModeChange, isFullscreenActive]);
+
+  // Toggle chat visibility (for theater mode)
+  const toggleChat = useCallback(() => {
+    setIsChatCollapsed(prev => !prev);
+  }, []);
+
+  // Get layout classes based on mode and device
+  const getLayoutClasses = () => {
+    const baseClasses = "relative w-full h-full";
+    
+    if (layoutMode === 'fullscreen') {
+      return clsx(baseClasses, "fixed inset-0 z-50 bg-black");
+    }
+
+    if (deviceType === 'mobile') {
+      return clsx(baseClasses, "flex flex-col");
+    }
+
+    if (deviceType === 'tablet') {
+      if (layoutMode === 'theater') {
+        return clsx(baseClasses, "flex flex-col");
+      }
+      return clsx(baseClasses, "grid grid-cols-1 lg:grid-cols-2 gap-4");
+    }
+
+    // Desktop layouts
+    if (layoutMode === 'theater') {
+      return clsx(baseClasses, "flex flex-col");
+    }
+
+    return clsx(baseClasses, "grid grid-cols-1 lg:grid-cols-3 gap-4");
   };
 
-  const config = getLayoutConfig();
+  // Render layout controls
+  const renderLayoutControls = () => {
+    if (!showLayoutControls || deviceType === 'mobile') return null;
 
-  return (
-    <Layout.Manager
-      className="h-screen bg-gray-100 dark:bg-gray-900"
-      breakpoints={{
-        sm: { cols: 1, layout: 'mobile' },
-        md: { cols: 12, layout: 'tablet' },
-        lg: { cols: 12, layout: 'desktop' }
-      }}
-    >
-      {/* Layout Controls */}
-      <div className="absolute top-4 right-4 z-50 flex items-center gap-2 bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm rounded-lg p-2 shadow-lg">
-        <Select
-          value={layout}
-          onValueChange={(value) => setLayout(value as LayoutMode)}
-          options={layoutOptions.map(opt => ({
-            value: opt.value,
-            label: (
-              <div className="flex items-center gap-2">
-                <Icon name={opt.icon} size="sm" />
-                <span>{opt.label}</span>
-              </div>
-            )
-          }))}
-          size="sm"
-        />
-        
-        <Tooltip content="Toggle Chat (C)">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setIsChatCollapsed(!isChatCollapsed)}
-            className={isChatCollapsed ? 'opacity-50' : ''}
+    return (
+      <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
+        <div className="bg-black/50 backdrop-blur-sm rounded-lg p-1 flex items-center gap-1">
+          <button
+            onClick={() => handleModeChange('default')}
+            className={clsx(
+              "p-2 rounded transition-colors",
+              layoutMode === 'default'
+                ? "bg-white/20 text-white"
+                : "text-white/70 hover:text-white hover:bg-white/10"
+            )}
+            title="Default Layout"
           >
-            <Icon name="message-square" size="sm" />
-          </Button>
-        </Tooltip>
-        
-        <Tooltip content="Toggle Products">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setIsProductsCollapsed(!isProductsCollapsed)}
-            className={isProductsCollapsed ? 'opacity-50' : ''}
+            <Layout className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => handleModeChange('theater')}
+            className={clsx(
+              "p-2 rounded transition-colors",
+              layoutMode === 'theater'
+                ? "bg-white/20 text-white"
+                : "text-white/70 hover:text-white hover:bg-white/10"
+            )}
+            title="Theater Mode"
           >
-            <Icon name="shopping-bag" size="sm" />
-          </Button>
-        </Tooltip>
+            <Monitor className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => handleModeChange('fullscreen')}
+            className={clsx(
+              "p-2 rounded transition-colors",
+              layoutMode === 'fullscreen'
+                ? "bg-white/20 text-white"
+                : "text-white/70 hover:text-white hover:bg-white/10"
+            )}
+            title="Fullscreen"
+          >
+            {isFullscreenActive ? (
+              <Minimize2 className="w-4 h-4" />
+            ) : (
+              <Maximize2 className="w-4 h-4" />
+            )}
+          </button>
+        </div>
+
+        {/* Device indicator (development helper) */}
+        {process.env.NODE_ENV === 'development' && deviceType !== 'mobile' && (
+          <div className="bg-black/50 backdrop-blur-sm rounded-lg px-3 py-1 text-white/70 text-xs flex items-center gap-1">
+            {deviceType === 'mobile' && <Smartphone className="w-3 h-3" />}
+            {deviceType === 'tablet' && <Tablet className="w-3 h-3" />}
+            {deviceType === 'desktop' && <Monitor className="w-3 h-3" />}
+            {deviceType}
+          </div>
+        )}
       </div>
+    );
+  };
 
-      {/* Main Layout Grid */}
-      <Layout.Grid cols={12} gap={0} className="h-full">
-        {/* Video Panel */}
-        <Layout.Panel 
-          id="video" 
-          span={config.videoSpan}
-          priority={1}
-          className={`
-            ${layout === 'fullscreen' ? 'col-span-12' : ''}
-            ${layout === 'theater' ? 'col-span-12' : ''}
-            relative
-          `}
-        >
-          <ViewerPlayer
-            streamKey={streamKey}
-            viewerCount={viewerCount}
-            isLive={isLive}
-            streamTitle={streamTitle}
-            streamerName={streamerName}
-          />
-          
-          {/* Overlay Chat for Theater Mode */}
-          {layout === 'theater' && !isChatCollapsed && (
-            <div className="absolute top-0 right-0 h-full w-80 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm shadow-xl">
-              <ChatContainer
-                streamId={streamKey}
-                viewerCount={viewerCount}
-                onSendMessage={onSendMessage}
-                messages={messages}
-                currentUserId={currentUserId}
-              />
+  // Render layout based on mode
+  const renderLayout = () => {
+    // Mobile layout (always stacked)
+    if (deviceType === 'mobile') {
+      return (
+        <>
+          <div className="relative w-full aspect-video bg-black">
+            {videoComponent}
+          </div>
+          <div className="flex-1 min-h-0">
+            {chatComponent}
+          </div>
+          {productsComponent && (
+            <div className="mt-4">
+              {productsComponent}
             </div>
           )}
-        </Layout.Panel>
-        
-        {/* Chat Panel */}
-        {config.chatPosition === 'side' && !isChatCollapsed && (
-          <Layout.Panel 
-            id="chat" 
-            span={config.chatSpan}
-            resizable
-            minWidth={280}
-            maxWidth={480}
-            defaultWidth={chatWidth}
-            onResize={(width) => setChatWidth(width)}
-            className="border-l border-gray-200 dark:border-gray-700"
-          >
-            <ChatContainer
-              streamId={streamKey}
-              viewerCount={viewerCount}
-              onSendMessage={onSendMessage}
-              messages={messages}
-              currentUserId={currentUserId}
-            />
-          </Layout.Panel>
-        )}
-        
-        {/* Products Panel */}
-        {config.showProducts && products.length > 0 && (
-          <Layout.Panel 
-            id="products" 
-            span={config.productSpan}
-            collapsible
-            defaultCollapsed={false}
-            className="col-span-12 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-6"
-          >
-            <div className="mb-4 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Icon name="shopping-bag" size="md" className="text-primary-500" />
-                <Text weight="semibold" size="lg">Featured Products</Text>
-                <Badge variant="secondary">{products.length} items</Badge>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setIsProductsCollapsed(true)}
+        </>
+      );
+    }
+
+    // Fullscreen layout
+    if (layoutMode === 'fullscreen') {
+      return (
+        <div className="relative w-full h-full">
+          {videoComponent}
+          {renderLayoutControls()}
+        </div>
+      );
+    }
+
+    // Theater mode layout
+    if (layoutMode === 'theater') {
+      return (
+        <>
+          <div className="relative w-full flex-1 bg-black">
+            {videoComponent}
+            {renderLayoutControls()}
+          </div>
+          
+          {/* Collapsible chat overlay */}
+          <div className={clsx(
+            "absolute bottom-0 right-0 transition-all duration-300 z-10",
+            isChatCollapsed ? "w-80" : "w-96",
+            deviceType === 'tablet' ? "h-full" : "h-96"
+          )}>
+            <div className="relative h-full">
+              {/* Chat toggle button */}
+              <button
+                onClick={toggleChat}
+                className="absolute -left-12 top-4 bg-black/50 backdrop-blur-sm text-white p-2 rounded-l-lg hover:bg-black/60 transition-colors"
               >
-                <Icon name="chevron-down" size="sm" />
-              </Button>
+                {isChatCollapsed ? (
+                  <Maximize2 className="w-4 h-4" />
+                ) : (
+                  <Minimize2 className="w-4 h-4" />
+                )}
+              </button>
+              
+              <div className={clsx(
+                "h-full bg-white dark:bg-gray-800 shadow-lg transition-all duration-300",
+                isChatCollapsed && "opacity-90"
+              )}>
+                {chatComponent}
+              </div>
             </div>
-            
-            <ProductCarousel
-              products={products}
-              onAddToCart={onAddToCart}
-              onToggleWishlist={onToggleWishlist}
-              wishlistItems={wishlistItems}
-              showTimer={true}
-              saleEndTime={new Date(Date.now() + 3600000)} // 1 hour from now
-            />
-          </Layout.Panel>
+          </div>
+
+          {/* Mini products bar (optional) */}
+          {showProductsInTheater && productsComponent && (
+            <div className="absolute bottom-0 left-0 right-96 h-24 bg-black/50 backdrop-blur-sm p-2 overflow-x-auto">
+              <div className="h-full">
+                {productsComponent}
+              </div>
+            </div>
+          )}
+        </>
+      );
+    }
+
+    // Default layout (desktop)
+    return (
+      <>
+        {/* Video section - takes up 2 columns */}
+        <div className="lg:col-span-2 relative">
+          <div className="relative w-full aspect-video bg-black">
+            {videoComponent}
+            {renderLayoutControls()}
+          </div>
+          
+          {/* Products below video on desktop */}
+          {productsComponent && deviceType === 'desktop' && (
+            <div className="mt-4">
+              {productsComponent}
+            </div>
+          )}
+        </div>
+
+        {/* Chat section - 1 column */}
+        <div className="lg:col-span-1 h-full">
+          {chatComponent}
+        </div>
+
+        {/* Products for tablet (full width below) */}
+        {productsComponent && deviceType === 'tablet' && (
+          <div className="lg:col-span-2">
+            {productsComponent}
+          </div>
         )}
-      </Layout.Grid>
-      
-      {/* Fullscreen Toggle */}
-      {layout === 'fullscreen' && (
-        <FullScreen.Exit
-          onClick={() => setLayout('default')}
-          className="absolute bottom-4 right-4"
-        />
-      )}
-      
-      {/* Mobile Layout Indicator */}
-      <div className="lg:hidden fixed bottom-4 left-4 bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 px-3 py-1 rounded-full text-sm">
-        <Icon name="smartphone" size="xs" className="mr-1" />
-        Mobile View
-      </div>
-    </Layout.Manager>
+      </>
+    );
+  };
+
+  return (
+    <div className={clsx(getLayoutClasses(), className)}>
+      {renderLayout()}
+    </div>
   );
 };
+
+export default StreamLayout;
