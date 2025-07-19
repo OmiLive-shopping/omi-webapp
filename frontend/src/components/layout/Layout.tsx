@@ -1,15 +1,13 @@
 import React from 'react';
-import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
+import { Outlet, Link, useLocation } from 'react-router-dom';
+import { useAuthStore } from '@/stores/authStore';
+import { useAuth } from '@/hooks/useAuth';
 
 const Layout: React.FC = () => {
-  const navigate = useNavigate();
   const location = useLocation();
-  const isAuthenticated = localStorage.getItem('authToken') !== null;
-
-  const handleLogout = () => {
-    localStorage.removeItem('authToken');
-    navigate('/auth');
-  };
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const user = useAuthStore((state) => state.user);
+  const { logout } = useAuth();
 
   const isActive = (path: string) => {
     return location.pathname === path;
@@ -90,12 +88,19 @@ const Layout: React.FC = () => {
                   >
                     Profile
                   </Link>
-                  <button
-                    onClick={handleLogout}
-                    className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium transition"
-                  >
-                    Logout
-                  </button>
+                  <div className="flex items-center gap-3">
+                    {user && (
+                      <span className="text-sm text-gray-600 dark:text-gray-400">
+                        {user.username || user.email}
+                      </span>
+                    )}
+                    <button
+                      onClick={logout}
+                      className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium transition"
+                    >
+                      Logout
+                    </button>
+                  </div>
                 </>
               ) : (
                 <Link

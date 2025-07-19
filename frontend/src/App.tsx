@@ -15,7 +15,6 @@ import {
   SchedulePage,
   AuthPage
 } from '@/pages';
-import UIShowcase from '@/pages/UIShowcase';
 
 // Create a client
 const queryClient = new QueryClient({
@@ -41,7 +40,6 @@ function App() {
           <Route path="product/:id" element={<ProductDetailPage />} />
           <Route path="stream/:id" element={<StreamPage />} />
           <Route path="schedule" element={<SchedulePage />} />
-          <Route path="ui-showcase" element={<UIShowcase />} />
           
           {/* Protected Routes */}
           <Route path="studio" element={

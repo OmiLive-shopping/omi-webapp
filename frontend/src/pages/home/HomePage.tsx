@@ -1,7 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import usePageTitle from '@/hooks/usePageTitle';
-import { Button } from '@/components/ui';
 
 const HomePage: React.FC = () => {
   usePageTitle('Home');
@@ -13,11 +12,11 @@ const HomePage: React.FC = () => {
         Your platform for live streaming and e-commerce.
       </p>
       <div className="flex gap-4">
-        <Link to="/ui-showcase">
-          <Button>View UI Components</Button>
+        <Link to="/products" className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition">
+          Browse Products
         </Link>
-        <Link to="/products">
-          <Button variant="secondary">Browse Products</Button>
+        <Link to="/schedule" className="px-4 py-2 bg-gray-200 text-gray-900 rounded-md hover:bg-gray-300 transition">
+          View Schedule
         </Link>
       </div>
     </div>

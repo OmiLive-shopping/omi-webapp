@@ -1,22 +1,16 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
+import { useAuthStore } from '@/stores/authStore';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  isAuthenticated?: boolean;
 }
 
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ 
-  children, 
-  isAuthenticated = false 
-}) => {
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const location = useLocation();
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
-  // TODO: Replace with actual auth check from your auth context/store
-  // For now, we'll use the prop or check localStorage
-  const isUserAuthenticated = isAuthenticated || localStorage.getItem('authToken') !== null;
-
-  if (!isUserAuthenticated) {
+  if (!isAuthenticated) {
     // Redirect to login page but save the attempted location
     return <Navigate to="/auth" state={{ from: location }} replace />;
   }
