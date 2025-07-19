@@ -15,6 +15,10 @@ import {
   LiveStreamsPage
 } from '@/pages';
 import MessageListDemo from '@/components/chat/MessageListDemo';
+import ChatInputDemo from '@/components/chat/ChatInputDemo';
+import MessageListTest from '@/components/chat/MessageListTest';
+import ChatLayoutComparison from '@/components/chat/ChatLayoutComparison';
+import MessageListComparison from '@/components/chat/MessageListComparison';
 
 function App() {
   return (
@@ -31,6 +35,10 @@ function App() {
           <Route path="stream/:id" element={<StreamPage />} />
           <Route path="schedule" element={<SchedulePage />} />
           <Route path="message-list-demo" element={<MessageListDemo />} />
+          <Route path="chat-input-demo" element={<ChatInputDemo />} />
+          <Route path="message-list-test" element={<MessageListTest />} />
+          <Route path="chat-layout-comparison" element={<ChatLayoutComparison />} />
+          <Route path="message-list-comparison" element={<MessageListComparison />} />
           
           {/* Protected Routes */}
           <Route path="studio" element={

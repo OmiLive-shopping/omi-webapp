@@ -66,7 +66,12 @@ export const MessageList: React.FC<MessageListProps> = ({
   const virtualizer = useVirtualizer({
     count: totalMessages,
     getScrollElement: () => scrollContainerRef.current,
-    estimateSize: () => 80, // Estimated height of each message
+    estimateSize: (index) => {
+      // Add extra space for the first message in a group (new user)
+      const isFirst = isFirstInGroup(index);
+      // Include spacing: base height + optional spacing for new speaker
+      return isFirst && index > 0 ? 95 : (isFirst ? 80 : 50);
+    },
     overscan: 5,
   });
 
@@ -173,7 +178,7 @@ export const MessageList: React.FC<MessageListProps> = ({
       <div
         ref={scrollContainerRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto px-4"
+        className="flex-1 min-h-0 overflow-y-auto px-4 py-4"
       >
         <div
           style={{
@@ -198,6 +203,10 @@ export const MessageList: React.FC<MessageListProps> = ({
                   transform: `translateY(${virtualItem.start}px)`,
                 }}
               >
+                {/* Add spacing before messages from different users */}
+                {showAvatar && virtualItem.index > 0 && (
+                  <div className="h-3" />
+                )}
                 <div
                   className={clsx(
                     "flex gap-3 p-2 rounded-lg transition-colors group relative",

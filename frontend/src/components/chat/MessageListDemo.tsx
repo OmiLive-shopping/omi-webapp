@@ -41,7 +41,39 @@ const generateMessages = (count: number): ChatMessage[] => {
   const messages: ChatMessage[] = [];
   const now = new Date();
   
-  for (let i = 0; i < count; i++) {
+  // Start with specific messages to show the grouping issue
+  messages.push({
+    id: 'msg-0',
+    user: sampleUsers[0], // StreamerGuy
+    content: 'Welcome everyone to the stream! 🎉',
+    timestamp: new Date(now.getTime() - count * 1000),
+    isPinned: true,
+  });
+  
+  messages.push({
+    id: 'msg-1',
+    user: sampleUsers[2], // Viewer1
+    content: 'Hey @StreamerGuy! Excited to be here!',
+    timestamp: new Date(now.getTime() - (count - 1) * 1000),
+    mentions: ['StreamerGuy'],
+  });
+  
+  messages.push({
+    id: 'msg-2',
+    user: sampleUsers[2], // Viewer1 (same user - should group)
+    content: 'This is awesome!',
+    timestamp: new Date(now.getTime() - (count - 2) * 1000),
+  });
+  
+  messages.push({
+    id: 'msg-3',
+    user: sampleUsers[1], // ModeratorAlice
+    content: 'Remember to follow the chat rules everyone!',
+    timestamp: new Date(now.getTime() - (count - 3) * 1000),
+  });
+  
+  // Generate the rest randomly
+  for (let i = 4; i < count; i++) {
     const userIndex = Math.floor(Math.random() * sampleUsers.length);
     const user = sampleUsers[userIndex];
     const messageIndex = i % sampleMessageTexts.length;
@@ -53,7 +85,6 @@ const generateMessages = (count: number): ChatMessage[] => {
       content: messageText,
       timestamp: new Date(now.getTime() - (count - i) * 1000), // Messages 1 second apart
       isHighlighted: Math.random() < 0.1, // 10% chance of being highlighted
-      isPinned: i === 0, // Pin the first message
       mentions: messageText.includes('@') ? [messageText.match(/@(\w+)/)?.[1] || ''] : undefined,
     });
   }

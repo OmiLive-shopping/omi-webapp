@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import EnhancedChatContainer from './EnhancedChatContainer';
-import type { ChatMessage, ChatUser } from './MessageList';
+import EnhancedChatContainerV2 from './EnhancedChatContainerV2';
+import type { ChatMessage, ChatUser } from './MessageListV2';
 
 // Mock Socket.io-like event emitter
 class MockSocket {
@@ -187,7 +187,7 @@ export const ChatDemo: React.FC = () => {
     <div className="h-screen bg-gray-100 dark:bg-gray-900 p-4">
       <div className="max-w-6xl mx-auto h-full bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden">
         <div className="h-full">
-          <EnhancedChatContainer
+          <EnhancedChatContainerV2
             streamId="demo-stream"
             viewerCount={viewerCount}
             messages={messages}
