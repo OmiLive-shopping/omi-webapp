@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { 
-  Heart,
   ShoppingCart,
   Eye,
   Tag,
@@ -10,6 +9,7 @@ import {
   ImageOff
 } from 'lucide-react';
 import clsx from 'clsx';
+import WishlistButton from './WishlistButton';
 
 export interface Product {
   id: string;
@@ -50,7 +50,6 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   const [imageError, setImageError] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [copiedCoupon, setCopiedCoupon] = useState(false);
-  const [wishlistAnimating, setWishlistAnimating] = useState(false);
 
   const formatPrice = (price: number, currency: string) => {
     return new Intl.NumberFormat('en-US', {
@@ -72,12 +71,6 @@ export const ProductCard: React.FC<ProductCardProps> = ({
     }
   };
 
-  const handleWishlistToggle = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setWishlistAnimating(true);
-    onToggleWishlist(product.id);
-    setTimeout(() => setWishlistAnimating(false), 300);
-  };
 
   const calculateDiscountedPrice = () => {
     if (product.couponDiscount) {
@@ -131,20 +124,12 @@ export const ProductCard: React.FC<ProductCardProps> = ({
               
               {/* Actions */}
               <div className="flex items-center gap-2">
-                <button
-                  onClick={handleWishlistToggle}
-                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
-                >
-                  <Heart 
-                    className={clsx(
-                      "w-5 h-5 transition-all duration-300",
-                      wishlistAnimating && "scale-125",
-                      isInWishlist 
-                        ? "fill-red-500 text-red-500" 
-                        : "text-gray-600 dark:text-gray-400"
-                    )}
-                  />
-                </button>
+                <WishlistButton
+                  productId={product.id}
+                  isInWishlist={isInWishlist}
+                  size="md"
+                  onToggleWishlist={onToggleWishlist}
+                />
                 {onQuickView && (
                   <button
                     onClick={(e) => {
@@ -278,22 +263,15 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         </div>
         
         {/* Wishlist Button */}
-        <button
-          onClick={handleWishlistToggle}
-          className={clsx(
-            "absolute top-2 right-2 p-2 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm rounded-full hover:bg-white dark:hover:bg-gray-900 transition-all duration-300",
-            wishlistAnimating && "scale-125"
-          )}
-        >
-          <Heart 
-            className={clsx(
-              "w-5 h-5 transition-colors",
-              isInWishlist 
-                ? "fill-red-500 text-red-500" 
-                : "text-gray-600 dark:text-gray-400 hover:text-red-500"
-            )}
+        <div className="absolute top-2 right-2">
+          <WishlistButton
+            productId={product.id}
+            isInWishlist={isInWishlist}
+            size="md"
+            onToggleWishlist={onToggleWishlist}
+            className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm hover:bg-white dark:hover:bg-gray-900"
           />
-        </button>
+        </div>
         
         {/* Quick View Overlay */}
         {isHovered && onQuickView && (
