@@ -1,11 +1,20 @@
 import clsx from 'clsx';
 import { BiMoon, BiSun } from 'react-icons/bi';
+import { Link, useLocation } from 'react-router-dom';
 
 import Button from '../Button';
 import { useTheme } from '@/hooks/useTheme';
 
 const Header = ({ type }: { type: string }) => {
   const [theme, handleChange] = useTheme();
+  const location = useLocation();
+
+  const navItems = [
+    { path: '/', label: 'Home' },
+    { path: '/live-streams', label: 'Live Streams' },
+    { path: '/studio', label: 'Studio' },
+    { path: '/products', label: 'Products' },
+  ];
 
   return (
     <header
@@ -22,11 +31,27 @@ const Header = ({ type }: { type: string }) => {
           type === 'responsive' ? 'max-w-5xl' : 'max-w-lg'
         )}
       >
-        <a href='/'>
-          <h1 className='text-lg font-medium text-black dark:text-white'>
-            aulianza-vite-react-starter
-          </h1>
-        </a>
+        <div className="flex items-center gap-6">
+          <Link to='/' className="text-xl font-bold text-gray-900 dark:text-white">
+            OMI Live
+          </Link>
+          <nav className="hidden md:flex items-center gap-4">
+            {navItems.map((item) => (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={clsx(
+                  'px-3 py-2 text-sm font-medium rounded-md transition-colors',
+                  location.pathname === item.path
+                    ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900'
+                    : 'text-gray-700 hover:bg-gray-200 dark:text-gray-300 dark:hover:bg-gray-700'
+                )}
+              >
+                {item.label}
+              </Link>
+            ))}
+          </nav>
+        </div>
         <Button
           variant='outline'
           className={clsx(

@@ -184,9 +184,32 @@ Claude Code's environment is non-interactive (no TTY), which prevents using `pri
 - After schema changes: Always run `npx prisma generate` to update the client
 
 ## CRITICAL: UI Component Strategy
-**DO NOT CREATE CUSTOM UI COMPONENTS**. This project uses bolt.new component library for ALL UI components. 
-- Phase 4 PRD available at: `.taskmaster/docs/PHASE_4_BOLT_NEW_INTEGRATION_PRD.md`
-- All UI components must use `@bolt/ui` imports
-- Custom components were removed to prepare for bolt.new integration
-- Focus on business logic, state management, and integration code only
-- When implementing UI, always refer to the Phase 4 PRD for bolt.new component usage
+**THIS PROJECT USES TAILWIND CSS EXCLUSIVELY**. We are NOT using any component libraries like bolt.new, Material-UI, Ant Design, or any other UI framework.
+
+### UI Technology Stack:
+- **Styling**: Tailwind CSS ONLY
+- **Icons**: Lucide React icons
+- **Components**: Custom React components with Tailwind classes
+- **No UI Libraries**: Do NOT install or use @bolt/ui, @mui/material, antd, or any other component library
+
+### Component Development Rules:
+1. ALL components must be built using regular React + Tailwind CSS
+2. Use native HTML elements styled with Tailwind utility classes
+3. For icons, use lucide-react package exclusively
+4. No pre-built component libraries - build everything custom
+5. Maintain consistent dark mode support using Tailwind's dark: prefix
+6. Use clsx for conditional class names
+7. Keep components simple and maintainable
+
+### Example Pattern:
+```tsx
+// CORRECT ✅
+<button className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700">
+  Click me
+</button>
+
+// WRONG ❌
+<Button variant="primary">Click me</Button>
+```
+
+**Remember: We are using PURE TAILWIND CSS. No component libraries. Period.**

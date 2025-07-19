@@ -1,6 +1,8 @@
-import { createTheme } from '@bolt/themes';
+// Theme configuration for OMI Live
+// This is used for consistent colors, spacing, and other design tokens
+// We use Tailwind CSS for styling - this is just for reference and custom properties
 
-export const theme = createTheme({
+export const theme = {
   name: 'omi-live',
   
   colors: {
@@ -377,4 +379,10 @@ export const theme = createTheme({
       '50%': { opacity: 0.5 },
     },
   },
-});
+};
+
+// Export individual theme sections for easy access
+export const colors = theme.colors;
+export const typography = theme.typography;
+export const spacing = theme.spacing;
+export const animations = theme.animations;

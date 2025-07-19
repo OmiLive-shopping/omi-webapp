@@ -1,7 +1,8 @@
+import { Outlet } from 'react-router-dom';
 import Header from './Header';
 
 interface LayoutProps {
-  children: React.ReactNode;
+  children?: React.ReactNode;
   type?: 'mobile' | 'responsive';
 }
 
@@ -11,7 +12,9 @@ const Layout = ({ children, type }: LayoutProps) => {
   return (
     <div className='dark:bg-dark'>
       <Header type={layoutType} />
-      <main className={`layout-container ${layoutType}`}>{children}</main>
+      <main className={`layout-container ${layoutType}`}>
+        {children || <Outlet />}
+      </main>
     </div>
   );
 };

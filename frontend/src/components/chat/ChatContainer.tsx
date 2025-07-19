@@ -1,18 +1,19 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
-  Chat, 
-  ScrollArea, 
-  Avatar,
-  Input,
-  Button,
-  EmojiPicker,
-  Badge,
-  Icon,
-  Text,
-  Heading,
-  Dropdown,
-  Tooltip
-} from '@bolt/ui';
+  Send,
+  Smile,
+  MoreVertical,
+  Shield,
+  Video,
+  Trash2,
+  Pause,
+  Play,
+  Settings,
+  Users,
+  ChevronDown,
+  MoreHorizontal
+} from 'lucide-react';
+import clsx from 'clsx';
 
 interface ChatMessage {
   id: string;
@@ -47,6 +48,7 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const [isAutoScrollEnabled, setIsAutoScrollEnabled] = useState(true);
+  const [showDropdown, setShowDropdown] = useState(false);
 
   useEffect(() => {
     if (isAutoScrollEnabled && scrollAreaRef.current) {
@@ -77,17 +79,17 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
     switch (role) {
       case 'streamer':
         return (
-          <Badge variant="primary" size="xs">
-            <Icon name="video" size="xs" className="mr-0.5" />
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-primary-600 text-white text-xs font-semibold rounded">
+            <Video className="w-3 h-3" />
             Streamer
-          </Badge>
+          </span>
         );
       case 'moderator':
         return (
-          <Badge variant="success" size="xs">
-            <Icon name="shield" size="xs" className="mr-0.5" />
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-600 text-white text-xs font-semibold rounded">
+            <Shield className="w-3 h-3" />
             Mod
-          </Badge>
+          </span>
         );
       default:
         return null;
@@ -102,157 +104,191 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
     }).format(date);
   };
 
+  // Common emojis for quick selection
+  const commonEmojis = ['😀', '😂', '❤️', '👍', '🎉', '🔥', '💯', '🚀'];
+
   return (
-    <Chat.Container className="h-full flex flex-col bg-white dark:bg-gray-900">
-      <Chat.Header className="p-4 border-b border-gray-200 dark:border-gray-700">
+    <div className="h-full flex flex-col bg-white dark:bg-gray-900">
+      {/* Chat Header */}
+      <div className="p-4 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between">
-          <Heading size="sm">Live Chat</Heading>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Live Chat</h3>
           <div className="flex items-center gap-2">
-            <Badge variant="secondary">
-              <Icon name="users" size="xs" className="mr-1" />
+            <span className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-sm rounded">
+              <Users className="w-4 h-4" />
               {viewerCount.toLocaleString()}
-            </Badge>
-            <Dropdown>
-              <Dropdown.Trigger>
-                <Button variant="ghost" size="sm">
-                  <Icon name="more-vertical" size="sm" />
-                </Button>
-              </Dropdown.Trigger>
-              <Dropdown.Menu>
-                <Dropdown.Item onClick={() => setIsAutoScrollEnabled(!isAutoScrollEnabled)}>
-                  <Icon name={isAutoScrollEnabled ? "pause" : "play"} size="sm" className="mr-2" />
-                  {isAutoScrollEnabled ? 'Pause auto-scroll' : 'Resume auto-scroll'}
-                </Dropdown.Item>
-                <Dropdown.Item>
-                  <Icon name="settings" size="sm" className="mr-2" />
-                  Chat settings
-                </Dropdown.Item>
-              </Dropdown.Menu>
-            </Dropdown>
+            </span>
+            <div className="relative">
+              <button
+                onClick={() => setShowDropdown(!showDropdown)}
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+              >
+                <MoreVertical className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+              </button>
+              {showDropdown && (
+                <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50">
+                  <button
+                    onClick={() => {
+                      setIsAutoScrollEnabled(!isAutoScrollEnabled);
+                      setShowDropdown(false);
+                    }}
+                    className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 text-sm"
+                  >
+                    {isAutoScrollEnabled ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                    {isAutoScrollEnabled ? 'Pause auto-scroll' : 'Resume auto-scroll'}
+                  </button>
+                  <button className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 text-sm">
+                    <Settings className="w-4 h-4" />
+                    Chat settings
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
-      </Chat.Header>
+      </div>
       
-      <ScrollArea 
-        className="flex-1 px-4" 
+      {/* Messages Area */}
+      <div 
         ref={scrollAreaRef}
+        className="flex-1 overflow-y-auto px-4"
         onScroll={(e) => {
           const target = e.target as HTMLDivElement;
           const isAtBottom = target.scrollHeight - target.scrollTop === target.clientHeight;
           setIsAutoScrollEnabled(isAtBottom);
         }}
       >
-        <Chat.MessageList className="py-4 space-y-3">
+        <div className="py-4 space-y-3">
           {messages.map((msg) => (
-            <Chat.Message
+            <div
               key={msg.id}
-              className={`
-                flex gap-3 p-2 rounded-lg transition-colors
-                ${msg.isHighlighted ? 'bg-yellow-50 dark:bg-yellow-900/20' : ''}
-                ${msg.isPinned ? 'border-l-4 border-primary-500' : ''}
-                hover:bg-gray-50 dark:hover:bg-gray-800
-              `}
+              className={clsx(
+                "flex gap-3 p-2 rounded-lg transition-colors group",
+                msg.isHighlighted && "bg-yellow-50 dark:bg-yellow-900/20",
+                msg.isPinned && "border-l-4 border-primary-500",
+                "hover:bg-gray-50 dark:hover:bg-gray-800"
+              )}
             >
-              <Avatar 
-                src={msg.user.avatar} 
-                name={msg.user.username}
-                size="sm"
-              />
+              {/* Avatar */}
+              <div className="flex-shrink-0">
+                {msg.user.avatar ? (
+                  <img 
+                    src={msg.user.avatar} 
+                    alt={msg.user.username}
+                    className="w-8 h-8 rounded-full"
+                  />
+                ) : (
+                  <div className="w-8 h-8 rounded-full bg-gray-300 dark:bg-gray-700 flex items-center justify-center">
+                    <span className="text-sm font-semibold text-gray-600 dark:text-gray-400">
+                      {msg.user.username[0].toUpperCase()}
+                    </span>
+                  </div>
+                )}
+              </div>
+              
+              {/* Message Content */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-baseline gap-2 mb-1">
-                  <Text weight="semibold" className="text-sm">
+                  <span className="font-semibold text-sm text-gray-900 dark:text-white">
                     {msg.user.username}
-                  </Text>
+                  </span>
                   {getRoleBadge(msg.user.role)}
-                  <Text variant="muted" size="xs">
+                  <span className="text-xs text-gray-500 dark:text-gray-400">
                     {formatTimestamp(msg.timestamp)}
-                  </Text>
+                  </span>
                 </div>
-                <Text className="text-sm break-words whitespace-pre-wrap">
+                <p className="text-sm break-words whitespace-pre-wrap text-gray-800 dark:text-gray-200">
                   {msg.content}
-                </Text>
+                </p>
               </div>
+              
+              {/* Message Actions */}
               {currentUserId === msg.user.id && (
-                <Dropdown>
-                  <Dropdown.Trigger>
-                    <Button variant="ghost" size="xs" className="opacity-0 group-hover:opacity-100">
-                      <Icon name="more-horizontal" size="xs" />
-                    </Button>
-                  </Dropdown.Trigger>
-                  <Dropdown.Menu>
-                    <Dropdown.Item>
-                      <Icon name="trash" size="sm" className="mr-2" />
-                      Delete
-                    </Dropdown.Item>
-                  </Dropdown.Menu>
-                </Dropdown>
+                <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded">
+                    <MoreHorizontal className="w-4 h-4 text-gray-500" />
+                  </button>
+                </div>
               )}
-            </Chat.Message>
+            </div>
           ))}
-        </Chat.MessageList>
+        </div>
         
+        {/* New Messages Indicator */}
         {!isAutoScrollEnabled && (
           <div className="sticky bottom-0 flex justify-center pb-2">
-            <Button
-              variant="secondary"
-              size="sm"
+            <button
               onClick={() => {
                 setIsAutoScrollEnabled(true);
                 if (scrollAreaRef.current) {
                   scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
                 }
               }}
+              className="px-3 py-1 bg-gray-800 text-white text-sm rounded-full hover:bg-gray-700 flex items-center gap-1"
             >
-              <Icon name="arrow-down" size="sm" className="mr-1" />
+              <ChevronDown className="w-4 h-4" />
               New messages
-            </Button>
+            </button>
           </div>
         )}
-      </ScrollArea>
+      </div>
       
-      <Chat.Input className="p-4 border-t border-gray-200 dark:border-gray-700">
+      {/* Input Area */}
+      <div className="p-4 border-t border-gray-200 dark:border-gray-700">
         <div className="flex gap-2">
           <div className="flex-1 relative">
-            <Input
+            <input
+              type="text"
               placeholder="Type a message..."
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyPress={handleKeyPress}
               maxLength={200}
-              className="pr-20"
+              className="w-full px-4 py-2 pr-20 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
             />
             <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
-              <Text variant="muted" size="xs">
+              <span className="text-xs text-gray-500 dark:text-gray-400">
                 {inputValue.length}/200
-              </Text>
-              <Tooltip content="Add emoji">
-                <Button
-                  variant="ghost"
-                  size="xs"
+              </span>
+              <div className="relative">
+                <button
                   onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                  className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors"
                 >
-                  <Icon name="smile" size="sm" />
-                </Button>
-              </Tooltip>
-            </div>
-            {showEmojiPicker && (
-              <div className="absolute bottom-full right-0 mb-2">
-                <EmojiPicker
-                  onEmojiSelect={handleEmojiSelect}
-                  onClose={() => setShowEmojiPicker(false)}
-                />
+                  <Smile className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                </button>
+                {showEmojiPicker && (
+                  <div className="absolute bottom-full right-0 mb-2 p-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700">
+                    <div className="grid grid-cols-4 gap-1">
+                      {commonEmojis.map((emoji) => (
+                        <button
+                          key={emoji}
+                          onClick={() => handleEmojiSelect(emoji)}
+                          className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-xl"
+                        >
+                          {emoji}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
-            )}
+            </div>
           </div>
-          <Button
-            variant="primary"
+          <button
             onClick={handleSendMessage}
             disabled={!inputValue.trim()}
+            className={clsx(
+              "px-4 py-2 rounded-lg font-semibold transition-colors flex items-center gap-2",
+              inputValue.trim()
+                ? "bg-primary-600 text-white hover:bg-primary-700"
+                : "bg-gray-200 dark:bg-gray-700 text-gray-500 cursor-not-allowed"
+            )}
           >
-            <Icon name="send" size="sm" />
-          </Button>
+            <Send className="w-4 h-4" />
+          </button>
         </div>
-      </Chat.Input>
-    </Chat.Container>
+      </div>
+    </div>
   );
 };
