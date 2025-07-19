@@ -1,17 +1,14 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
-  Send,
-  Smile,
   MoreVertical,
   Shield,
   Settings,
   Users,
   X,
-  AlertCircle,
   Crown
 } from 'lucide-react';
-import clsx from 'clsx';
-import MessageList from './MessageList';
+import MessageListV2 from './MessageListV2';
+import ChatInput from './ChatInput';
 
 interface ChatUser {
   id: string;
@@ -67,26 +64,14 @@ export const EnhancedChatContainer: React.FC<ChatContainerProps> = ({
   maxMessagesPerMinute = 10,
   showViewerList = false
 }) => {
-  const [inputValue, setInputValue] = useState('');
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showViewers, setShowViewers] = useState(showViewerList);
   const [showDropdown, setShowDropdown] = useState(false);
-  const [showMentionSuggestions, setShowMentionSuggestions] = useState(false);
-  const [mentionSearch, setMentionSearch] = useState('');
-  const [mentionStartIndex, setMentionStartIndex] = useState(-1);
-  const [selectedMentionIndex, setSelectedMentionIndex] = useState(0);
   
   // Rate limiting state
   const [rateLimit, setRateLimit] = useState<RateLimitState>({
     messageCount: 0,
     resetTime: Date.now() + 60000
   });
-  
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  // Common emojis for quick selection
-  const commonEmojis = ['😀', '😂', '❤️', '👍', '🎉', '🔥', '💯', '🚀', '😎', '🤔', '👏', '💪'];
-
 
   // Rate limit reset
   useEffect(() => {
@@ -103,103 +88,13 @@ export const EnhancedChatContainer: React.FC<ChatContainerProps> = ({
     return () => clearInterval(timer);
   }, [rateLimit.resetTime]);
 
-  // Extract mentions from message
-  const extractMentions = (text: string): string[] => {
-    const mentionRegex = /@(\w+)/g;
-    const mentions: string[] = [];
-    let match;
-    while ((match = mentionRegex.exec(text)) !== null) {
-      mentions.push(match[1]);
-    }
-    return mentions;
-  };
-
   // Handle sending message
-  const handleSendMessage = () => {
-    if (!inputValue.trim()) return;
-
-    // Check rate limit
-    if (rateLimit.messageCount >= maxMessagesPerMinute) {
-      const timeLeft = Math.ceil((rateLimit.resetTime - Date.now()) / 1000);
-      alert(`Please wait ${timeLeft} seconds before sending another message.`);
-      return;
-    }
-
-    const mentions = extractMentions(inputValue);
-    onSendMessage(inputValue, mentions);
-    setInputValue('');
+  const handleSendMessage = (content: string, mentions?: string[]) => {
+    onSendMessage(content, mentions);
     setRateLimit(prev => ({
       ...prev,
       messageCount: prev.messageCount + 1
     }));
-  };
-
-  // Handle input changes and mention detection
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setInputValue(value);
-
-    // Check for @ symbol
-    const cursorPosition = e.target.selectionStart || 0;
-    const textBeforeCursor = value.slice(0, cursorPosition);
-    const lastAtIndex = textBeforeCursor.lastIndexOf('@');
-
-    if (lastAtIndex !== -1 && lastAtIndex === textBeforeCursor.length - 1) {
-      // Just typed @
-      setShowMentionSuggestions(true);
-      setMentionStartIndex(lastAtIndex);
-      setMentionSearch('');
-      setSelectedMentionIndex(0);
-    } else if (lastAtIndex !== -1 && showMentionSuggestions) {
-      // Typing after @
-      const search = textBeforeCursor.slice(lastAtIndex + 1);
-      if (search.includes(' ')) {
-        setShowMentionSuggestions(false);
-      } else {
-        setMentionSearch(search);
-      }
-    } else {
-      setShowMentionSuggestions(false);
-    }
-  };
-
-  // Filter users for mention suggestions
-  const filteredUsers = viewers.filter(user => 
-    user.username.toLowerCase().includes(mentionSearch.toLowerCase())
-  ).slice(0, 5);
-
-  // Handle mention selection
-  const selectMention = (username: string) => {
-    const beforeMention = inputValue.slice(0, mentionStartIndex);
-    const afterMention = inputValue.slice(mentionStartIndex + mentionSearch.length + 1);
-    setInputValue(`${beforeMention}@${username} ${afterMention}`);
-    setShowMentionSuggestions(false);
-    inputRef.current?.focus();
-  };
-
-  // Handle keyboard navigation for mentions
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (showMentionSuggestions && filteredUsers.length > 0) {
-      if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        setSelectedMentionIndex(prev => 
-          prev < filteredUsers.length - 1 ? prev + 1 : 0
-        );
-      } else if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        setSelectedMentionIndex(prev => 
-          prev > 0 ? prev - 1 : filteredUsers.length - 1
-        );
-      } else if (e.key === 'Enter' || e.key === 'Tab') {
-        e.preventDefault();
-        selectMention(filteredUsers[selectedMentionIndex].username);
-      } else if (e.key === 'Escape') {
-        setShowMentionSuggestions(false);
-      }
-    } else if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage();
-    }
   };
 
 
@@ -225,17 +120,11 @@ export const EnhancedChatContainer: React.FC<ChatContainerProps> = ({
     }
   };
 
-  // Handle emoji selection
-  const handleEmojiSelect = (emoji: string) => {
-    setInputValue(prev => prev + emoji);
-    setShowEmojiPicker(false);
-    inputRef.current?.focus();
-  };
 
   return (
-    <div className="h-full flex">
+    <div className="h-full flex overflow-hidden">
       {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col bg-white dark:bg-gray-900">
+      <div className="flex-1 flex flex-col bg-white dark:bg-gray-900 min-h-0">
         {/* Chat Header */}
         <div className="p-4 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between">
@@ -269,107 +158,30 @@ export const EnhancedChatContainer: React.FC<ChatContainerProps> = ({
         </div>
         
         {/* Messages Area */}
-        <MessageList
+        <MessageListV2
           messages={messages}
           currentUser={currentUser}
           onDeleteMessage={onDeleteMessage}
           onReportMessage={onReportMessage}
           onTimeoutUser={onTimeoutUser}
           onBanUser={onBanUser}
-          className="flex-1"
+          className="flex-1 min-h-0"
         />
         
         {/* Input Area */}
-        <div className="p-4 border-t border-gray-200 dark:border-gray-700">
-          {/* Rate Limit Warning */}
-          {rateLimit.messageCount >= maxMessagesPerMinute - 2 && (
-            <div className="mb-2 px-3 py-1 bg-orange-100 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300 text-sm rounded-lg flex items-center gap-2">
-              <AlertCircle className="w-4 h-4" />
-              {rateLimit.messageCount >= maxMessagesPerMinute
-                ? `Message limit reached. Wait ${Math.ceil((rateLimit.resetTime - Date.now()) / 1000)}s`
-                : `${maxMessagesPerMinute - rateLimit.messageCount} messages remaining`}
-            </div>
-          )}
-          
-          <div className="flex gap-2 relative">
-            <div className="flex-1 relative">
-              <input
-                ref={inputRef}
-                type="text"
-                placeholder="Type a message..."
-                value={inputValue}
-                onChange={handleInputChange}
-                onKeyDown={handleKeyDown}
-                maxLength={500}
-                className="w-full px-4 py-2 pr-20 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-              />
-              
-              {/* Mention Suggestions */}
-              {showMentionSuggestions && filteredUsers.length > 0 && (
-                <div className="absolute bottom-full left-0 mb-2 w-64 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-50">
-                  {filteredUsers.map((user, index) => (
-                    <button
-                      key={user.id}
-                      onClick={() => selectMention(user.username)}
-                      className={clsx(
-                        "w-full px-3 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2",
-                        index === selectedMentionIndex && "bg-gray-100 dark:bg-gray-700"
-                      )}
-                    >
-                      {user.avatar ? (
-                        <img src={user.avatar} alt="" className="w-6 h-6 rounded-full" />
-                      ) : (
-                        <div className="w-6 h-6 rounded-full bg-gray-300 dark:bg-gray-600" />
-                      )}
-                      <span className="text-sm font-medium">{user.username}</span>
-                      {getRoleBadge(user.role)}
-                    </button>
-                  ))}
-                </div>
-              )}
-              
-              <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
-                <span className="text-xs text-gray-500 dark:text-gray-400">
-                  {inputValue.length}/500
-                </span>
-                <div className="relative">
-                  <button
-                    onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                    className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors"
-                  >
-                    <Smile className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-                  </button>
-                  {showEmojiPicker && (
-                    <div className="absolute bottom-full right-0 mb-2 p-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700">
-                      <div className="grid grid-cols-4 gap-1">
-                        {commonEmojis.map((emoji) => (
-                          <button
-                            key={emoji}
-                            onClick={() => handleEmojiSelect(emoji)}
-                            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-xl"
-                          >
-                            {emoji}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-            <button
-              onClick={handleSendMessage}
-              disabled={!inputValue.trim() || rateLimit.messageCount >= maxMessagesPerMinute}
-              className={clsx(
-                "px-4 py-2 rounded-lg font-semibold transition-colors flex items-center gap-2",
-                inputValue.trim() && rateLimit.messageCount < maxMessagesPerMinute
-                  ? "bg-primary-600 text-white hover:bg-primary-700"
-                  : "bg-gray-200 dark:bg-gray-700 text-gray-500 cursor-not-allowed"
-              )}
-            >
-              <Send className="w-4 h-4" />
-            </button>
-          </div>
+        <div className="flex-shrink-0 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+          <ChatInput
+            onSendMessage={handleSendMessage}
+            maxLength={500}
+            placeholder="Type a message..."
+            disabled={false}
+            messageCount={rateLimit.messageCount}
+            maxMessagesPerMinute={maxMessagesPerMinute}
+            resetTime={rateLimit.resetTime}
+            users={viewers}
+            showEmojiPicker={true}
+            showImageUpload={false}
+          />
         </div>
       </div>
 

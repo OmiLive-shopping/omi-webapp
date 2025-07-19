@@ -7,7 +7,6 @@ import {
   Minimize, 
   Settings, 
   Radio, 
-  Users, 
   WifiOff,
   PictureInPicture,
   Loader,
@@ -15,6 +14,7 @@ import {
   Wifi
 } from 'lucide-react';
 import clsx from 'clsx';
+import ViewerCount from './ViewerCount';
 
 interface ViewerPlayerProps {
   streamKey: string;
@@ -162,11 +162,6 @@ export const ViewerPlayer: React.FC<ViewerPlayerProps> = ({
     }
   };
 
-  const formatViewerCount = (count: number) => {
-    if (count >= 1000000) return `${(count / 1000000).toFixed(1)}M`;
-    if (count >= 1000) return `${(count / 1000).toFixed(1)}K`;
-    return count.toString();
-  };
 
   if (!isLive && !isReconnecting) {
     return (
@@ -231,10 +226,13 @@ export const ViewerPlayer: React.FC<ViewerPlayerProps> = ({
                 LIVE
               </span>
             )}
-            <span className="flex items-center gap-1 px-2 py-1 bg-black/50 text-white text-xs rounded">
-              <Users className="w-3 h-3" />
-              {formatViewerCount(viewerCount)} viewers
-            </span>
+            <ViewerCount
+              count={viewerCount}
+              variant="compact"
+              showTrend={true}
+              showAnimation={true}
+              className="bg-black/50 text-white"
+            />
             {getQualityIcon()}
           </div>
         </div>

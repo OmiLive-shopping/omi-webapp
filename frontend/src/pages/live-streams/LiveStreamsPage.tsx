@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import clsx from 'clsx';
 import { ViewerPlayer } from '@/components/stream/ViewerPlayer';
 import EnhancedChatContainer from '@/components/chat/EnhancedChatContainer';
+import ViewerCount from '@/components/stream/ViewerCount';
 
 interface Stream {
   id: string;
@@ -143,20 +144,25 @@ const LiveStreamsPage = () => {
                       <p className="text-gray-700 dark:text-gray-300">
                         Streamer: {streams.find(s => s.id === selectedStream)?.streamerName}
                       </p>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
-                        {streams.find(s => s.id === selectedStream)?.viewerCount} viewers
-                      </p>
                     </div>
-                    <span className="px-3 py-1 bg-red-500 text-white text-sm rounded-full">
-                      LIVE
-                    </span>
+                    <div className="flex items-center gap-4">
+                      <ViewerCount
+                        count={streams.find(s => s.id === selectedStream)?.viewerCount || 0}
+                        variant="expanded"
+                        showTrend={true}
+                        showAnimation={true}
+                      />
+                      <span className="px-3 py-1 bg-red-500 text-white text-sm rounded-full">
+                        LIVE
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
 
               {/* Chat Section */}
               <div className="lg:col-span-1">
-                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden h-[600px]">
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg h-[600px] flex flex-col">
                   <EnhancedChatContainer
                     streamId={selectedStream}
                     viewerCount={streams.find(s => s.id === selectedStream)?.viewerCount || 0}

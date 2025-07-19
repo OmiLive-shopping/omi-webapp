@@ -279,102 +279,53 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         </div>
       )}
 
-      {/* Input Container */}
-      <div className="flex items-end gap-2">
-        <div className="flex-1 relative">
-          <textarea
-            ref={textareaRef}
-            value={message}
-            onChange={handleInputChange}
-            onKeyDown={handleKeyDown}
-            onPaste={handlePaste}
-            placeholder={placeholder}
-            disabled={disabled || isRateLimited}
-            rows={1}
-            className={clsx(
-              "w-full px-4 py-2 pr-24 resize-none",
-              "bg-gray-100 dark:bg-gray-800",
-              "text-gray-900 dark:text-white",
-              "rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500",
-              "transition-colors",
-              "max-h-32 overflow-y-auto",
-              (disabled || isRateLimited) && "opacity-50 cursor-not-allowed"
-            )}
-          />
-          
-          {/* Character Count & Actions */}
-          <div className="absolute right-2 bottom-2 flex items-center gap-1">
-            {/* Character Count */}
-            <span className={clsx(
-              "text-xs",
-              message.length > maxLength * 0.9
-                ? "text-red-500 dark:text-red-400"
-                : "text-gray-500 dark:text-gray-400"
-            )}>
-              {message.length}/{maxLength}
-            </span>
-
-            {/* Image Upload (Future) */}
-            {showImageUpload && (
-              <button
-                type="button"
-                disabled={disabled || isRateLimited}
-                className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors disabled:opacity-50"
-                title="Upload image (coming soon)"
-              >
-                <Image className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-              </button>
-            )}
-
-            {/* Emoji Picker */}
-            {showEmojiPicker && (
-              <div className="relative" ref={emojiPickerRef}>
-                <button
-                  type="button"
-                  onClick={() => setShowEmojis(!showEmojis)}
-                  disabled={disabled || isRateLimited}
-                  className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors disabled:opacity-50"
-                >
-                  <Smile className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-                </button>
-                {showEmojis && (
-                  <div className="absolute bottom-full right-0 mb-2 p-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50">
-                    <div className="grid grid-cols-4 gap-1 w-48">
-                      {commonEmojis.map((emoji) => (
-                        <button
-                          key={emoji}
-                          onClick={() => handleEmojiSelect(emoji)}
-                          className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-xl transition-colors"
-                        >
-                          {emoji}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
+      {/* Main Input Container with minimal padding */}
+      <div className="p-3">
+        {/* Input and Send Button Row */}
+        <div className="flex items-center gap-2">
+          <div className="flex-1">
+            <textarea
+              ref={textareaRef}
+              value={message}
+              onChange={handleInputChange}
+              onKeyDown={handleKeyDown}
+              onPaste={handlePaste}
+              placeholder={placeholder}
+              disabled={disabled || isRateLimited}
+              rows={1}
+              className={clsx(
+                "w-full px-3 py-2.5 resize-none",
+                "bg-gray-100 dark:bg-gray-800",
+                "text-gray-900 dark:text-white",
+                "rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500",
+                "transition-colors",
+                "max-h-32 overflow-y-auto",
+                "h-[44px]",
+                "leading-tight",
+                (disabled || isRateLimited) && "opacity-50 cursor-not-allowed"
+              )}
+            />
           </div>
-        </div>
 
-        {/* Send Button */}
-        <button
-          onClick={handleSend}
-          disabled={!message.trim() || disabled || isRateLimited || isSending}
-          className={clsx(
-            "px-4 py-2 rounded-lg font-semibold transition-all flex items-center gap-2",
-            "transform active:scale-95",
-            message.trim() && !disabled && !isRateLimited && !isSending
-              ? "bg-primary-600 text-white hover:bg-primary-700 shadow-sm"
-              : "bg-gray-200 dark:bg-gray-700 text-gray-500 cursor-not-allowed"
-          )}
-        >
-          <Send className={clsx(
-            "w-4 h-4 transition-transform",
-            isSending && "animate-pulse"
-          )} />
-          {isSending ? "Sending..." : "Send"}
-        </button>
+          {/* Send Button */}
+          <button
+            onClick={handleSend}
+            disabled={!message.trim() || disabled || isRateLimited || isSending}
+            className={clsx(
+              "px-4 py-2.5 rounded-lg font-medium transition-all flex items-center gap-1.5",
+              "transform active:scale-95 h-[44px] flex-shrink-0",
+              message.trim() && !disabled && !isRateLimited && !isSending
+                ? "bg-primary-600 text-white hover:bg-primary-700 shadow-sm"
+                : "bg-gray-200 dark:bg-gray-700 text-gray-500 cursor-not-allowed"
+            )}
+          >
+            <Send className={clsx(
+              "w-4 h-4 transition-transform",
+              isSending && "animate-pulse"
+            )} />
+            {isSending ? "Sending..." : "Send"}
+          </button>
+        </div>
       </div>
     </div>
   );
