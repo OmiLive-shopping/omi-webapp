@@ -1,6 +1,6 @@
 import React from 'react';
 import { UseQueryResult } from '@tanstack/react-query';
-import { ApiError } from '@/lib/api-client';
+import { ApiError } from '@/lib/api';
 
 interface QueryStateHandlerProps<T = any> {
   query: UseQueryResult<T, Error>;

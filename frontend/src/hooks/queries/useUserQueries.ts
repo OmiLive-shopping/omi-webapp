@@ -1,5 +1,5 @@
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { apiClient, API_ENDPOINTS, PaginatedResponse, ApiResponse } from '@/lib/api-client';
+import { apiClient, API_ENDPOINTS, PaginatedResponse, ApiResponse } from '@/lib/api';
 import { queryKeys, queryUtils } from '@/lib/query-client';
 import { useAuthStore } from '@/stores/auth.store';
 

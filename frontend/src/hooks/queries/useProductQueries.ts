@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiClient, API_ENDPOINTS, PaginatedResponse, ApiResponse } from '@/lib/api-client';
+import { apiClient, API_ENDPOINTS, PaginatedResponse, ApiResponse } from '@/lib/api';
 import { queryKeys, queryUtils } from '@/lib/query-client';
 import { Product, useProductStore } from '@/stores/product-store';
 
