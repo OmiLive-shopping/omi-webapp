@@ -39,6 +39,9 @@ export function initializeSocketServer(httpServer: HTTPServer): void {
     socket.on('chat:moderate-user', (data) => chatHandler.handleModerateUser(socket, data));
     socket.on('chat:typing', (data) => chatHandler.handleTyping(socket, data));
     socket.on('chat:get-history', (data) => chatHandler.handleGetHistory(socket, data));
+    socket.on('chat:react', (data) => chatHandler.handleReactToMessage(socket, data));
+    socket.on('chat:pin-message', (data) => chatHandler.handlePinMessage(socket, data));
+    socket.on('chat:slowmode', (data) => chatHandler.handleSlowMode(socket, data));
 
     // Handle disconnect
     socket.on('disconnect', async () => {

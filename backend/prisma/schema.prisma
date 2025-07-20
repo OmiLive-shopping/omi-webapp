@@ -9,30 +9,35 @@ datasource db {
 }
 
 model User {
-  id            String         @id @default(uuid())
-  firstName     String?
-  lastName      String?
-  email         String         @unique
-  password      String?
-  roleId        String?
-  active        Boolean        @default(true)
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @default(now()) @updatedAt
-  isAdmin       Boolean        @default(false)
-  streamKey     String         @unique @default(cuid())
-  username      String         @unique
-  avatarUrl     String?
-  bio           String?
-  comments      Comment[]
-  streams       Stream[]
-  role          Roles?         @relation(fields: [roleId], references: [id])
-  wishlist      Product[]      @relation("UserWishlist")
-  cart          Cart?
-  orders        Order[]
-  streamViewers StreamViewer[]
-  refreshTokens RefreshToken[]
-  followers     Follow[]       @relation("UserFollowers")
-  following     Follow[]       @relation("UserFollowing")
+  id                   String              @id @default(uuid())
+  firstName            String?
+  lastName             String?
+  email                String              @unique
+  password             String?
+  roleId               String?
+  active               Boolean             @default(true)
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @default(now()) @updatedAt
+  isAdmin              Boolean             @default(false)
+  streamKey            String              @unique @default(cuid())
+  username             String              @unique
+  avatarUrl            String?
+  bio                  String?
+  comments             Comment[]
+  streams              Stream[]
+  role                 Roles?              @relation(fields: [roleId], references: [id])
+  wishlist             Product[]           @relation("UserWishlist")
+  cart                 Cart?
+  orders               Order[]
+  streamViewers        StreamViewer[]
+  refreshTokens        RefreshToken[]
+  followers            Follow[]            @relation("UserFollowers")
+  following            Follow[]            @relation("UserFollowing")
+  messageReactions     MessageReaction[]
+  moderatedActions     ChatModeration[]    @relation("ModeratedUsers")
+  moderatorActions     ChatModeration[]    @relation("ModeratorActions")
+  streamModeratorFor   StreamModerator[]   @relation("StreamModeratorUser")
+  streamModeratorAddedBy StreamModerator[] @relation("StreamModeratorAddedBy")
 
   @@index([email])
   @@index([username])
@@ -98,28 +103,31 @@ model Product {
 }
 
 model Stream {
-  id            String          @id @default(uuid())
-  title         String
-  description   String?
-  scheduled     DateTime
-  userId        String
-  isLive        Boolean         @default(false)
-  viewerCount   Int             @default(0)
-  startedAt     DateTime?
-  endedAt       DateTime?
-  thumbnailUrl  String?
-  streamUrl     String?
-  streamKey     String?         @unique @default(cuid())
-  categoryId    String?
-  tags          String[]        @default([])
-  status        String          @default("scheduled") // scheduled, live, ended
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @default(now()) @updatedAt
-  comments      Comment[]
-  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  category      Category?       @relation(fields: [categoryId], references: [id])
-  products      StreamProduct[]
-  streamViewers StreamViewer[]
+  id              String             @id @default(uuid())
+  title           String
+  description     String?
+  scheduled       DateTime
+  userId          String
+  isLive          Boolean            @default(false)
+  viewerCount     Int                @default(0)
+  startedAt       DateTime?
+  endedAt         DateTime?
+  thumbnailUrl    String?
+  streamUrl       String?
+  streamKey       String?            @unique @default(cuid())
+  categoryId      String?
+  tags            String[]           @default([])
+  status          String             @default("scheduled") // scheduled, live, ended
+  slowModeDelay   Int                @default(0) // Slow mode delay in seconds
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @default(now()) @updatedAt
+  comments        Comment[]
+  user            User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category        Category?          @relation(fields: [categoryId], references: [id])
+  products        StreamProduct[]
+  streamViewers   StreamViewer[]
+  moderations     ChatModeration[]
+  moderators      StreamModerator[]
 
   @@index([userId])
   @@index([isLive])
@@ -143,16 +151,25 @@ model StreamProduct {
 }
 
 model Comment {
-  id        String   @id @default(uuid())
+  id        String              @id @default(uuid())
   content   String
   userId    String
   streamId  String
-  createdAt DateTime @default(now())
-  stream    Stream   @relation(fields: [streamId], references: [id], onDelete: Cascade)
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  isPinned  Boolean             @default(false)
+  isDeleted Boolean             @default(false)
+  replyToId String?
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @default(now()) @updatedAt
+  stream    Stream              @relation(fields: [streamId], references: [id], onDelete: Cascade)
+  user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  replyTo   Comment?            @relation("CommentReplies", fields: [replyToId], references: [id])
+  replies   Comment[]           @relation("CommentReplies")
+  reactions MessageReaction[]
 
   @@index([streamId])
   @@index([userId])
+  @@index([isPinned])
+  @@index([createdAt])
 }
 
 model Cart {
@@ -266,4 +283,53 @@ model Follow {
   @@unique([followerId, followingId])
   @@index([followerId])
   @@index([followingId])
+}
+
+model MessageReaction {
+  id        String   @id @default(uuid())
+  messageId String
+  userId    String
+  emoji     String   // The emoji used for reaction
+  createdAt DateTime @default(now())
+  message   Comment  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId, emoji])
+  @@index([messageId])
+  @@index([userId])
+}
+
+model ChatModeration {
+  id          String   @id @default(uuid())
+  streamId    String
+  userId      String   // User being moderated
+  moderatorId String   // Moderator who took action
+  action      String   // 'timeout', 'ban', 'unban'
+  reason      String?
+  duration    Int?     // Duration in seconds for timeout
+  expiresAt   DateTime? // When the moderation expires
+  createdAt   DateTime @default(now())
+  stream      Stream   @relation(fields: [streamId], references: [id], onDelete: Cascade)
+  user        User     @relation("ModeratedUsers", fields: [userId], references: [id], onDelete: Cascade)
+  moderator   User     @relation("ModeratorActions", fields: [moderatorId], references: [id], onDelete: Cascade)
+
+  @@index([streamId])
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([action])
+}
+
+model StreamModerator {
+  id        String   @id @default(uuid())
+  streamId  String
+  userId    String
+  addedBy   String
+  createdAt DateTime @default(now())
+  stream    Stream   @relation(fields: [streamId], references: [id], onDelete: Cascade)
+  user      User     @relation("StreamModeratorUser", fields: [userId], references: [id], onDelete: Cascade)
+  addedByUser User   @relation("StreamModeratorAddedBy", fields: [addedBy], references: [id], onDelete: Cascade)
+
+  @@unique([streamId, userId])
+  @@index([streamId])
+  @@index([userId])
 }
