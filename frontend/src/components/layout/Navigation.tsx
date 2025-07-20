@@ -1,19 +1,24 @@
-import React, { useState } from 'react';
-import { 
-  Navigation, 
-  Sidebar, 
-  Avatar, 
-  Dropdown,
-  Input,
-  Badge,
-  Button,
-  Icon,
-  Text,
-  Logo,
-  Tooltip,
-  Divider
-} from '@bolt/ui';
+import React, { useState, useRef, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import {
+  Home,
+  Video,
+  ShoppingBag,
+  Grid3X3,
+  Search,
+  X,
+  ShoppingCart,
+  Bell,
+  ChevronDown,
+  User as UserIcon,
+  Package,
+  Heart,
+  Settings,
+  LogOut,
+  Menu,
+  Sparkles
+} from 'lucide-react';
+import clsx from 'clsx';
 
 interface User {
   id: string;
@@ -40,7 +45,26 @@ export const MainNavigation: React.FC<MainNavigationProps> = ({
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const location = useLocation();
+  const userMenuRef = useRef<HTMLDivElement>(null);
+  const notificationRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setIsUserMenuOpen(false);
+      }
+      if (notificationRef.current && !notificationRef.current.contains(event.target as Node)) {
+        setIsNotificationOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,319 +78,398 @@ export const MainNavigation: React.FC<MainNavigationProps> = ({
   };
 
   const navigationItems = [
-    { path: '/', label: 'Home', icon: 'home' },
-    { path: '/streams', label: 'Live Streams', icon: 'video' },
-    { path: '/products', label: 'Products', icon: 'shopping-bag' },
-    { path: '/categories', label: 'Categories', icon: 'grid' }
+    { path: '/', label: 'Home', icon: Home },
+    { path: '/streams', label: 'Live Streams', icon: Video },
+    { path: '/products', label: 'Products', icon: ShoppingBag },
+    { path: '/categories', label: 'Categories', icon: Grid3X3 }
   ];
 
   return (
     <>
-      <Navigation.Bar 
-        sticky 
-        className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700"
-      >
-        <div className="flex items-center gap-4 flex-1">
-          {/* Mobile Menu Toggle */}
-          <Button
-            variant="ghost"
-            size="sm"
-            className="lg:hidden"
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          >
-            <Icon name={isMobileMenuOpen ? 'x' : 'menu'} size="md" />
-          </Button>
-
-          {/* Logo */}
-          <Navigation.Brand>
-            <Link to="/" className="flex items-center gap-2">
-              <Logo size="sm" />
-              <Text weight="bold" size="lg" className="hidden sm:block">
-                OMI Live
-              </Text>
-            </Link>
-          </Navigation.Brand>
-
-          {/* Desktop Navigation */}
-          <Navigation.Menu className="hidden lg:flex">
-            {navigationItems.map((item) => (
-              <Navigation.Item 
-                key={item.path}
-                href={item.path}
-                active={isActive(item.path)}
-                className="flex items-center gap-2"
+      <nav className="sticky top-0 z-50 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center gap-4 flex-1">
+              {/* Mobile Menu Toggle */}
+              <button
+                type="button"
+                className="lg:hidden p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary-500"
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               >
-                <Icon name={item.icon} size="sm" />
-                {item.label}
-              </Navigation.Item>
-            ))}
-          </Navigation.Menu>
-        </div>
-
-        {/* Search Bar */}
-        <Navigation.Search className="flex-1 max-w-xl mx-4">
-          <form onSubmit={handleSearch} className="w-full">
-            <Input
-              type="search"
-              placeholder="Search streams, products..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              leftIcon={<Icon name="search" size="sm" />}
-              rightElement={
-                searchQuery && (
-                  <Button
-                    variant="ghost"
-                    size="xs"
-                    onClick={() => setSearchQuery('')}
-                  >
-                    <Icon name="x" size="xs" />
-                  </Button>
-                )
-              }
-            />
-          </form>
-        </Navigation.Search>
-
-        {/* Right Actions */}
-        <Navigation.Actions className="flex items-center gap-2">
-          {/* Cart */}
-          <Tooltip content="Shopping Cart">
-            <Button
-              as={Link}
-              to="/cart"
-              variant="ghost"
-              size="sm"
-              className="relative"
-            >
-              <Icon name="shopping-cart" size="md" />
-              {cartItemCount > 0 && (
-                <Badge 
-                  variant="danger" 
-                  size="xs" 
-                  className="absolute -top-1 -right-1"
-                >
-                  {cartItemCount}
-                </Badge>
-              )}
-            </Button>
-          </Tooltip>
-
-          {/* Notifications */}
-          {user && (
-            <Dropdown>
-              <Dropdown.Trigger>
-                <Button variant="ghost" size="sm" className="relative">
-                  <Icon name="bell" size="md" />
-                  {notificationCount > 0 && (
-                    <Badge 
-                      variant="danger" 
-                      size="xs" 
-                      className="absolute -top-1 -right-1"
-                    >
-                      {notificationCount}
-                    </Badge>
-                  )}
-                </Button>
-              </Dropdown.Trigger>
-              <Dropdown.Menu align="end" className="w-80">
-                <Dropdown.Header>
-                  <Text weight="semibold">Notifications</Text>
-                </Dropdown.Header>
-                <Dropdown.Separator />
-                <Dropdown.Item>
-                  <div className="flex items-start gap-3">
-                    <Icon name="video" size="sm" className="mt-0.5 text-primary-500" />
-                    <div className="flex-1">
-                      <Text size="sm">Your favorite streamer is live!</Text>
-                      <Text size="xs" variant="muted">2 minutes ago</Text>
-                    </div>
-                  </div>
-                </Dropdown.Item>
-                <Dropdown.Item>
-                  <div className="flex items-start gap-3">
-                    <Icon name="shopping-bag" size="sm" className="mt-0.5 text-green-500" />
-                    <div className="flex-1">
-                      <Text size="sm">Flash sale on featured products</Text>
-                      <Text size="xs" variant="muted">1 hour ago</Text>
-                    </div>
-                  </div>
-                </Dropdown.Item>
-                <Dropdown.Separator />
-                <Dropdown.Item className="text-center">
-                  <Link to="/notifications" className="text-primary-500">
-                    View all notifications
-                  </Link>
-                </Dropdown.Item>
-              </Dropdown.Menu>
-            </Dropdown>
-          )}
-
-          {/* User Menu */}
-          {user ? (
-            <Dropdown>
-              <Dropdown.Trigger>
-                <Button variant="ghost" size="sm" className="flex items-center gap-2">
-                  <Avatar 
-                    src={user.avatar} 
-                    name={user.name} 
-                    size="sm"
-                  />
-                  <Text className="hidden sm:block">{user.name}</Text>
-                  <Icon name="chevron-down" size="xs" />
-                </Button>
-              </Dropdown.Trigger>
-              <Dropdown.Menu align="end">
-                <Dropdown.Item as={Link} to="/profile">
-                  <Icon name="user" size="sm" className="mr-2" />
-                  Profile
-                </Dropdown.Item>
-                {user.role === 'streamer' && (
-                  <Dropdown.Item as={Link} to="/studio">
-                    <Icon name="video" size="sm" className="mr-2" />
-                    Creator Studio
-                  </Dropdown.Item>
+                {isMobileMenuOpen ? (
+                  <X className="h-6 w-6" />
+                ) : (
+                  <Menu className="h-6 w-6" />
                 )}
-                <Dropdown.Item as={Link} to="/orders">
-                  <Icon name="package" size="sm" className="mr-2" />
-                  Orders
-                </Dropdown.Item>
-                <Dropdown.Item as={Link} to="/wishlist">
-                  <Icon name="heart" size="sm" className="mr-2" />
-                  Wishlist
-                </Dropdown.Item>
-                <Dropdown.Item as={Link} to="/settings">
-                  <Icon name="settings" size="sm" className="mr-2" />
-                  Settings
-                </Dropdown.Item>
-                <Dropdown.Separator />
-                <Dropdown.Item onClick={onLogout} className="text-red-600">
-                  <Icon name="log-out" size="sm" className="mr-2" />
-                  Logout
-                </Dropdown.Item>
-              </Dropdown.Menu>
-            </Dropdown>
-          ) : (
-            <div className="flex items-center gap-2">
-              <Button as={Link} to="/login" variant="ghost" size="sm">
-                Login
-              </Button>
-              <Button as={Link} to="/register" variant="primary" size="sm">
-                Sign Up
-              </Button>
+              </button>
+
+              {/* Logo */}
+              <Link to="/" className="flex items-center gap-2">
+                <Sparkles className="h-8 w-8 text-primary-600" />
+                <span className="hidden sm:block text-xl font-bold text-gray-900 dark:text-white">
+                  OMI Live
+                </span>
+              </Link>
+
+              {/* Desktop Navigation */}
+              <nav className="hidden lg:flex items-center space-x-1 ml-10">
+                {navigationItems.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <Link
+                      key={item.path}
+                      to={item.path}
+                      className={clsx(
+                        'flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors',
+                        isActive(item.path)
+                          ? 'bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900'
+                          : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white'
+                      )}
+                    >
+                      <Icon className="h-4 w-4" />
+                      {item.label}
+                    </Link>
+                  );
+                })}
+              </nav>
             </div>
-          )}
-        </Navigation.Actions>
-      </Navigation.Bar>
+
+            {/* Search Bar */}
+            <div className="flex-1 max-w-xl mx-4">
+              <form onSubmit={handleSearch} className="w-full">
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Search className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    type="search"
+                    placeholder="Search streams, products..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="block w-full pl-10 pr-10 py-2 border border-gray-300 dark:border-gray-600 rounded-md leading-5 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                  />
+                  {searchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setSearchQuery('')}
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                    >
+                      <X className="h-5 w-5 text-gray-400 hover:text-gray-500" />
+                    </button>
+                  )}
+                </div>
+              </form>
+            </div>
+
+            {/* Right Actions */}
+            <div className="flex items-center gap-2">
+              {/* Cart */}
+              <Link
+                to="/cart"
+                className="relative p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary-500"
+                title="Shopping Cart"
+              >
+                <ShoppingCart className="h-6 w-6" />
+                {cartItemCount > 0 && (
+                  <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center font-medium">
+                    {cartItemCount}
+                  </span>
+                )}
+              </Link>
+
+              {/* Notifications */}
+              {user && (
+                <div className="relative" ref={notificationRef}>
+                  <button
+                    type="button"
+                    onClick={() => setIsNotificationOpen(!isNotificationOpen)}
+                    className="relative p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary-500"
+                  >
+                    <Bell className="h-6 w-6" />
+                    {notificationCount > 0 && (
+                      <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center font-medium">
+                        {notificationCount}
+                      </span>
+                    )}
+                  </button>
+
+                  {/* Notifications Dropdown */}
+                  {isNotificationOpen && (
+                    <div className="origin-top-right absolute right-0 mt-2 w-80 rounded-md shadow-lg bg-white dark:bg-gray-800 ring-1 ring-black ring-opacity-5 z-50">
+                      <div className="py-1">
+                        <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700">
+                          <p className="text-sm font-semibold text-gray-900 dark:text-white">Notifications</p>
+                        </div>
+                        
+                        <a href="#" className="block px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-700">
+                          <div className="flex items-start gap-3">
+                            <Video className="h-5 w-5 mt-0.5 text-primary-500" />
+                            <div className="flex-1">
+                              <p className="text-sm text-gray-900 dark:text-white">Your favorite streamer is live!</p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400">2 minutes ago</p>
+                            </div>
+                          </div>
+                        </a>
+                        
+                        <a href="#" className="block px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-700">
+                          <div className="flex items-start gap-3">
+                            <ShoppingBag className="h-5 w-5 mt-0.5 text-green-500" />
+                            <div className="flex-1">
+                              <p className="text-sm text-gray-900 dark:text-white">Flash sale on featured products</p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400">1 hour ago</p>
+                            </div>
+                          </div>
+                        </a>
+                        
+                        <div className="border-t border-gray-200 dark:border-gray-700">
+                          <Link
+                            to="/notifications"
+                            className="block px-4 py-2 text-center text-sm text-primary-600 hover:text-primary-500"
+                            onClick={() => setIsNotificationOpen(false)}
+                          >
+                            View all notifications
+                          </Link>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* User Menu */}
+              {user ? (
+                <div className="relative" ref={userMenuRef}>
+                  <button
+                    type="button"
+                    onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                    className="flex items-center gap-2 p-2 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary-500"
+                  >
+                    {user.avatar ? (
+                      <img className="h-8 w-8 rounded-full" src={user.avatar} alt={user.name} />
+                    ) : (
+                      <div className="h-8 w-8 rounded-full bg-gray-300 flex items-center justify-center">
+                        <span className="text-sm font-medium text-gray-600">
+                          {user.name.charAt(0).toUpperCase()}
+                        </span>
+                      </div>
+                    )}
+                    <span className="hidden sm:block text-sm font-medium">{user.name}</span>
+                    <ChevronDown className="h-4 w-4" />
+                  </button>
+
+                  {/* User Menu Dropdown */}
+                  {isUserMenuOpen && (
+                    <div className="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white dark:bg-gray-800 ring-1 ring-black ring-opacity-5 z-50">
+                      <div className="py-1">
+                        <Link
+                          to="/profile"
+                          className="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                          onClick={() => setIsUserMenuOpen(false)}
+                        >
+                          <UserIcon className="h-4 w-4 mr-2" />
+                          Profile
+                        </Link>
+                        {user.role === 'streamer' && (
+                          <Link
+                            to="/studio"
+                            className="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                            onClick={() => setIsUserMenuOpen(false)}
+                          >
+                            <Video className="h-4 w-4 mr-2" />
+                            Creator Studio
+                          </Link>
+                        )}
+                        <Link
+                          to="/orders"
+                          className="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                          onClick={() => setIsUserMenuOpen(false)}
+                        >
+                          <Package className="h-4 w-4 mr-2" />
+                          Orders
+                        </Link>
+                        <Link
+                          to="/wishlist"
+                          className="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                          onClick={() => setIsUserMenuOpen(false)}
+                        >
+                          <Heart className="h-4 w-4 mr-2" />
+                          Wishlist
+                        </Link>
+                        <Link
+                          to="/settings"
+                          className="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                          onClick={() => setIsUserMenuOpen(false)}
+                        >
+                          <Settings className="h-4 w-4 mr-2" />
+                          Settings
+                        </Link>
+                        <div className="border-t border-gray-200 dark:border-gray-700"></div>
+                        <button
+                          onClick={() => {
+                            onLogout();
+                            setIsUserMenuOpen(false);
+                          }}
+                          className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700"
+                        >
+                          <LogOut className="h-4 w-4 mr-2" />
+                          Logout
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Link
+                    to="/login"
+                    className="px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+                  >
+                    Login
+                  </Link>
+                  <Link
+                    to="/register"
+                    className="px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                  >
+                    Sign Up
+                  </Link>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </nav>
 
       {/* Mobile Sidebar */}
-      <Sidebar
-        open={isMobileMenuOpen}
-        onOpenChange={setIsMobileMenuOpen}
-        side="left"
-        className="lg:hidden"
-      >
-        <Sidebar.Header>
-          <Logo size="sm" />
-          <Text weight="bold" size="lg">OMI Live</Text>
-        </Sidebar.Header>
-        
-        <Sidebar.Content>
-          <Sidebar.Section>
-            {navigationItems.map((item) => (
-              <Sidebar.Item
-                key={item.path}
-                as={Link}
-                to={item.path}
-                active={isActive(item.path)}
+      {isMobileMenuOpen && (
+        <>
+          {/* Overlay */}
+          <div
+            className="fixed inset-0 bg-gray-600 bg-opacity-75 z-40 lg:hidden"
+            onClick={() => setIsMobileMenuOpen(false)}
+          ></div>
+
+          {/* Sidebar */}
+          <div className="fixed inset-y-0 left-0 flex flex-col w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 z-50 lg:hidden">
+            {/* Header */}
+            <div className="flex items-center justify-between h-16 px-4 border-b border-gray-200 dark:border-gray-700">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-8 w-8 text-primary-600" />
+                <span className="text-xl font-bold text-gray-900 dark:text-white">OMI Live</span>
+              </div>
+              <button
+                type="button"
                 onClick={() => setIsMobileMenuOpen(false)}
+                className="p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800"
               >
-                <Icon name={item.icon} size="sm" className="mr-3" />
-                {item.label}
-              </Sidebar.Item>
-            ))}
-          </Sidebar.Section>
-          
-          {user && (
-            <>
-              <Divider />
-              <Sidebar.Section title="Account">
-                <Sidebar.Item
-                  as={Link}
-                  to="/profile"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  <Icon name="user" size="sm" className="mr-3" />
-                  Profile
-                </Sidebar.Item>
-                {user.role === 'streamer' && (
-                  <Sidebar.Item
-                    as={Link}
-                    to="/studio"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    <Icon name="video" size="sm" className="mr-3" />
-                    Creator Studio
-                  </Sidebar.Item>
-                )}
-                <Sidebar.Item
-                  as={Link}
-                  to="/orders"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  <Icon name="package" size="sm" className="mr-3" />
-                  Orders
-                </Sidebar.Item>
-                <Sidebar.Item
-                  as={Link}
-                  to="/settings"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  <Icon name="settings" size="sm" className="mr-3" />
-                  Settings
-                </Sidebar.Item>
-              </Sidebar.Section>
-            </>
-          )}
-        </Sidebar.Content>
-        
-        <Sidebar.Footer>
-          {user ? (
-            <Button 
-              variant="ghost" 
-              fullWidth 
-              onClick={() => {
-                onLogout();
-                setIsMobileMenuOpen(false);
-              }}
-              className="text-red-600"
-            >
-              <Icon name="log-out" size="sm" className="mr-2" />
-              Logout
-            </Button>
-          ) : (
-            <div className="space-y-2">
-              <Button 
-                as={Link} 
-                to="/login" 
-                variant="outline" 
-                fullWidth
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                Login
-              </Button>
-              <Button 
-                as={Link} 
-                to="/register" 
-                variant="primary" 
-                fullWidth
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                Sign Up
-              </Button>
+                <X className="h-6 w-6" />
+              </button>
             </div>
-          )}
-        </Sidebar.Footer>
-      </Sidebar>
+
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto">
+              <nav className="px-2 py-4">
+                {navigationItems.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <Link
+                      key={item.path}
+                      to={item.path}
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className={clsx(
+                        'flex items-center gap-3 px-3 py-2 mb-1 rounded-md text-sm font-medium transition-colors',
+                        isActive(item.path)
+                          ? 'bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900'
+                          : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white'
+                      )}
+                    >
+                      <Icon className="h-5 w-5" />
+                      {item.label}
+                    </Link>
+                  );
+                })}
+              </nav>
+
+              {user && (
+                <>
+                  <div className="border-t border-gray-200 dark:border-gray-700 my-2"></div>
+                  <div className="px-2 py-4">
+                    <p className="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Account</p>
+                    <nav className="mt-3">
+                      <Link
+                        to="/profile"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        className="flex items-center gap-3 px-3 py-2 mb-1 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white"
+                      >
+                        <UserIcon className="h-5 w-5" />
+                        Profile
+                      </Link>
+                      {user.role === 'streamer' && (
+                        <Link
+                          to="/studio"
+                          onClick={() => setIsMobileMenuOpen(false)}
+                          className="flex items-center gap-3 px-3 py-2 mb-1 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white"
+                        >
+                          <Video className="h-5 w-5" />
+                          Creator Studio
+                        </Link>
+                      )}
+                      <Link
+                        to="/orders"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        className="flex items-center gap-3 px-3 py-2 mb-1 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white"
+                      >
+                        <Package className="h-5 w-5" />
+                        Orders
+                      </Link>
+                      <Link
+                        to="/settings"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        className="flex items-center gap-3 px-3 py-2 mb-1 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white"
+                      >
+                        <Settings className="h-5 w-5" />
+                        Settings
+                      </Link>
+                    </nav>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="border-t border-gray-200 dark:border-gray-700 p-4">
+              {user ? (
+                <button
+                  onClick={() => {
+                    onLogout();
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="flex items-center justify-center gap-2 w-full px-3 py-2 text-sm font-medium text-red-600 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md"
+                >
+                  <LogOut className="h-5 w-5" />
+                  Logout
+                </button>
+              ) : (
+                <div className="space-y-2">
+                  <Link
+                    to="/login"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="block w-full px-3 py-2 text-center text-sm font-medium text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"
+                  >
+                    Login
+                  </Link>
+                  <Link
+                    to="/register"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="block w-full px-3 py-2 text-center text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-700"
+                  >
+                    Sign Up
+                  </Link>
+                </div>
+              )}
+            </div>
+          </div>
+        </>
+      )}
     </>
   );
 };
