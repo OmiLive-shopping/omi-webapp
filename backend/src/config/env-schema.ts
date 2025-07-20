@@ -16,6 +16,8 @@ export const envSchema = z.object({
   CLIENT_URL: z.string().url().optional(),
   SOCKET_ADMIN_USERNAME: z.string().optional(),
   SOCKET_ADMIN_PASSWORD: z.string().optional(),
+  REDIS_URL: z.string().url().optional().default('redis://localhost:6379'),
+  API_KEY_HEADER: z.string().optional().default('x-api-key'),
 });
 
 export type EnvVars = z.infer<typeof envSchema>;
