@@ -9,22 +9,30 @@ datasource db {
 }
 
 model User {
-  id        String    @id @default(uuid())
-  firstName String?
-  lastName  String?
-  email     String    @unique
-  password  String?
-  roleId    String?
-  active    Boolean   @default(true)
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @default(now()) @updatedAt
-  isAdmin   Boolean   @default(false)
-  streamKey String    @unique @default(cuid())
-  username  String    @unique
-  comments  Comment[]
-  streams   Stream[]
-  role      Roles?    @relation(fields: [roleId], references: [id])
-  wishlist  Product[] @relation("UserWishlist")
+  id            String         @id @default(uuid())
+  firstName     String?
+  lastName      String?
+  email         String         @unique
+  password      String?
+  roleId        String?
+  active        Boolean        @default(true)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @default(now()) @updatedAt
+  isAdmin       Boolean        @default(false)
+  streamKey     String         @unique @default(cuid())
+  username      String         @unique
+  avatarUrl     String?
+  bio           String?
+  comments      Comment[]
+  streams       Stream[]
+  role          Roles?         @relation(fields: [roleId], references: [id])
+  wishlist      Product[]      @relation("UserWishlist")
+  cart          Cart?
+  orders        Order[]
+  streamViewers StreamViewer[]
+  refreshTokens RefreshToken[]
+  followers     Follow[]       @relation("UserFollowers")
+  following     Follow[]       @relation("UserFollowing")
 
   @@index([email])
   @@index([username])
@@ -38,44 +46,87 @@ model Roles {
   user   User[]
 }
 
+model Category {
+  id          String    @id @default(uuid())
+  name        String    @unique
+  slug        String    @unique
+  description String?
+  imageUrl    String?
+  active      Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @default(now()) @updatedAt
+  products    Product[]
+  streams     Stream[]
+
+  @@index([slug])
+  @@index([active])
+}
+
 model Product {
   id               String          @id @default(uuid())
   name             String
   imageUrl         String?
+  images           String[]        @default([])
   description      String?
+  price            Float           @default(0)
+  originalPrice    Float?
   couponCode       String?
   couponExpiration DateTime?
   url              String?
   public           Boolean         @default(true)
   active           Boolean         @default(true)
+  inStock          Boolean         @default(true)
+  stockCount       Int?
+  featured         Boolean         @default(false)
+  categoryId       String?
+  tags             String[]        @default([])
+  rating           Float?
+  reviewCount      Int             @default(0)
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @default(now()) @updatedAt
+  category         Category?       @relation(fields: [categoryId], references: [id])
   streams          StreamProduct[]
   wishlistedBy     User[]          @relation("UserWishlist")
+  cartItems        CartItem[]
+  orderItems       OrderItem[]
 
   @@index([public])
   @@index([active])
+  @@index([categoryId])
+  @@index([featured])
+  @@index([inStock])
 }
 
 model Stream {
-  id          String          @id @default(uuid())
-  title       String
-  description String?
-  scheduled   DateTime
-  userId      String
-  isLive      Boolean         @default(false)
-  viewerCount Int             @default(0)
-  startedAt   DateTime?
-  endedAt     DateTime?
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @default(now()) @updatedAt
-  comments    Comment[]
-  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  products    StreamProduct[]
+  id            String          @id @default(uuid())
+  title         String
+  description   String?
+  scheduled     DateTime
+  userId        String
+  isLive        Boolean         @default(false)
+  viewerCount   Int             @default(0)
+  startedAt     DateTime?
+  endedAt       DateTime?
+  thumbnailUrl  String?
+  streamUrl     String?
+  streamKey     String?         @unique @default(cuid())
+  categoryId    String?
+  tags          String[]        @default([])
+  status        String          @default("scheduled") // scheduled, live, ended
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @default(now()) @updatedAt
+  comments      Comment[]
+  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category      Category?       @relation(fields: [categoryId], references: [id])
+  products      StreamProduct[]
+  streamViewers StreamViewer[]
 
   @@index([userId])
   @@index([isLive])
   @@index([scheduled])
+  @@index([categoryId])
+  @@index([status])
+  @@index([streamKey])
 }
 
 model StreamProduct {
@@ -102,4 +153,117 @@ model Comment {
 
   @@index([streamId])
   @@index([userId])
+}
+
+model Cart {
+  id        String     @id @default(uuid())
+  userId    String     @unique
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items     CartItem[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @default(now()) @updatedAt
+
+  @@index([userId])
+}
+
+model CartItem {
+  id        String   @id @default(uuid())
+  cartId    String
+  productId String
+  quantity  Int      @default(1)
+  cart      Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  @@unique([cartId, productId])
+  @@index([cartId])
+  @@index([productId])
+}
+
+model Order {
+  id              String      @id @default(uuid())
+  orderNumber     String      @unique @default(cuid())
+  userId          String
+  user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status          String      @default("pending") // pending, processing, shipped, delivered, cancelled
+  paymentStatus   String      @default("unpaid") // unpaid, paid, refunded
+  paymentMethod   String?
+  subtotal        Float
+  tax             Float       @default(0)
+  shipping        Float       @default(0)
+  total           Float
+  shippingAddress Json?
+  billingAddress  Json?
+  notes           String?
+  items           OrderItem[]
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @default(now()) @updatedAt
+
+  @@index([userId])
+  @@index([orderNumber])
+  @@index([status])
+  @@index([paymentStatus])
+}
+
+model OrderItem {
+  id         String   @id @default(uuid())
+  orderId    String
+  productId  String
+  quantity   Int
+  price      Float
+  total      Float
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product    Product  @relation(fields: [productId], references: [id])
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @default(now()) @updatedAt
+
+  @@index([orderId])
+  @@index([productId])
+}
+
+model StreamViewer {
+  id         String   @id @default(uuid())
+  streamId   String
+  userId     String?
+  sessionId  String   // For anonymous viewers
+  ipAddress  String?
+  userAgent  String?
+  location   String?
+  joinedAt   DateTime @default(now())
+  leftAt     DateTime?
+  stream     Stream   @relation(fields: [streamId], references: [id], onDelete: Cascade)
+  user       User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([streamId, sessionId])
+  @@index([streamId])
+  @@index([userId])
+  @@index([joinedAt])
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  @@index([token])
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model Follow {
+  id         String   @id @default(uuid())
+  followerId String
+  followingId String
+  follower   User     @relation("UserFollowing", fields: [followerId], references: [id], onDelete: Cascade)
+  following  User     @relation("UserFollowers", fields: [followingId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@unique([followerId, followingId])
+  @@index([followerId])
+  @@index([followingId])
 }
