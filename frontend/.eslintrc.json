@@ -17,6 +17,39 @@
   },
   "plugins": ["react-refresh"],
   "rules": {
-    "react-refresh/only-export-components": "warn"
+    "react-refresh/only-export-components": "warn",
+    "@typescript-eslint/no-unused-vars": ["warn", { 
+      "argsIgnorePattern": "^_",
+      "varsIgnorePattern": "^_" 
+    }],
+    "@typescript-eslint/no-explicit-any": "warn",
+    "no-restricted-imports": ["error", {
+      "patterns": [
+        "@mui/*",
+        "@bolt/*",
+        "antd",
+        "antd/*",
+        "@chakra-ui/*",
+        "react-bootstrap",
+        "react-bootstrap/*",
+        "@headlessui/*",
+        "@radix-ui/*",
+        "@mantine/*",
+        "semantic-ui-react",
+        "semantic-ui-react/*",
+        "primereact/*",
+        "@arco-design/*",
+        "element-plus",
+        "@fluentui/*",
+        "reactstrap",
+        "@nextui-org/*",
+        "@tremor/*",
+        "@geist-ui/*",
+        "baseui",
+        "grommet",
+        "@blueprintjs/*"
+      ],
+      "message": "⛔ Component libraries are PROHIBITED! Use Tailwind CSS exclusively for all UI styling. See .taskmaster/docs/ui-guidelines.md for approved patterns."
+    }]
   }
 }

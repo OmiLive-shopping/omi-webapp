@@ -1,40 +1,63 @@
 import { useEffect } from 'react';
-import { socket } from '@/lib/socket';
-import { useAppStore } from '@/stores/app.store';
+import { useSocketStore } from '@/stores/socket-store';
 import { useAuthStore } from '@/stores/auth.store';
 
-export function useSocket() {
+interface UseSocketOptions {
+  autoConnect?: boolean;
+  streamId?: string;
+}
+
+export function useSocket(options: UseSocketOptions = {}) {
+  const { autoConnect = true, streamId } = options;
   const { token } = useAuthStore();
-  const { chat } = useAppStore();
+  
+  const {
+    isConnected,
+    connectionError,
+    messages,
+    viewerCount,
+    streamStatus,
+    connect,
+    disconnect,
+    sendMessage,
+    joinStream,
+    leaveStream,
+    clearMessages,
+  } = useSocketStore();
 
   useEffect(() => {
-    if (!token) {
-      socket.disconnect();
-      return;
+    if (autoConnect && token) {
+      connect(token);
+    } else if (!token) {
+      disconnect();
     }
 
-    socket.auth = { token };
-    socket.connect();
-
-    socket.on('connect', () => {
-      chat.setConnected(true);
-    });
-
-    socket.on('disconnect', () => {
-      chat.setConnected(false);
-    });
-
-    socket.on('connect_error', (error) => {
-      console.error('Socket connection error:', error.message);
-    });
-
     return () => {
-      socket.off('connect');
-      socket.off('disconnect');
-      socket.off('connect_error');
-      socket.disconnect();
+      if (autoConnect) {
+        disconnect();
+      }
     };
-  }, [token, chat]);
+  }, [autoConnect, token, connect, disconnect]);
 
-  return { socket, isConnected: chat.isConnected };
+  useEffect(() => {
+    if (isConnected && streamId) {
+      joinStream(streamId);
+      
+      return () => {
+        leaveStream(streamId);
+      };
+    }
+  }, [isConnected, streamId, joinStream, leaveStream]);
+
+  return {
+    isConnected,
+    connectionError,
+    messages,
+    viewerCount,
+    streamStatus,
+    sendMessage,
+    clearMessages,
+    connect,
+    disconnect,
+  };
 }
