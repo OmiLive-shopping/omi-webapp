@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { VitePWA } from 'vite-plugin-pwa';
 import path from 'path';
 
 export default defineConfig({
@@ -9,7 +10,109 @@ export default defineConfig({
       '@': path.resolve(__dirname, 'src'),
     },
   },
-  plugins: [react()],
+  plugins: [
+    react(),
+    VitePWA({
+      registerType: 'autoUpdate',
+      includeAssets: ['favicon.ico', 'robots.txt', 'apple-touch-icon.png'],
+      manifest: {
+        name: 'OMI Live - Live Commerce Platform',
+        short_name: 'OMI Live',
+        description: 'Live streaming commerce platform with real-time shopping',
+        theme_color: '#8b5cf6',
+        background_color: '#0a0a0a',
+        display: 'standalone',
+        orientation: 'portrait',
+        scope: '/',
+        start_url: '/',
+        icons: [
+          {
+            src: 'pwa-64x64.png',
+            sizes: '64x64',
+            type: 'image/png'
+          },
+          {
+            src: 'pwa-192x192.png',
+            sizes: '192x192',
+            type: 'image/png'
+          },
+          {
+            src: 'pwa-512x512.png',
+            sizes: '512x512',
+            type: 'image/png'
+          },
+          {
+            src: 'maskable-icon-512x512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable'
+          }
+        ],
+        categories: ['shopping', 'entertainment']
+      },
+      workbox: {
+        cleanupOutdatedCaches: true,
+        clientsClaim: true,
+        skipWaiting: true,
+        runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/api\.*/i,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'api-cache',
+              expiration: {
+                maxEntries: 50,
+                maxAgeSeconds: 5 * 60 // 5 minutes
+              },
+              cacheableResponse: {
+                statuses: [0, 200]
+              }
+            }
+          },
+          {
+            urlPattern: /\.(jpg|jpeg|png|gif|webp|svg)$/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'image-cache',
+              expiration: {
+                maxEntries: 100,
+                maxAgeSeconds: 30 * 24 * 60 * 60 // 30 days
+              }
+            }
+          },
+          {
+            urlPattern: /\.(woff|woff2|eot|ttf|otf)$/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'font-cache',
+              expiration: {
+                maxEntries: 10,
+                maxAgeSeconds: 365 * 24 * 60 * 60 // 1 year
+              }
+            }
+          },
+          {
+            urlPattern: /\.(js|css)$/i,
+            handler: 'StaleWhileRevalidate',
+            options: {
+              cacheName: 'static-resources',
+              expiration: {
+                maxEntries: 50,
+                maxAgeSeconds: 7 * 24 * 60 * 60 // 7 days
+              }
+            }
+          }
+        ]
+      },
+      devOptions: {
+        enabled: true,
+        type: 'module',
+        navigateFallback: 'index.html'
+      },
+      navigateFallbackDenylist: [/^\/api/],
+      navigateFallback: 'index.html'
+    })
+  ],
   
   // Build optimizations
   build: {

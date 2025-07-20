@@ -4,6 +4,7 @@ import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import ErrorBoundary from '@/components/common/ErrorBoundary';
 import { SuspenseWrapper } from '@/components/SuspenseWrapper';
 import { NotFound } from '@/pages/NotFound';
+import { PWAInstallPrompt } from '@/components/PWAInstallPrompt';
 import {
   HomePage,
   StreamPage,
@@ -30,6 +31,7 @@ function App() {
     <ErrorBoundary>
       <BrowserRouter>
         <SuspenseWrapper fullScreen message="Loading application...">
+          <PWAInstallPrompt />
           <Routes>
             <Route path="/" element={<Layout type="responsive" />}>
               {/* Public Routes */}

@@ -12,7 +12,8 @@
     "format": "prettier --write .",
     "format:check": "prettier -c .",
     "preview": "vite preview",
-    "prepare": "husky install"
+    "prepare": "husky install",
+    "generate-pwa-assets": "pwa-assets-generator"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.17.9",
@@ -36,6 +37,7 @@
     "@types/react-dom": "^18.0.11",
     "@typescript-eslint/eslint-plugin": "^5.59.0",
     "@typescript-eslint/parser": "^5.59.0",
+    "@vite-pwa/assets-generator": "^1.0.0",
     "@vitejs/plugin-react": "^4.0.0",
     "autoprefixer": "^10.4.14",
     "eslint": "^8.38.0",
@@ -48,7 +50,8 @@
     "tailwindcss": "^3.3.2",
     "terser": "^5.43.1",
     "typescript": "^5.0.2",
-    "vite": "^4.3.9"
+    "vite": "^4.3.9",
+    "vite-plugin-pwa": "^1.0.1"
   },
   "lint-staged": {
     "**/*.{js,jsx,ts,tsx,html,css,json}": [
