@@ -5,6 +5,7 @@ import ErrorBoundary from '@/components/common/ErrorBoundary';
 import { SuspenseWrapper } from '@/components/SuspenseWrapper';
 import { NotFound } from '@/pages/NotFound';
 import { PWAInstallPrompt } from '@/components/PWAInstallPrompt';
+import { SkipLinks, ScreenReaderAnnouncer } from '@/components/accessibility';
 import {
   HomePage,
   StreamPage,
@@ -30,6 +31,8 @@ function App() {
   return (
     <ErrorBoundary>
       <BrowserRouter>
+        <SkipLinks />
+        <ScreenReaderAnnouncer />
         <SuspenseWrapper fullScreen message="Loading application...">
           <PWAInstallPrompt />
           <Routes>
