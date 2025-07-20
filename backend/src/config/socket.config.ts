@@ -1,20 +1,25 @@
 import { instrument } from '@socket.io/admin-ui';
 import { Server as HttpServer } from 'http';
 import jwt from 'jsonwebtoken';
-import { Server as SocketServer } from 'socket.io';
+import { Server as SocketServer, Socket } from 'socket.io';
 
 import { env } from './env-config';
 import { PrismaService } from './prisma.config';
+import { initializeSocketServer } from '../socket';
 
 export interface SocketUser {
   id: string;
   email: string;
   username: string;
   isAdmin: boolean;
+  role?: string;
 }
 
-export interface AuthenticatedSocket extends SocketServer {
+export interface AuthenticatedSocket extends Socket {
   user?: SocketUser;
+  userId?: string;
+  username?: string;
+  role?: string;
 }
 
 export class SocketService {
@@ -38,84 +43,13 @@ export class SocketService {
       return this.io;
     }
 
-    // Initialize Socket.io with CORS configuration
-    this.io = new SocketServer(httpServer, {
-      cors: {
-        origin: env.CLIENT_URL || 'http://localhost:5173',
-        credentials: true,
-      },
-      transports: ['websocket', 'polling'],
-    });
-
-    // Set up admin UI in development
-    if (env.NODE_ENV !== 'production') {
-      instrument(this.io, {
-        auth: {
-          type: 'basic',
-          username: env.SOCKET_ADMIN_USERNAME || 'admin',
-          password: env.SOCKET_ADMIN_PASSWORD || 'admin',
-        },
-        mode: env.NODE_ENV === 'development' ? 'development' : 'production',
-      });
-    }
-
-    // Authentication middleware
-    this.io.use(async (socket: any, next) => {
-      try {
-        const token =
-          socket.handshake.auth?.token || socket.handshake.headers?.authorization?.split(' ')[1];
-
-        if (!token) {
-          return next(new Error('Authentication required'));
-        }
-
-        const decoded = jwt.verify(token, env.JWT_SECRET) as { userId: string };
-
-        // Fetch user from database
-        const user = await this.prisma.client.user.findUnique({
-          where: { id: decoded.userId },
-          select: {
-            id: true,
-            email: true,
-            username: true,
-            isAdmin: true,
-          },
-        });
-
-        if (!user) {
-          return next(new Error('User not found'));
-        }
-
-        // Attach user to socket
-        socket.user = user;
-        next();
-      } catch (error) {
-        return next(new Error('Invalid token'));
-      }
-    });
-
-    // Connection handler
-    this.io.on('connection', (socket: any) => {
-      console.log(`User ${socket.user.username} connected`);
-
-      // Join user to their own room
-      socket.join(`user:${socket.user.id}`);
-
-      // Initialize stream handler
-      const { StreamSocketHandler } = require('../socket-handlers/stream.handler');
-      const streamHandler = new StreamSocketHandler();
-      streamHandler.handleConnection(socket);
-
-      // Handle disconnection
-      socket.on('disconnect', () => {
-        console.log(`User ${socket.user.username} disconnected`);
-      });
-
-      // Error handler
-      socket.on('error', (error: Error) => {
-        console.error(`Socket error for user ${socket.user.username}:`, error);
-      });
-    });
+    // Initialize our comprehensive Socket.IO server
+    initializeSocketServer(httpServer);
+    
+    // Get the initialized IO instance
+    const { SocketServer } = require('./socket/socket.config');
+    const socketServerInstance = SocketServer.getInstance();
+    this.io = socketServerInstance.getIO();
 
     return this.io;
   }
@@ -157,4 +91,3 @@ export class SocketService {
     }
   }
 }
-
