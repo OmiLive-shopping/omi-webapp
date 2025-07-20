@@ -5,7 +5,6 @@ import {
   MoreVertical,
   Shield,
   Video,
-  Trash2,
   Pause,
   Play,
   Settings,
@@ -38,7 +37,7 @@ interface ChatContainerProps {
 }
 
 export const ChatContainer: React.FC<ChatContainerProps> = ({
-  streamId,
+  streamId: _streamId,
   viewerCount,
   onSendMessage,
   messages,

@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Layout from '@/components/layouts/Layout';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
@@ -6,6 +7,7 @@ import { SuspenseWrapper } from '@/components/SuspenseWrapper';
 import { NotFound } from '@/pages/NotFound';
 import { PWAInstallPrompt } from '@/components/PWAInstallPrompt';
 import { SkipLinks, ScreenReaderAnnouncer } from '@/components/accessibility';
+import performanceMonitor from '@/utils/performance-monitoring';
 import {
   HomePage,
   StreamPage,
@@ -28,6 +30,18 @@ import ChatInputDebug from '@/components/chat/ChatInputDebug';
 import StreamLayoutDemo from '@/components/stream/StreamLayoutDemo';
 
 function App() {
+  useEffect(() => {
+    // Start monitoring app performance
+    performanceMonitor.startMark('app-interactive');
+    
+    // Mark when app becomes interactive
+    const timer = setTimeout(() => {
+      performanceMonitor.endMark('app-interactive');
+    }, 100);
+    
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
     <ErrorBoundary>
       <BrowserRouter>

@@ -3,6 +3,7 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 import path from 'path';
+import { visualizer } from 'rollup-plugin-visualizer';
 
 export default defineConfig({
   resolve: {
@@ -111,8 +112,15 @@ export default defineConfig({
       },
       navigateFallbackDenylist: [/^\/api/],
       navigateFallback: 'index.html'
+    }),
+    // Bundle analyzer
+    process.env.ANALYZE && visualizer({
+      open: true,
+      gzipSize: true,
+      brotliSize: true,
+      filename: 'dist/stats.html'
     })
-  ],
+  ].filter(Boolean),
   
   // Build optimizations
   build: {

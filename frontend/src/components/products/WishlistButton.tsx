@@ -23,9 +23,9 @@ interface WishlistMutationContext {
 }
 
 // Mock API functions - replace with actual API calls
-const addToWishlistAPI = async (productId: string): Promise<void> => {
+const addToWishlistAPI = async (_productId: string): Promise<void> => {
   // Simulate API call
-  await new Promise((resolve, reject) => {
+  await new Promise<void>((resolve, reject) => {
     setTimeout(() => {
       // Simulate random failure for testing
       if (Math.random() > 0.9) {
@@ -37,9 +37,9 @@ const addToWishlistAPI = async (productId: string): Promise<void> => {
   });
 };
 
-const removeFromWishlistAPI = async (productId: string): Promise<void> => {
+const removeFromWishlistAPI = async (_productId: string): Promise<void> => {
   // Simulate API call
-  await new Promise((resolve, reject) => {
+  await new Promise<void>((resolve, reject) => {
     setTimeout(() => {
       // Simulate random failure for testing
       if (Math.random() > 0.9) {

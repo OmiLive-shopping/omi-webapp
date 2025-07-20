@@ -177,7 +177,7 @@ export const StreamLayout: React.FC<StreamLayoutProps> = ({
         </div>
 
         {/* Device indicator (development helper) */}
-        {process.env.NODE_ENV === 'development' && deviceType !== 'mobile' && (
+        {process.env.NODE_ENV === 'development' && (
           <div className="bg-black/50 backdrop-blur-sm rounded-lg px-3 py-1 text-white/70 text-xs flex items-center gap-1">
             {deviceType === 'mobile' && <Smartphone className="w-3 h-3" />}
             {deviceType === 'tablet' && <Tablet className="w-3 h-3" />}
