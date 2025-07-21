@@ -15,9 +15,11 @@ import {
 } from 'lucide-react';
 import clsx from 'clsx';
 import ViewerCount from './ViewerCount';
+import { useQuery } from '@tanstack/react-query';
+import { api } from '@/lib/api';
 
 interface ViewerPlayerProps {
-  streamKey: string;
+  streamId: string;
   viewerCount: number;
   isLive: boolean;
   streamTitle?: string;
@@ -27,7 +29,7 @@ interface ViewerPlayerProps {
 type ConnectionQuality = 'excellent' | 'good' | 'fair' | 'poor' | 'none';
 
 export const ViewerPlayer: React.FC<ViewerPlayerProps> = ({
-  streamKey,
+  streamId,
   viewerCount,
   isLive,
   streamTitle = 'Untitled Stream',
@@ -46,6 +48,16 @@ export const ViewerPlayer: React.FC<ViewerPlayerProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const controlsTimeoutRef = useRef<NodeJS.Timeout>();
+
+  // Fetch viewer URL from backend
+  const { data: viewerData, isLoading: loadingUrl } = useQuery({
+    queryKey: ['viewer-url', streamId],
+    queryFn: async () => {
+      const response = await api.get(`/streams/${streamId}/viewer-url`);
+      return response.data.data;
+    },
+    enabled: !!streamId && isLive,
+  });
 
   // Auto-hide controls after 3 seconds of inactivity
   useEffect(() => {
@@ -183,13 +195,20 @@ export const ViewerPlayer: React.FC<ViewerPlayerProps> = ({
     >
       {/* Video Player */}
       <div className="relative w-full h-full">
-        <iframe
-          ref={iframeRef}
-          src={`https://vdo.ninja/?view=${streamKey}&scene&autostart&controls=0`}
-          className="w-full h-full"
-          allow="autoplay; camera; microphone; fullscreen; picture-in-picture"
-          style={{ border: 'none' }}
-        />
+        {loadingUrl || !viewerData ? (
+          <div className="flex items-center justify-center h-full">
+            <Loader className="w-8 h-8 text-white animate-spin" />
+          </div>
+        ) : (
+          <iframe
+            ref={iframeRef}
+            src={viewerData.viewerUrl}
+            className="w-full h-full"
+            allow="autoplay; camera; microphone; fullscreen; picture-in-picture"
+            style={{ border: 'none' }}
+            onLoad={() => setIsLoading(false)}
+          />
+        )}
       </div>
 
       {/* Loading Overlay */}

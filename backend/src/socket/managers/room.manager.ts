@@ -6,6 +6,8 @@ interface RoomInfo {
   viewers: Map<string, ViewerInfo>;
   moderators: Set<string>;
   createdAt: Date;
+  streamStats?: any;
+  lastStatsDbUpdate?: number;
 }
 
 interface ViewerInfo {

@@ -55,6 +55,10 @@ router.patch(
   userController.updateProfile,
 );
 
+// Stream key management - require authentication
+router.get('/stream-key', auth, userController.getStreamKey);
+router.post('/stream-key/regenerate', auth, userController.regenerateStreamKey);
+
 // Public routes with optional auth for follow status
 router.get(
   '/:id',

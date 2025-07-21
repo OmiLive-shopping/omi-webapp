@@ -83,6 +83,10 @@ router.post(
 );
 router.post('/:id/end', requirePermission('streams.update'), streamController.endStreamById);
 
+// VDO.ninja configuration
+router.get('/:id/streaming-config', requirePermission('streams.update'), streamController.getStreamingConfig);
+router.get('/:id/viewer-url', streamController.getViewerUrl);
+
 // Stream viewer count (could be used by stream software)
 router.patch(
   '/:id/viewer-count',

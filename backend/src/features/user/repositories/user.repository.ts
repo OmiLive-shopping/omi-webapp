@@ -35,6 +35,7 @@ export class UserRepository {
         streamKey: true,
         createdAt: true,
         updatedAt: true,
+        role: { select: { name: true } },
       },
     });
   }
@@ -269,5 +270,24 @@ export class UserRepository {
       followersCount,
       followingCount,
     };
+  }
+
+  async regenerateStreamKey(userId: string) {
+    // First, we need to manually generate a new cuid since Prisma won't regenerate on update
+    const { customAlphabet } = await import('nanoid');
+    const alphabet = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+    const nanoid = customAlphabet(alphabet, 25);
+    const newStreamKey = nanoid();
+
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        streamKey: newStreamKey,
+      },
+      select: {
+        id: true,
+        streamKey: true,
+      },
+    });
   }
 }

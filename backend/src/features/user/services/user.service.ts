@@ -158,4 +158,42 @@ export class UserService {
     const following = await this.userRepository.getFollowing(userId, page, pageSize);
     return unifiedResponse(true, 'Following list retrieved successfully', following);
   }
+
+  async getStreamKey(userId: string) {
+    const user = await this.userRepository.findUserById(userId);
+    if (!user) {
+      return unifiedResponse(false, ERROR.USER_NOT_FOUND);
+    }
+
+    // Only return stream key if user has streamer role
+    if (user.role?.name !== 'streamer' && user.role?.name !== 'admin') {
+      return unifiedResponse(false, 'Only streamers can access stream keys');
+    }
+
+    return unifiedResponse(true, 'Stream key retrieved successfully', { 
+      streamKey: user.streamKey,
+      // Generate VDO.ninja room name from stream key
+      vdoRoomName: `omi-${user.streamKey}`
+    });
+  }
+
+  async regenerateStreamKey(userId: string) {
+    const user = await this.userRepository.findUserById(userId);
+    if (!user) {
+      return unifiedResponse(false, ERROR.USER_NOT_FOUND);
+    }
+
+    // Only allow streamers and admins to regenerate stream keys
+    if (user.role?.name !== 'streamer' && user.role?.name !== 'admin') {
+      return unifiedResponse(false, 'Only streamers can regenerate stream keys');
+    }
+
+    const updatedUser = await this.userRepository.regenerateStreamKey(userId);
+    
+    return unifiedResponse(true, 'Stream key regenerated successfully', { 
+      streamKey: updatedUser.streamKey,
+      // Generate VDO.ninja room name from stream key
+      vdoRoomName: `omi-${updatedUser.streamKey}`
+    });
+  }
 }

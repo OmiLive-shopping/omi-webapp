@@ -187,7 +187,7 @@ const LiveStreamsPage = () => {
               {/* Video Player - Takes 2/3 width on desktop */}
               <div className="lg:col-span-2">
                 <ViewerPlayer 
-                  streamKey={selectedStream}
+                  streamId={selectedStream}
                   viewerCount={streams.find(s => s.id === selectedStream)?.viewerCount || 0}
                   isLive={streams.find(s => s.id === selectedStream)?.isLive || false}
                   streamTitle={streams.find(s => s.id === selectedStream)?.title}

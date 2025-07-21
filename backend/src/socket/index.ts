@@ -33,6 +33,8 @@ export function initializeSocketServer(httpServer: HTTPServer): void {
     socket.on('stream:update', data => streamHandler.handleStreamUpdate(socket, data));
     socket.on('stream:feature-product', data => streamHandler.handleFeatureProduct(socket, data));
     socket.on('stream:get-analytics', data => streamHandler.handleGetAnalytics(socket, data));
+    socket.on('stream:stats:update', data => streamHandler.handleStreamStats(socket, data));
+    socket.on('stream:stats:get', data => streamHandler.handleGetStreamStats(socket, data));
 
     // Chat events
     socket.on('chat:send-message', data => chatHandler.handleSendMessage(socket, data));

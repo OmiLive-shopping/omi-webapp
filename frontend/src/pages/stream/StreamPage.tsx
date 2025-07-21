@@ -247,7 +247,7 @@ const StreamPage: React.FC = () => {
           <div className="lg:col-span-2 space-y-4">
             {/* Video Player */}
             <ViewerPlayer 
-              streamKey={streamData.id}
+              streamId={streamData.id}
               viewerCount={streamData.viewerCount}
               isLive={streamData.isLive}
               streamTitle={streamData.title}

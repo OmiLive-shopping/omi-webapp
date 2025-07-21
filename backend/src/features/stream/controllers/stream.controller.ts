@@ -169,4 +169,26 @@ export class StreamController {
     const result = await this.streamService.getStreamViewers(id);
     res.status(result.success ? 200 : 404).json(result);
   };
+
+  getStreamingConfig = async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const userId = (req as any).user.id;
+
+    const result = await this.streamService.getStreamingConfig(id, userId);
+    res.status(result.success ? 200 : result.message.includes('Unauthorized') ? 403 : 404).json(result);
+  };
+
+  getViewerUrl = async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const { audioOnly, lowLatency, maxQuality } = req.query;
+
+    const options = {
+      audioOnly: audioOnly === 'true',
+      lowLatency: lowLatency === 'true',
+      maxQuality: maxQuality as '360p' | '720p' | '1080p' | undefined,
+    };
+
+    const result = await this.streamService.getViewerUrl(id, options);
+    res.status(result.success ? 200 : 404).json(result);
+  };
 }

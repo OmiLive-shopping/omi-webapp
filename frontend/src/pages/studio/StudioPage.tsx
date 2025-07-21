@@ -378,7 +378,6 @@ const StudioPage: React.FC = () => {
             {/* Main Studio Component */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden">
               <StreamerStudio
-                streamKey={streamKey}
                 onStreamStart={handleStreamStart}
                 onStreamEnd={handleStreamEnd}
               />

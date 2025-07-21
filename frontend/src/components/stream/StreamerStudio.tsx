@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   Video,
   Radio,
@@ -8,13 +8,16 @@ import {
   Clock,
   Wifi,
   Package,
-  MessageSquare
+  MessageSquare,
+  AlertCircle
 } from 'lucide-react';
 import clsx from 'clsx';
 import StreamControls from './StreamControls';
+import { useQuery } from '@tanstack/react-query';
+import { api } from '@/lib/api';
+import { useAuthStore } from '@/stores/auth.store';
 
 interface StreamerStudioProps {
-  streamKey: string;
   onStreamStart: () => void;
   onStreamEnd: () => void;
 }
@@ -27,7 +30,6 @@ interface StreamSettings {
 }
 
 export const StreamerStudio: React.FC<StreamerStudioProps> = ({
-  streamKey,
   onStreamStart,
   onStreamEnd
 }) => {
@@ -38,7 +40,7 @@ export const StreamerStudio: React.FC<StreamerStudioProps> = ({
     quality: 'high',
     bitrate: 2500
   });
-  const [streamStats, setStreamStats] = useState({
+  const [streamStats] = useState({
     viewers: 0,
     duration: '00:00:00',
     fps: 30,
@@ -46,6 +48,18 @@ export const StreamerStudio: React.FC<StreamerStudioProps> = ({
   });
   const [activeTab, setActiveTab] = useState<'products' | 'chat' | 'settings'>('products');
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const { user } = useAuthStore();
+
+  // Fetch stream key from backend
+  const { data: streamKeyData, isLoading: loadingKey } = useQuery({
+    queryKey: ['stream-key'],
+    queryFn: async () => {
+      const response = await api.get('/users/stream-key');
+      return response.data.data;
+    },
+    enabled: !!user,
+  });
+
 
   const handleStreamStart = () => {
     setIsStreaming(true);
@@ -75,13 +89,25 @@ export const StreamerStudio: React.FC<StreamerStudioProps> = ({
               </div>
             </div>
             <div className="flex-1 relative bg-black">
-              <iframe
-                ref={iframeRef}
-                src={`https://vdo.ninja/?push=${streamKey}&meshcast&webcam&bitrate=${settings.bitrate}`}
-                className="w-full h-full"
-                allow="camera; microphone; autoplay"
-                style={{ border: 'none' }}
-              />
+              {loadingKey ? (
+                <div className="flex items-center justify-center h-full">
+                  <div className="text-white">Loading stream configuration...</div>
+                </div>
+              ) : streamKeyData ? (
+                <iframe
+                  ref={iframeRef}
+                  src={`https://vdo.ninja/?room=${streamKeyData.vdoRoomName}&push=${streamKeyData.streamKey}&meshcast&webcam&bitrate=${settings.bitrate}&director=1`}
+                  className="w-full h-full"
+                  allow="camera; microphone; autoplay"
+                  style={{ border: 'none' }}
+                />
+              ) : (
+                <div className="flex flex-col items-center justify-center h-full text-white">
+                  <AlertCircle className="w-12 h-12 mb-4" />
+                  <p>Unable to load stream configuration</p>
+                  <p className="text-sm text-gray-400 mt-2">Make sure you have streamer permissions</p>
+                </div>
+              )}
               {/* Stream Stats Overlay */}
               <div className="absolute top-4 left-4 bg-black/75 backdrop-blur-sm p-3 rounded-lg">
                 <div className="flex items-center gap-4 text-white text-sm">

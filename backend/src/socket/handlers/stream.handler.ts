@@ -22,6 +22,26 @@ const featureProductSchema = z.object({
   duration: z.number().min(5).max(300).optional(), // Duration in seconds
 });
 
+const streamStatsSchema = z.object({
+  streamId: z.string().uuid(),
+  stats: z.object({
+    bitrate: z.number().optional(),
+    fps: z.number().optional(),
+    resolution: z.object({
+      width: z.number(),
+      height: z.number(),
+    }).optional(),
+    audioLevel: z.number().optional(),
+    packetLoss: z.number().optional(),
+    latency: z.number().optional(),
+    bandwidth: z.object({
+      upload: z.number(),
+      download: z.number(),
+    }).optional(),
+  }),
+  timestamp: z.string().datetime(),
+});
+
 export class StreamHandler {
   private roomManager = RoomManager.getInstance();
   private socketServer = SocketServer.getInstance();
@@ -267,6 +287,124 @@ export class StreamHandler {
     } catch (error) {
       console.error('Error getting analytics:', error);
       socket.emit('error', { message: 'Failed to get analytics' });
+    }
+  };
+
+  // Handle VDO.ninja stream stats update
+  handleStreamStats = async (socket: SocketWithAuth, data: any) => {
+    try {
+      const validated = streamStatsSchema.parse(data);
+
+      // Check if user owns the stream
+      const stream = await this.prisma.stream.findUnique({
+        where: { id: validated.streamId },
+        select: { userId: true, isLive: true },
+      });
+
+      if (!stream || stream.userId !== socket.userId) {
+        socket.emit('error', { message: 'Unauthorized to update stream stats' });
+        return;
+      }
+
+      if (!stream.isLive) {
+        socket.emit('error', { message: 'Stream is not live' });
+        return;
+      }
+
+      // Store stats in room manager (in-memory for now)
+      const roomInfo = this.roomManager.getRoomInfo(validated.streamId);
+      if (roomInfo) {
+        roomInfo.streamStats = {
+          ...validated.stats,
+          lastUpdated: new Date(validated.timestamp),
+        };
+      }
+
+      // Broadcast stats to moderators and analytics viewers
+      socket.to(`stream:${validated.streamId}:moderators`).emit('stream:stats:update', {
+        streamId: validated.streamId,
+        stats: validated.stats,
+        timestamp: validated.timestamp,
+      });
+
+      // Log important stats changes
+      if (validated.stats.packetLoss && validated.stats.packetLoss > 5) {
+        console.warn(`High packet loss detected for stream ${validated.streamId}: ${validated.stats.packetLoss}%`);
+      }
+
+      // Acknowledge receipt
+      socket.emit('stream:stats:received', {
+        streamId: validated.streamId,
+        timestamp: new Date().toISOString(),
+      });
+
+      // Update stream quality metrics in database periodically (every 30 seconds)
+      const lastDbUpdate = roomInfo?.lastStatsDbUpdate || 0;
+      const now = Date.now();
+      if (now - lastDbUpdate > 30000) {
+        await this.updateStreamQualityMetrics(validated.streamId, validated.stats);
+        if (roomInfo) {
+          roomInfo.lastStatsDbUpdate = now;
+        }
+      }
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        socket.emit('error', { message: 'Invalid stats data', errors: error.errors });
+      } else {
+        console.error('Error handling stream stats:', error);
+        socket.emit('error', { message: 'Failed to process stream stats' });
+      }
+    }
+  };
+
+  // Helper method to update stream quality metrics in database
+  private async updateStreamQualityMetrics(streamId: string, stats: any) {
+    try {
+      // TODO: Implement StreamAnalytics model in Prisma schema
+      // For now, we'll just log the stats
+      console.log(`Stream quality metrics for ${streamId}:`, {
+        bitrate: stats.bitrate || 0,
+        fps: stats.fps || 0,
+        latency: stats.latency || 0,
+        packetLoss: stats.packetLoss || 0,
+        resolution: stats.resolution ? `${stats.resolution.width}x${stats.resolution.height}` : null,
+      });
+
+      // In the future, this will save to database:
+      // const analytics = await this.prisma.streamAnalytics.upsert({
+      //   where: { streamId },
+      //   create: { ... },
+      //   update: { ... },
+      // });
+
+      return { streamId, stats };
+    } catch (error) {
+      console.error('Error updating stream quality metrics:', error);
+    }
+  }
+
+  // Get real-time stream stats
+  handleGetStreamStats = async (socket: SocketWithAuth, data: { streamId: string }) => {
+    try {
+      const roomInfo = this.roomManager.getRoomInfo(data.streamId);
+      
+      if (!roomInfo || !roomInfo.streamStats) {
+        socket.emit('stream:stats:current', {
+          streamId: data.streamId,
+          stats: null,
+          message: 'No stats available',
+        });
+        return;
+      }
+
+      socket.emit('stream:stats:current', {
+        streamId: data.streamId,
+        stats: roomInfo.streamStats,
+        viewerCount: this.roomManager.getViewerCount(data.streamId),
+      });
+    } catch (error) {
+      console.error('Error getting stream stats:', error);
+      socket.emit('error', { message: 'Failed to get stream stats' });
     }
   };
 }

@@ -141,4 +141,34 @@ export class UserController {
       next(error);
     }
   };
+
+  getStreamKey = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const userId = req.userId;
+      if (!userId) {
+        res.status(401).json({ success: false, message: 'Unauthorized' });
+        return;
+      }
+
+      const result = await this.userService.getStreamKey(userId);
+      res.status(result.success ? 200 : 404).json(result);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  regenerateStreamKey = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const userId = req.userId;
+      if (!userId) {
+        res.status(401).json({ success: false, message: 'Unauthorized' });
+        return;
+      }
+
+      const result = await this.userService.regenerateStreamKey(userId);
+      res.status(result.success ? 200 : 400).json(result);
+    } catch (error) {
+      next(error);
+    }
+  };
 }

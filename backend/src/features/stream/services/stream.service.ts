@@ -14,6 +14,7 @@ import {
   UpdateStreamInput,
   UpdateViewerCountInput,
 } from '../types/stream.types';
+import { vdoNinjaService } from './vdo-ninja.service';
 
 export class StreamService {
   constructor(
@@ -283,5 +284,76 @@ export class StreamService {
 
     const viewers = await this.streamRepository.getStreamViewers(streamId);
     return unifiedResponse(true, 'Stream viewers retrieved successfully', viewers);
+  }
+
+  async getStreamingConfig(streamId: string, userId: string) {
+    const stream = await this.streamRepository.findStreamById(streamId);
+
+    if (!stream) {
+      return unifiedResponse(false, 'Stream not found');
+    }
+
+    // Only stream owner or admin can get streaming config
+    if (stream.userId !== userId) {
+      const user = await this.userRepository.findUserById(userId);
+      if (!user?.isAdmin) {
+        return unifiedResponse(false, 'Unauthorized: You can only get config for your own streams');
+      }
+    }
+
+    // Get the user's stream key
+    const user = await this.userRepository.findUserById(stream.userId);
+    if (!user || !user.streamKey) {
+      return unifiedResponse(false, 'Stream key not found for user');
+    }
+
+    // Generate VDO.ninja configuration
+    const streamUrls = vdoNinjaService.generateStreamUrls(user.streamKey);
+    const obsConfig = vdoNinjaService.generateObsConfig(user.streamKey);
+
+    return unifiedResponse(true, 'Streaming configuration retrieved successfully', {
+      streamId,
+      streamKey: user.streamKey,
+      vdoNinja: {
+        ...streamUrls,
+        obsConfig,
+      },
+      instructions: [
+        'Use the streamerUrl in OBS Browser Source or open in browser',
+        'Share the viewerUrl with your viewers',
+        'The stream will automatically connect when you go live',
+      ],
+    });
+  }
+
+  async getViewerUrl(
+    streamId: string, 
+    options?: {
+      audioOnly?: boolean;
+      lowLatency?: boolean;
+      maxQuality?: '360p' | '720p' | '1080p';
+    }
+  ) {
+    const stream = await this.streamRepository.findStreamById(streamId);
+
+    if (!stream) {
+      return unifiedResponse(false, 'Stream not found');
+    }
+
+    // Get the stream owner's stream key
+    const user = await this.userRepository.findUserById(stream.userId);
+    if (!user || !user.streamKey) {
+      return unifiedResponse(false, 'Stream configuration not found');
+    }
+
+    const viewerUrl = vdoNinjaService.generateViewerUrl(user.streamKey, options);
+
+    return unifiedResponse(true, 'Viewer URL generated successfully', {
+      streamId,
+      streamTitle: stream.title,
+      viewerUrl,
+      isLive: stream.isLive,
+      roomName: `omi-${user.streamKey}`,
+    });
   }
 }
