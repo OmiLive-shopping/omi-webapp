@@ -1,68 +1,66 @@
-import { Router, Request, Response } from 'express';
-import { auth } from '../../../middleware/auth.middleware';
-import { apiKeyStore } from '../../../middleware/api-key.middleware';
-import { unifiedResponse } from 'uni-response';
+import { Request, Response, Router } from 'express';
 import { body } from 'express-validator';
+import { unifiedResponse } from 'uni-response';
+
+import { apiKeyStore } from '../../../middleware/api-key.middleware';
+import { authMiddleware } from '../../../middleware/auth-enhanced.middleware';
 import { handleValidationErrors } from '../../../middleware/input-validation.middleware';
+import { requireAdmin } from '../../../middleware/role.middleware';
 
 const router = Router();
 
-// All API key management routes require authentication
-router.use(auth);
-
-// Additional check for admin role
-const requireAdmin = (req: Request, res: Response, next: any) => {
-  if (req.user?.role !== 'admin') {
-    res.status(403).json(unifiedResponse(false, 'Admin access required'));
-    return;
-  }
-  next();
-};
+// All API key management routes require authentication and admin role
+router.use(authMiddleware, requireAdmin);
 
 // List all API keys
-router.get('/', requireAdmin, (req: Request, res: Response) => {
+router.get('/', (req: Request, res: Response) => {
   const keys = apiKeyStore.listKeys();
   res.json(unifiedResponse(true, 'API keys retrieved', { keys }));
 });
 
 // Generate new API key
-router.post('/',
-  requireAdmin,
+router.post(
+  '/',
   [
     body('name').trim().isLength({ min: 3, max: 50 }).withMessage('Name must be 3-50 characters'),
     body('permissions').isArray().withMessage('Permissions must be an array'),
     body('permissions.*').isIn(['read', 'write', 'delete']).withMessage('Invalid permission'),
-    body('rateLimit.max').optional().isInt({ min: 1 }).withMessage('Rate limit max must be positive'),
-    body('rateLimit.windowMs').optional().isInt({ min: 1000 }).withMessage('Window must be at least 1 second'),
+    body('rateLimit.max')
+      .optional()
+      .isInt({ min: 1 })
+      .withMessage('Rate limit max must be positive'),
+    body('rateLimit.windowMs')
+      .optional()
+      .isInt({ min: 1000 })
+      .withMessage('Window must be at least 1 second'),
   ],
   handleValidationErrors,
   (req: Request, res: Response) => {
     const { name, permissions, rateLimit } = req.body;
-    
+
     const { id, key } = apiKeyStore.generateNewKey(name, permissions);
-    
-    res.json(unifiedResponse(true, 'API key created', {
-      id,
-      key,
-      message: 'Save this key securely. It will not be shown again.',
-    }));
-  }
+
+    res.json(
+      unifiedResponse(true, 'API key created', {
+        id,
+        key,
+        message: 'Save this key securely. It will not be shown again.',
+      }),
+    );
+  },
 );
 
 // Revoke API key
-router.delete('/:id',
-  requireAdmin,
-  (req: Request, res: Response) => {
-    const { id } = req.params;
-    
-    const revoked = apiKeyStore.revokeKey(id);
-    
-    if (revoked) {
-      res.json(unifiedResponse(true, 'API key revoked'));
-    } else {
-      res.status(404).json(unifiedResponse(false, 'API key not found'));
-    }
+router.delete('/:id', (req: Request, res: Response) => {
+  const { id } = req.params;
+
+  const revoked = apiKeyStore.revokeKey(id);
+
+  if (revoked) {
+    res.json(unifiedResponse(true, 'API key revoked'));
+  } else {
+    res.status(404).json(unifiedResponse(false, 'API key not found'));
   }
-);
+});
 
 export default router;

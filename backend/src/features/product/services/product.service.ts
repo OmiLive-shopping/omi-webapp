@@ -12,11 +12,7 @@ import {
 export class ProductService {
   constructor(private readonly productRepository: ProductRepository) {}
 
-  async createProduct(input: CreateProductInput, userId: string, isAdmin: boolean) {
-    if (!isAdmin) {
-      return unifiedResponse(false, 'Unauthorized: Admin access required');
-    }
-
+  async createProduct(input: CreateProductInput, userId: string) {
     const product = await this.productRepository.createProduct(input);
     return unifiedResponse(true, 'Product created successfully', product);
   }
@@ -36,11 +32,7 @@ export class ProductService {
     return unifiedResponse(true, 'Product retrieved successfully', product);
   }
 
-  async updateProduct(productId: string, input: UpdateProductInput, isAdmin: boolean) {
-    if (!isAdmin) {
-      return unifiedResponse(false, 'Unauthorized: Admin access required');
-    }
-
+  async updateProduct(productId: string, input: UpdateProductInput) {
     const existingProduct = await this.productRepository.findProductById(productId);
     if (!existingProduct) {
       return unifiedResponse(false, 'Product not found');
@@ -50,11 +42,7 @@ export class ProductService {
     return unifiedResponse(true, 'Product updated successfully', updatedProduct);
   }
 
-  async deleteProduct(productId: string, isAdmin: boolean) {
-    if (!isAdmin) {
-      return unifiedResponse(false, 'Unauthorized: Admin access required');
-    }
-
+  async deleteProduct(productId: string) {
     const existingProduct = await this.productRepository.findProductById(productId);
     if (!existingProduct) {
       return unifiedResponse(false, 'Product not found');

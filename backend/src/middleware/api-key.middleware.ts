@@ -1,7 +1,8 @@
-import { Request, Response, NextFunction } from 'express';
-import { unifiedResponse } from 'uni-response';
-import { env } from '../config/env-config';
 import crypto from 'crypto';
+import { NextFunction, Request, Response } from 'express';
+import { unifiedResponse } from 'uni-response';
+
+import { env } from '../config/env-config';
 
 // In production, these would be stored in a database
 // For now, we'll use environment variables or a simple in-memory store
@@ -53,13 +54,13 @@ class ApiKeyStore {
   validateKey(rawKey: string): ApiKey | null {
     const hashedKey = this.hashKey(rawKey);
     const apiKey = this.keys.get(hashedKey);
-    
+
     if (apiKey && apiKey.active) {
       // Update last used timestamp
       apiKey.lastUsedAt = new Date();
       return apiKey;
     }
-    
+
     return null;
   }
 
@@ -187,7 +188,7 @@ export function apiKeyRateLimit() {
           limit: limit.max,
           window: limit.windowMs,
           resetTime: new Date(usage.resetTime).toISOString(),
-        })
+        }),
       );
       return;
     }

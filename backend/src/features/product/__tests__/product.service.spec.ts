@@ -28,20 +28,14 @@ describe('ProductService', () => {
     const mockProduct = { id: '123', name: 'Test Product' };
     mockProductRepository.createProduct.mockResolvedValue(mockProduct);
 
-    const result = await productService.createProduct({ name: 'Test Product' }, 'userId', true);
+    const result = await productService.createProduct({ name: 'Test Product' }, 'userId');
 
     expect(result.success).toBe(true);
     expect(result.message).toBe('Product created successfully');
     expect(result.data).toEqual(mockProduct);
   });
 
-  it('should not create a product when user is not admin', async () => {
-    const result = await productService.createProduct({ name: 'Test Product' }, 'userId', false);
-
-    expect(result.success).toBe(false);
-    expect(result.message).toBe('Unauthorized: Admin access required');
-    expect(mockProductRepository.createProduct).not.toHaveBeenCalled();
-  });
+  // Note: Admin check is now handled at the middleware layer, not in the service
 
   it('should get products with filters', async () => {
     const mockProducts = [
@@ -111,7 +105,7 @@ describe('ProductService', () => {
     mockProductRepository.findProductById.mockResolvedValue(existingProduct);
     mockProductRepository.updateProduct.mockResolvedValue(updatedProduct);
 
-    const result = await productService.updateProduct('123', { name: 'New Name' }, true);
+    const result = await productService.updateProduct('123', { name: 'New Name' });
 
     expect(result.success).toBe(true);
     expect(result.message).toBe('Product updated successfully');

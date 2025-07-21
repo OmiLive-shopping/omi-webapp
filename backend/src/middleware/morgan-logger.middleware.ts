@@ -1,10 +1,11 @@
-import morgan, { StreamOptions } from 'morgan';
+import crypto from 'crypto';
 import { Request, Response } from 'express';
-import { env } from '../config/env-config';
 import fs from 'fs';
+import morgan, { StreamOptions } from 'morgan';
 import path from 'path';
 import { createStream } from 'rotating-file-stream';
-import crypto from 'crypto';
+
+import { env } from '../config/env-config';
 
 // Extend Request to include custom properties
 interface CustomRequest extends Request {
@@ -59,7 +60,7 @@ const stream: StreamOptions = {
 const formats = {
   // Development format - colorized and human-readable
   dev: ':method :url :status :response-time-ms ms - :res[content-length]',
-  
+
   // Production format - detailed JSON for log aggregation
   production: JSON.stringify({
     timestamp: ':date[iso]',
@@ -75,10 +76,11 @@ const formats = {
     userId: ':user-id',
     apiKey: ':api-key',
   }),
-  
+
   // Combined format - Apache combined log format
-  combined: ':remote-addr - :user-id [:date[clf]] ":method :url HTTP/:http-version" :status :res[content-length] ":referrer" ":user-agent"',
-  
+  combined:
+    ':remote-addr - :user-id [:date[clf]] ":method :url HTTP/:http-version" :status :res[content-length] ":referrer" ":user-agent"',
+
   // API format - for API-specific logging
   api: '[:date[iso]] :request-id :method :url :status :response-time-ms ms :user-id :api-key',
 };
@@ -103,24 +105,22 @@ export const errorLogger = morgan(formats.combined, {
 export const morganLogger = {
   // Development logger
   dev: morgan('dev', { skip }),
-  
+
   // Production logger
   production: morgan(formats.production, { stream, skip }),
-  
+
   // API logger with custom format
   api: morgan(formats.api, { stream, skip }),
-  
+
   // Combined format logger
   combined: morgan(formats.combined, { stream, skip }),
-  
+
   // Error logger
   error: errorLogger,
 };
 
 // Main logger middleware that switches based on environment
-export const logger = env.NODE_ENV === 'production' 
-  ? morganLogger.production 
-  : morganLogger.dev;
+export const logger = env.NODE_ENV === 'production' ? morganLogger.production : morganLogger.dev;
 
 // Request ID middleware - should be applied before morgan
 export const requestIdMiddleware = (req: CustomRequest, res: Response, next: any) => {
@@ -137,7 +137,7 @@ export const logEvent = (event: string, data: any) => {
     event,
     data,
   };
-  
+
   if (env.NODE_ENV === 'production') {
     accessLogStream.write(JSON.stringify(logEntry) + '\n');
   } else {

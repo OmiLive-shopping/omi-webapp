@@ -1,5 +1,5 @@
-import { SocketWithAuth } from '../../config/socket/socket.config';
 import { PrismaService } from '../../config/prisma.config';
+import { SocketWithAuth } from '../../config/socket/socket.config';
 
 interface RoomInfo {
   streamId: string;
@@ -54,7 +54,7 @@ export class RoomManager {
     }
 
     const roomInfo = this.rooms.get(streamId)!;
-    
+
     // Add viewer to room
     roomInfo.viewers.set(socket.id, {
       userId: socket.userId,
@@ -138,7 +138,7 @@ export class RoomManager {
   getUserRooms(userId: string): string[] {
     const rooms: string[] = [];
     this.rooms.forEach((room, streamId) => {
-      room.viewers.forEach((viewer) => {
+      room.viewers.forEach(viewer => {
         if (viewer.userId === userId) {
           rooms.push(streamId);
         }
@@ -192,7 +192,7 @@ export class RoomManager {
       if (room && stream) {
         // Stream owner is always a moderator
         room.moderators.add(stream.userId);
-        
+
         // TODO: Load additional moderators from a StreamModerator table
       }
     } catch (error) {
@@ -270,5 +270,11 @@ export class RoomManager {
   // Get all active streams
   getActiveStreams(): string[] {
     return Array.from(this.rooms.keys());
+  }
+
+  // For testing purposes only
+  clearAll(): void {
+    this.rooms.clear();
+    this.userSockets.clear();
   }
 }

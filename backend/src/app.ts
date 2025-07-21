@@ -1,19 +1,19 @@
 import express, { Application, Request, Response } from 'express';
 import helmet from 'helmet';
 
-import { env } from './config/env-config';
 import { corsMiddleware } from './config/cors.config';
+import { env } from './config/env-config';
 import { RedisClient } from './config/redis.config';
+import apiKeyRoutes from './features/api-key/routes/api-key.routes';
 import productRoutes from './features/product/routes/product.routes';
 import streamRoutes from './features/stream/routes/stream.routes';
 import userRoutes from './features/user/routes/user.routes';
-import apiKeyRoutes from './features/api-key/routes/api-key.routes';
 import { apiErrorHandler, unmatchedRoutes } from './middleware/api-error.middleware';
-import { loggerMiddleware, pinoLogger } from './middleware/pino-logger';
-import { hostWhitelist } from './middleware/security.middleware';
-import { apiRateLimiter } from './middleware/rate-limit.middleware';
-import { requestIdMiddleware, logger } from './middleware/morgan-logger.middleware';
 import { validateApiKey } from './middleware/api-key.middleware';
+import { logger, requestIdMiddleware } from './middleware/morgan-logger.middleware';
+import { loggerMiddleware, pinoLogger } from './middleware/pino-logger';
+import { apiRateLimiter } from './middleware/rate-limit.middleware';
+import { hostWhitelist } from './middleware/security.middleware';
 
 const app: Application = express();
 
@@ -32,22 +32,24 @@ const app: Application = express();
 app.use(requestIdMiddleware);
 
 // Security middleware
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      scriptSrc: ["'self'"],
-      imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'"],
-      fontSrc: ["'self'"],
-      objectSrc: ["'none'"],
-      mediaSrc: ["'self'"],
-      frameSrc: ["'none'"],
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        scriptSrc: ["'self'"],
+        imgSrc: ["'self'", 'data:', 'https:'],
+        connectSrc: ["'self'"],
+        fontSrc: ["'self'"],
+        objectSrc: ["'none'"],
+        mediaSrc: ["'self'"],
+        frameSrc: ["'none'"],
+      },
     },
-  },
-  crossOriginEmbedderPolicy: env.NODE_ENV === 'production',
-}));
+    crossOriginEmbedderPolicy: env.NODE_ENV === 'production',
+  }),
+);
 
 // CORS - before other middleware
 app.use(corsMiddleware);

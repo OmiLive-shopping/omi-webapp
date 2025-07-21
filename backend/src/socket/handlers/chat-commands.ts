@@ -1,7 +1,7 @@
-import { SocketWithAuth } from '../../config/socket/socket.config';
-import { RoomManager } from '../managers/room.manager';
-import { SlowModeManager } from '../managers/rate-limiter';
 import { PrismaService } from '../../config/prisma.config';
+import { SocketWithAuth } from '../../config/socket/socket.config';
+import { SlowModeManager } from '../managers/rate-limiter';
+import { RoomManager } from '../managers/room.manager';
 
 interface CommandContext {
   socket: SocketWithAuth;
@@ -37,7 +37,11 @@ export class ChatCommandHandler {
     this.commands.set('viewers', this.handleViewers.bind(this));
   }
 
-  async processCommand(socket: SocketWithAuth, streamId: string, message: string): Promise<boolean> {
+  async processCommand(
+    socket: SocketWithAuth,
+    streamId: string,
+    message: string,
+  ): Promise<boolean> {
     if (!message.startsWith('/')) return false;
 
     const parts = message.slice(1).split(' ');
@@ -61,14 +65,16 @@ export class ChatCommandHandler {
   }
 
   private async handleTimeout(ctx: CommandContext) {
-    if (!this.isModeratorOrOwner(ctx)) {
+    if (!(await this.isModeratorOrOwner(ctx))) {
       ctx.socket.emit('chat:command:error', { message: 'Moderator permissions required' });
       return;
     }
 
     const [username, duration, ...reasonParts] = ctx.args;
     if (!username || !duration) {
-      ctx.socket.emit('chat:command:usage', { message: 'Usage: /timeout <username> <seconds> [reason]' });
+      ctx.socket.emit('chat:command:usage', {
+        message: 'Usage: /timeout <username> <seconds> [reason]',
+      });
       return;
     }
 
@@ -90,7 +96,7 @@ export class ChatCommandHandler {
 
     // Create moderation record
     const expiresAt = new Date(Date.now() + durationSeconds * 1000);
-    
+
     await this.prisma.chatModeration.create({
       data: {
         streamId: ctx.streamId,
@@ -122,11 +128,13 @@ export class ChatCommandHandler {
       expiresAt,
     });
 
-    ctx.socket.emit('chat:command:success', { message: `${username} has been timed out for ${durationSeconds} seconds` });
+    ctx.socket.emit('chat:command:success', {
+      message: `${username} has been timed out for ${durationSeconds} seconds`,
+    });
   }
 
   private async handleBan(ctx: CommandContext) {
-    if (!this.isModeratorOrOwner(ctx)) {
+    if (!(await this.isModeratorOrOwner(ctx))) {
       ctx.socket.emit('chat:command:error', { message: 'Moderator permissions required' });
       return;
     }
@@ -179,7 +187,7 @@ export class ChatCommandHandler {
   }
 
   private async handleUnban(ctx: CommandContext) {
-    if (!this.isModeratorOrOwner(ctx)) {
+    if (!(await this.isModeratorOrOwner(ctx))) {
       ctx.socket.emit('chat:command:error', { message: 'Moderator permissions required' });
       return;
     }
@@ -223,7 +231,7 @@ export class ChatCommandHandler {
   }
 
   private async handleSlowMode(ctx: CommandContext) {
-    if (!this.isModeratorOrOwner(ctx)) {
+    if (!(await this.isModeratorOrOwner(ctx))) {
       ctx.socket.emit('chat:command:error', { message: 'Moderator permissions required' });
       return;
     }
@@ -234,7 +242,7 @@ export class ChatCommandHandler {
     if (delay === 0) {
       // Disable slow mode
       this.slowModeManager.disableSlowMode(ctx.streamId);
-      
+
       await this.prisma.stream.update({
         where: { id: ctx.streamId },
         data: { slowModeDelay: 0 },
@@ -262,7 +270,7 @@ export class ChatCommandHandler {
   }
 
   private async handleClear(ctx: CommandContext) {
-    if (!this.isModeratorOrOwner(ctx)) {
+    if (!(await this.isModeratorOrOwner(ctx))) {
       ctx.socket.emit('chat:command:error', { message: 'Moderator permissions required' });
       return;
     }
@@ -285,7 +293,7 @@ export class ChatCommandHandler {
   }
 
   private async handlePin(ctx: CommandContext) {
-    if (!this.isModeratorOrOwner(ctx)) {
+    if (!(await this.isModeratorOrOwner(ctx))) {
       ctx.socket.emit('chat:command:error', { message: 'Moderator permissions required' });
       return;
     }
@@ -347,7 +355,7 @@ export class ChatCommandHandler {
   }
 
   private async handleUnpin(ctx: CommandContext) {
-    if (!this.isModeratorOrOwner(ctx)) {
+    if (!(await this.isModeratorOrOwner(ctx))) {
       ctx.socket.emit('chat:command:error', { message: 'Moderator permissions required' });
       return;
     }
@@ -474,7 +482,7 @@ export class ChatCommandHandler {
 
   private async handleHelp(ctx: CommandContext) {
     const isModerator = await this.isModeratorOrOwner(ctx);
-    
+
     const commands = [
       '**Available Commands:**',
       '/help - Show this help message',
@@ -494,7 +502,7 @@ export class ChatCommandHandler {
         '/pin <messageId> - Pin a message',
         '/unpin - Unpin the current pinned message',
         '/mod <user> - Make user a moderator',
-        '/unmod <user> - Remove moderator status'
+        '/unmod <user> - Remove moderator status',
       );
     }
 
@@ -531,7 +539,7 @@ export class ChatCommandHandler {
 
   private async handleViewers(ctx: CommandContext) {
     const viewerCount = this.roomManager.getViewerCount(ctx.streamId);
-    
+
     ctx.socket.emit('chat:system:message', {
       content: `Current viewers: ${viewerCount}`,
       type: 'info',

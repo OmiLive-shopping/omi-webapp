@@ -74,17 +74,23 @@ export class UserService {
     return unifiedResponse(true, SUCCESS.USER_FOUND, user);
   }
 
-  async updateProfile(userId: string, updateData: {
-    firstName?: string;
-    lastName?: string;
-    bio?: string;
-    avatarUrl?: string;
-    username?: string;
-    email?: string;
-  }) {
+  async updateProfile(
+    userId: string,
+    updateData: {
+      firstName?: string;
+      lastName?: string;
+      bio?: string;
+      avatarUrl?: string;
+      username?: string;
+      email?: string;
+    },
+  ) {
     // Check if username is being updated and is available
     if (updateData.username) {
-      const isAvailable = await this.userRepository.checkUsernameAvailable(updateData.username, userId);
+      const isAvailable = await this.userRepository.checkUsernameAvailable(
+        updateData.username,
+        userId,
+      );
       if (!isAvailable) {
         return unifiedResponse(false, 'Username is already taken');
       }

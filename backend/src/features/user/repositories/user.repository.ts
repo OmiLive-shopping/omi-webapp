@@ -109,12 +109,15 @@ export class UserRepository {
     };
   }
 
-  async updateProfile(userId: string, data: {
-    firstName?: string;
-    lastName?: string;
-    bio?: string;
-    avatarUrl?: string;
-  }) {
+  async updateProfile(
+    userId: string,
+    data: {
+      firstName?: string;
+      lastName?: string;
+      bio?: string;
+      avatarUrl?: string;
+    },
+  ) {
     return this.prisma.user.update({
       where: { id: userId },
       data,
@@ -188,7 +191,7 @@ export class UserRepository {
 
   async getFollowers(userId: string, page = 1, pageSize = 20) {
     const skip = (page - 1) * pageSize;
-    
+
     const [followers, total] = await Promise.all([
       this.prisma.follow.findMany({
         where: { followingId: userId },
@@ -223,7 +226,7 @@ export class UserRepository {
 
   async getFollowing(userId: string, page = 1, pageSize = 20) {
     const skip = (page - 1) * pageSize;
-    
+
     const [following, total] = await Promise.all([
       this.prisma.follow.findMany({
         where: { followerId: userId },

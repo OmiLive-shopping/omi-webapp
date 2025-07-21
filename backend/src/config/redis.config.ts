@@ -1,4 +1,5 @@
 import { createClient, RedisClientType } from 'redis';
+
 import { env } from './env-config';
 
 export class RedisClient {
@@ -11,7 +12,7 @@ export class RedisClient {
       url: env.REDIS_URL || 'redis://localhost:6379',
       socket: {
         connectTimeout: 10000,
-        reconnectStrategy: (retries) => {
+        reconnectStrategy: retries => {
           if (retries > 10) {
             console.error('Redis: Max reconnection attempts reached');
             return false;
@@ -21,7 +22,7 @@ export class RedisClient {
       },
     });
 
-    this.client.on('error', (err) => {
+    this.client.on('error', err => {
       console.error('Redis Client Error:', err);
       this.isConnected = false;
     });
@@ -83,7 +84,7 @@ export class RedisClient {
     const multi = this.client.multi();
     multi.incr(key);
     multi.expire(key, Math.ceil(windowMs / 1000));
-    
+
     const results = await multi.exec();
     return results[0] as number;
   }

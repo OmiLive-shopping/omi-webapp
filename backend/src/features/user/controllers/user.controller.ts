@@ -88,12 +88,12 @@ export class UserController {
     try {
       const userId = req.userId;
       const { id } = req.params;
-      
+
       if (!userId) {
         res.status(401).json({ success: false, message: 'Unauthorized' });
         return;
       }
-      
+
       const result = await this.userService.followUser(userId, id);
       res.status(result.success ? 200 : 400).json(result);
     } catch (error) {
@@ -105,12 +105,12 @@ export class UserController {
     try {
       const userId = req.userId;
       const { id } = req.params;
-      
+
       if (!userId) {
         res.status(401).json({ success: false, message: 'Unauthorized' });
         return;
       }
-      
+
       const result = await this.userService.unfollowUser(userId, id);
       res.status(result.success ? 200 : 400).json(result);
     } catch (error) {
@@ -122,12 +122,8 @@ export class UserController {
     try {
       const { id } = req.params;
       const { page = 1, pageSize = 20 } = req.query;
-      
-      const result = await this.userService.getFollowers(
-        id, 
-        Number(page), 
-        Number(pageSize)
-      );
+
+      const result = await this.userService.getFollowers(id, Number(page), Number(pageSize));
       res.status(result.success ? 200 : 400).json(result);
     } catch (error) {
       next(error);
@@ -138,12 +134,8 @@ export class UserController {
     try {
       const { id } = req.params;
       const { page = 1, pageSize = 20 } = req.query;
-      
-      const result = await this.userService.getFollowing(
-        id, 
-        Number(page), 
-        Number(pageSize)
-      );
+
+      const result = await this.userService.getFollowing(id, Number(page), Number(pageSize));
       res.status(result.success ? 200 : 400).json(result);
     } catch (error) {
       next(error);

@@ -1,6 +1,7 @@
+import { instrument } from '@socket.io/admin-ui';
 import { Server as HTTPServer } from 'http';
 import { Server as SocketIOServer, Socket } from 'socket.io';
-import { instrument } from '@socket.io/admin-ui';
+
 import { env } from '../env-config';
 
 export interface SocketWithAuth extends Socket {

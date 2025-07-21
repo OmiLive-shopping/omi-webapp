@@ -1,9 +1,10 @@
-import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { ChatHandler } from '../chat.handler';
-import { SocketWithAuth } from '../../../config/socket/socket.config';
-import { RoomManager } from '../../managers/room.manager';
-import { ChatRateLimiter, SlowModeManager } from '../../managers/rate-limiter';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
 import { PrismaService } from '../../../config/prisma.config';
+import { SocketWithAuth } from '../../../config/socket/socket.config';
+import { ChatRateLimiter, SlowModeManager } from '../../managers/rate-limiter';
+import { RoomManager } from '../../managers/room.manager';
+import { ChatHandler } from '../chat.handler';
 
 // Mock all dependencies
 vi.mock('../../managers/room.manager');
@@ -12,11 +13,12 @@ vi.mock('../../../config/prisma.config');
 vi.mock('../chat-commands');
 
 // Helper to generate valid UUID v4
-const uuid = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-  const r = Math.random() * 16 | 0;
-  const v = c === 'x' ? r : (r & 0x3 | 0x8);
-  return v.toString(16);
-});
+const uuid = () =>
+  'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
 
 describe('ChatHandler', () => {
   let chatHandler: ChatHandler;
@@ -26,7 +28,7 @@ describe('ChatHandler', () => {
   let mockRateLimiter: any;
   let mockSlowModeManager: any;
   let mockCommandHandler: any;
-  
+
   // Generate consistent UUIDs for testing
   const streamId = '123e4567-e89b-12d3-a456-426614174000';
   const userId = '223e4567-e89b-12d3-a456-426614174000';
@@ -156,11 +158,14 @@ describe('ChatHandler', () => {
       });
 
       expect(mockSocket.to).toHaveBeenCalledWith(`stream:${streamId}`);
-      expect(mockSocket.emit).toHaveBeenCalledWith('chat:message:sent', expect.objectContaining({
-        id: messageId,
-        content: 'Hello world!',
-        username: 'testuser',
-      }));
+      expect(mockSocket.emit).toHaveBeenCalledWith(
+        'chat:message:sent',
+        expect.objectContaining({
+          id: messageId,
+          content: 'Hello world!',
+          username: 'testuser',
+        }),
+      );
     });
 
     it('should process commands', async () => {
@@ -426,9 +431,7 @@ describe('ChatHandler', () => {
     it('should add a reaction', async () => {
       mockPrisma.comment.findUnique.mockResolvedValue({ streamId: streamId });
       mockPrisma.messageReaction.findUnique.mockResolvedValue(null);
-      mockPrisma.messageReaction.groupBy.mockResolvedValue([
-        { emoji: '👍', _count: 5 },
-      ]);
+      mockPrisma.messageReaction.groupBy.mockResolvedValue([{ emoji: '👍', _count: 5 }]);
 
       await chatHandler.handleReactToMessage(mockSocket, {
         messageId: messageId,

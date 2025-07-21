@@ -1,5 +1,5 @@
-import { body, param, query, validationResult, ValidationChain } from 'express-validator';
-import { Request, Response, NextFunction } from 'express';
+import { NextFunction, Request, Response } from 'express';
+import { body, param, query, ValidationChain, validationResult } from 'express-validator';
 import { unifiedResponse } from 'uni-response';
 
 /**
@@ -10,12 +10,12 @@ export const handleValidationErrors = (req: Request, res: Response, next: NextFu
   if (!errors.isEmpty()) {
     res.status(400).json(
       unifiedResponse(false, 'Validation failed', {
-        errors: errors.array().map((err) => ({
+        errors: errors.array().map(err => ({
           field: err.type === 'field' ? err.path : undefined,
           message: err.msg,
           value: err.type === 'field' ? err.value : undefined,
         })),
-      })
+      }),
     );
     return;
   }
@@ -26,21 +26,20 @@ export const handleValidationErrors = (req: Request, res: Response, next: NextFu
 export const commonValidations = {
   // UUID validation
   uuid: (field: string) => param(field).isUUID().withMessage(`${field} must be a valid UUID`),
-  
+
   // Pagination
   pagination: [
     query('page').optional().isInt({ min: 1 }).withMessage('Page must be a positive integer'),
-    query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1 and 100'),
+    query('limit')
+      .optional()
+      .isInt({ min: 1, max: 100 })
+      .withMessage('Limit must be between 1 and 100'),
     query('sort').optional().isIn(['asc', 'desc']).withMessage('Sort must be either asc or desc'),
   ],
 
   // Email
-  email: (field: string = 'email') => 
-    body(field)
-      .trim()
-      .isEmail()
-      .normalizeEmail()
-      .withMessage('Invalid email address'),
+  email: (field: string = 'email') =>
+    body(field).trim().isEmail().normalizeEmail().withMessage('Invalid email address'),
 
   // Password
   password: (field: string = 'password') =>
@@ -68,24 +67,15 @@ export const commonValidations = {
 
   // Boolean
   boolean: (field: string) =>
-    body(field)
-      .optional()
-      .isBoolean()
-      .withMessage(`${field} must be a boolean`),
+    body(field).optional().isBoolean().withMessage(`${field} must be a boolean`),
 
   // Date
   date: (field: string) =>
-    body(field)
-      .optional()
-      .isISO8601()
-      .withMessage(`${field} must be a valid ISO 8601 date`),
+    body(field).optional().isISO8601().withMessage(`${field} must be a valid ISO 8601 date`),
 
   // URL
   url: (field: string) =>
-    body(field)
-      .optional()
-      .isURL()
-      .withMessage(`${field} must be a valid URL`),
+    body(field).optional().isURL().withMessage(`${field} must be a valid URL`),
 
   // Array
   array: (field: string, minLength: number = 0, maxLength: number = 100) =>
@@ -95,8 +85,7 @@ export const commonValidations = {
       .withMessage(`${field} must be an array with ${minLength}-${maxLength} items`),
 
   // Sanitization helpers
-  sanitizeHtml: (field: string) =>
-    body(field).trim().escape(),
+  sanitizeHtml: (field: string) => body(field).trim().escape(),
 };
 
 // Specific validation rules for different features
@@ -143,9 +132,7 @@ export const streamValidations = {
     body('tags').optional().isArray({ max: 10 }),
   ],
 
-  goLive: [
-    body('streamUrl').optional().isURL(),
-  ],
+  goLive: [body('streamUrl').optional().isURL()],
 };
 
 // Product validations
@@ -182,7 +169,10 @@ export const productValidations = {
 // Comment validations
 export const commentValidations = {
   create: [
-    body('content').trim().isLength({ min: 1, max: 500 }).withMessage('Comment must be 1-500 characters'),
+    body('content')
+      .trim()
+      .isLength({ min: 1, max: 500 })
+      .withMessage('Comment must be 1-500 characters'),
     body('streamId').isUUID(),
     body('replyToId').optional().isUUID(),
   ],
@@ -191,14 +181,22 @@ export const commentValidations = {
 // Search validations
 export const searchValidations = {
   search: [
-    query('q').trim().isLength({ min: 1, max: 100 }).withMessage('Search query must be 1-100 characters'),
-    query('type').optional().isIn(['products', 'streams', 'users']).withMessage('Invalid search type'),
+    query('q')
+      .trim()
+      .isLength({ min: 1, max: 100 })
+      .withMessage('Search query must be 1-100 characters'),
+    query('type')
+      .optional()
+      .isIn(['products', 'streams', 'users'])
+      .withMessage('Invalid search type'),
     ...commonValidations.pagination,
   ],
 };
 
 // Helper function to create custom validation chains
-export function createValidationChain(validations: ValidationChain[]): (req: Request, res: Response, next: NextFunction) => void {
+export function createValidationChain(
+  validations: ValidationChain[],
+): (req: Request, res: Response, next: NextFunction) => void {
   return async (req: Request, res: Response, next: NextFunction) => {
     await Promise.all(validations.map(validation => validation.run(req)));
     handleValidationErrors(req, res, next);

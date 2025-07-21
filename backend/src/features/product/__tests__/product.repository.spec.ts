@@ -100,6 +100,7 @@ describe('ProductRepository', () => {
     ] as any;
 
     vi.mocked(prisma.product.findMany).mockResolvedValue(mockProducts);
+    vi.mocked(prisma.product.count).mockResolvedValue(2);
 
     const result = await productRepository.findProducts({
       public: true,
@@ -108,7 +109,13 @@ describe('ProductRepository', () => {
       hasActiveCoupon: true,
     });
 
-    expect(result).toEqual(mockProducts);
+    expect(result).toEqual({
+      products: mockProducts,
+      total: 2,
+      page: 1,
+      limit: 20,
+      totalPages: 1,
+    });
     expect(prisma.product.findMany).toHaveBeenCalledWith({
       where: {
         public: true,
@@ -123,8 +130,13 @@ describe('ProductRepository', () => {
         _count: {
           select: { wishlistedBy: true },
         },
+        category: {
+          select: { id: true, name: true },
+        },
       },
       orderBy: { createdAt: 'desc' },
+      skip: 0,
+      take: 20,
     });
   });
 

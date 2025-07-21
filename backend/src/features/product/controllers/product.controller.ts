@@ -14,10 +14,9 @@ export class ProductController {
   createProduct = async (req: Request, res: Response) => {
     const input: CreateProductInput = req.body;
     const userId = (req as any).user.id;
-    const isAdmin = (req as any).user.isAdmin || false;
 
-    const result = await this.productService.createProduct(input, userId, isAdmin);
-    res.status(result.success ? 201 : 403).json(result);
+    const result = await this.productService.createProduct(input, userId);
+    res.status(result.success ? 201 : 400).json(result);
   };
 
   getProducts = async (req: Request, res: Response) => {
@@ -35,22 +34,16 @@ export class ProductController {
   updateProduct = async (req: Request, res: Response) => {
     const { id } = req.params;
     const input: UpdateProductInput = req.body;
-    const isAdmin = (req as any).user.isAdmin || false;
 
-    const result = await this.productService.updateProduct(id, input, isAdmin);
-    res
-      .status(result.success ? 200 : result.message.includes('Unauthorized') ? 403 : 404)
-      .json(result);
+    const result = await this.productService.updateProduct(id, input);
+    res.status(result.success ? 200 : 404).json(result);
   };
 
   deleteProduct = async (req: Request, res: Response) => {
     const { id } = req.params;
-    const isAdmin = (req as any).user.isAdmin || false;
 
-    const result = await this.productService.deleteProduct(id, isAdmin);
-    res
-      .status(result.success ? 200 : result.message.includes('Unauthorized') ? 403 : 404)
-      .json(result);
+    const result = await this.productService.deleteProduct(id);
+    res.status(result.success ? 200 : 404).json(result);
   };
 
   addToWishlist = async (req: Request, res: Response) => {
@@ -79,7 +72,7 @@ export class ProductController {
   searchProducts = async (req: Request, res: Response) => {
     const { q, ...filters } = req.query;
     const searchQuery = q as string;
-    
+
     if (!searchQuery || searchQuery.trim() === '') {
       res.status(400).json({ success: false, message: 'Search query is required' });
       return;

@@ -1,21 +1,22 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import request from 'supertest';
 import express from 'express';
-import { RedisClient } from '../../config/redis.config';
-import { 
-  createRateLimiter, 
-  authRateLimiter, 
-  apiRateLimiter,
-  RATE_LIMIT_CONFIGS 
-} from '../rate-limit.middleware';
-import { 
-  validateApiKey, 
-  requirePermission, 
-  apiKeyStore,
-  apiKeyRateLimit
-} from '../api-key.middleware';
+import request from 'supertest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
 import { corsMiddleware } from '../../config/cors.config';
-import { userValidations, handleValidationErrors } from '../input-validation.middleware';
+import { RedisClient } from '../../config/redis.config';
+import {
+  apiKeyRateLimit,
+  apiKeyStore,
+  requirePermission,
+  validateApiKey,
+} from '../api-key.middleware';
+import { handleValidationErrors, userValidations } from '../input-validation.middleware';
+import {
+  apiRateLimiter,
+  authRateLimiter,
+  createRateLimiter,
+  RATE_LIMIT_CONFIGS,
+} from '../rate-limit.middleware';
 
 // Mock Redis
 vi.mock('../../config/redis.config', () => ({
@@ -67,11 +68,11 @@ describe('Security Middleware Tests', () => {
       for (let i = 0; i < 6; i++) {
         requests.push(request(app).post('/auth'));
       }
-      
+
       const responses = await Promise.all(requests);
       const successCount = responses.filter(r => r.status === 200).length;
       const rateLimitedCount = responses.filter(r => r.status === 429).length;
-      
+
       expect(successCount).toBe(5);
       expect(rateLimitedCount).toBe(1);
     });
@@ -105,10 +106,8 @@ describe('Security Middleware Tests', () => {
     it('should accept requests with valid API key', async () => {
       app.get('/api', validateApiKey(true), (req, res) => res.json({ success: true }));
 
-      const res = await request(app)
-        .get('/api')
-        .set('x-api-key', testApiKey.key);
-      
+      const res = await request(app).get('/api').set('x-api-key', testApiKey.key);
+
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
     });
@@ -116,25 +115,19 @@ describe('Security Middleware Tests', () => {
     it('should reject invalid API keys', async () => {
       app.get('/api', validateApiKey(true), (req, res) => res.json({ success: true }));
 
-      const res = await request(app)
-        .get('/api')
-        .set('x-api-key', 'invalid-key');
-      
+      const res = await request(app).get('/api').set('x-api-key', 'invalid-key');
+
       expect(res.status).toBe(401);
       expect(res.body.message).toBe('Invalid API key');
     });
 
     it('should check API key permissions', async () => {
-      app.get('/api', 
-        validateApiKey(true), 
-        requirePermission('delete'),
-        (req, res) => res.json({ success: true })
+      app.get('/api', validateApiKey(true), requirePermission('delete'), (req, res) =>
+        res.json({ success: true }),
       );
 
-      const res = await request(app)
-        .get('/api')
-        .set('x-api-key', testApiKey.key);
-      
+      const res = await request(app).get('/api').set('x-api-key', testApiKey.key);
+
       expect(res.status).toBe(403);
       expect(res.body.message).toBe('Missing required permission: delete');
     });
@@ -143,37 +136,29 @@ describe('Security Middleware Tests', () => {
       app.get('/api', validateApiKey(true), (req, res) => res.json({ success: true }));
 
       // First request should work
-      const res1 = await request(app)
-        .get('/api')
-        .set('x-api-key', testApiKey.key);
+      const res1 = await request(app).get('/api').set('x-api-key', testApiKey.key);
       expect(res1.status).toBe(200);
 
       // Revoke the key
       apiKeyStore.revokeKey(testApiKey.id);
 
       // Second request should fail
-      const res2 = await request(app)
-        .get('/api')
-        .set('x-api-key', testApiKey.key);
+      const res2 = await request(app).get('/api').set('x-api-key', testApiKey.key);
       expect(res2.status).toBe(401);
     });
   });
 
   describe('Input Validation', () => {
     it('should validate email format', async () => {
-      app.post('/register',
-        userValidations.register,
-        handleValidationErrors,
-        (req, res) => res.json({ success: true })
+      app.post('/register', userValidations.register, handleValidationErrors, (req, res) =>
+        res.json({ success: true }),
       );
 
-      const res = await request(app)
-        .post('/register')
-        .send({
-          email: 'invalid-email',
-          username: 'testuser',
-          password: 'Test1234!',
-        });
+      const res = await request(app).post('/register').send({
+        email: 'invalid-email',
+        username: 'testuser',
+        password: 'Test1234!',
+      });
 
       expect(res.status).toBe(400);
       expect(res.body.success).toBe(false);
@@ -181,46 +166,38 @@ describe('Security Middleware Tests', () => {
         expect.objectContaining({
           field: 'email',
           message: 'Invalid email address',
-        })
+        }),
       );
     });
 
     it('should validate password strength', async () => {
-      app.post('/register',
-        userValidations.register,
-        handleValidationErrors,
-        (req, res) => res.json({ success: true })
+      app.post('/register', userValidations.register, handleValidationErrors, (req, res) =>
+        res.json({ success: true }),
       );
 
-      const res = await request(app)
-        .post('/register')
-        .send({
-          email: 'test@example.com',
-          username: 'testuser',
-          password: 'weak',
-        });
+      const res = await request(app).post('/register').send({
+        email: 'test@example.com',
+        username: 'testuser',
+        password: 'weak',
+      });
 
       expect(res.status).toBe(400);
       expect(res.body.data.errors).toContainEqual(
         expect.objectContaining({
           field: 'password',
           message: expect.stringContaining('Password must'),
-        })
+        }),
       );
     });
 
     it('should sanitize input', async () => {
-      app.post('/test',
-        userValidations.updateProfile,
-        handleValidationErrors,
-        (req, res) => res.json({ bio: req.body.bio })
+      app.post('/test', userValidations.updateProfile, handleValidationErrors, (req, res) =>
+        res.json({ bio: req.body.bio }),
       );
 
-      const res = await request(app)
-        .post('/test')
-        .send({
-          bio: '  Test bio with spaces  ',
-        });
+      const res = await request(app).post('/test').send({
+        bio: '  Test bio with spaces  ',
+      });
 
       expect(res.status).toBe(200);
       expect(res.body.bio).toBe('Test bio with spaces'); // Trimmed
@@ -245,17 +222,13 @@ describe('Security Middleware Tests', () => {
     });
 
     it('should allow whitelisted origins', async () => {
-      const res = await request(app)
-        .get('/test')
-        .set('Origin', 'http://localhost:5173');
+      const res = await request(app).get('/test').set('Origin', 'http://localhost:5173');
 
       expect(res.headers['access-control-allow-origin']).toBe('http://localhost:5173');
     });
 
     it('should expose custom headers', async () => {
-      const res = await request(app)
-        .get('/test')
-        .set('Origin', 'http://localhost:3000');
+      const res = await request(app).get('/test').set('Origin', 'http://localhost:3000');
 
       const exposedHeaders = res.headers['access-control-expose-headers'];
       expect(exposedHeaders).toContain('X-Request-ID');
@@ -270,7 +243,7 @@ describe('Security Middleware Tests', () => {
       app.get('/test', (req, res) => res.json({ success: true }));
 
       const res = await request(app).get('/test');
-      
+
       expect(res.headers['x-dns-prefetch-control']).toBe('off');
       expect(res.headers['x-frame-options']).toBe('SAMEORIGIN');
       expect(res.headers['x-content-type-options']).toBe('nosniff');
@@ -281,14 +254,16 @@ describe('Security Middleware Tests', () => {
     it('should log requests with morgan', async () => {
       const mockWrite = vi.fn();
       const morgan = await import('morgan');
-      
-      app.use(morgan.default('dev', {
-        stream: { write: mockWrite },
-      }));
+
+      app.use(
+        morgan.default('dev', {
+          stream: { write: mockWrite },
+        }),
+      );
       app.get('/test', (req, res) => res.json({ success: true }));
 
       await request(app).get('/test');
-      
+
       expect(mockWrite).toHaveBeenCalled();
       expect(mockWrite.mock.calls[0][0]).toContain('GET /test');
     });

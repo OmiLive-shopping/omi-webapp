@@ -2,9 +2,13 @@ import { Router } from 'express';
 
 import { PrismaService } from '../../../config/prisma.config';
 import { auth } from '../../../middleware/auth.middleware';
-import { validateRequest } from '../../../middleware/validation.middleware';
+import {
+  commonValidations,
+  handleValidationErrors,
+  userValidations,
+} from '../../../middleware/input-validation.middleware';
 import { authRateLimiter, searchRateLimiter } from '../../../middleware/rate-limit.middleware';
-import { userValidations, commonValidations, handleValidationErrors } from '../../../middleware/input-validation.middleware';
+import { validateRequest } from '../../../middleware/validation.middleware';
 import { UserController } from '../controllers/user.controller';
 import { UserRepository } from '../repositories/user.repository';
 import { loginSchema, registerSchema, updateProfileSchema } from '../schemas/user.schema';
@@ -22,66 +26,74 @@ const router = Router();
 router.get('/', userController.heartbeat);
 
 // Auth routes with rate limiting
-router.post('/register', 
+router.post(
+  '/register',
   authRateLimiter,
   userValidations.register,
   handleValidationErrors,
-  validateRequest(registerSchema), 
-  userController.register
+  validateRequest(registerSchema),
+  userController.register,
 );
 
-router.post('/login', 
+router.post(
+  '/login',
   authRateLimiter,
   userValidations.login,
   handleValidationErrors,
-  validateRequest(loginSchema), 
-  userController.login
+  validateRequest(loginSchema),
+  userController.login,
 );
 
 // Protected routes - require authentication
 router.get('/profile', auth, userController.getProfile);
-router.patch('/profile', 
-  auth, 
+router.patch(
+  '/profile',
+  auth,
   userValidations.updateProfile,
   handleValidationErrors,
-  validateRequest(updateProfileSchema), 
-  userController.updateProfile
+  validateRequest(updateProfileSchema),
+  userController.updateProfile,
 );
 
 // Public routes with optional auth for follow status
-router.get('/:id', 
+router.get(
+  '/:id',
   commonValidations.uuid('id'),
   handleValidationErrors,
-  userController.getPublicProfile
+  userController.getPublicProfile,
 );
 
-router.get('/:id/followers', 
+router.get(
+  '/:id/followers',
   commonValidations.uuid('id'),
   ...commonValidations.pagination,
   handleValidationErrors,
-  userController.getFollowers
+  userController.getFollowers,
 );
 
-router.get('/:id/following', 
+router.get(
+  '/:id/following',
   commonValidations.uuid('id'),
   ...commonValidations.pagination,
   handleValidationErrors,
-  userController.getFollowing
+  userController.getFollowing,
 );
 
 // Follow/Unfollow routes - require authentication
-router.post('/:id/follow', 
-  auth, 
+router.post(
+  '/:id/follow',
+  auth,
   commonValidations.uuid('id'),
   handleValidationErrors,
-  userController.followUser
+  userController.followUser,
 );
 
-router.delete('/:id/follow', 
-  auth, 
+router.delete(
+  '/:id/follow',
+  auth,
   commonValidations.uuid('id'),
   handleValidationErrors,
-  userController.unfollowUser
+  userController.unfollowUser,
 );
 
 export default router;

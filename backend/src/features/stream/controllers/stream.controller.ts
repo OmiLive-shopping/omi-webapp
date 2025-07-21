@@ -7,10 +7,10 @@ import {
   CreateStreamInput,
   EndStreamInput,
   GoLiveInput,
+  StartStreamInput,
   StreamFilters,
   UpdateStreamInput,
   UpdateViewerCountInput,
-  StartStreamInput,
 } from '../types/stream.types';
 
 export class StreamController {

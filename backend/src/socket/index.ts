@@ -1,15 +1,16 @@
 import { Server as HTTPServer } from 'http';
+
 import { SocketServer, SocketWithAuth } from '../config/socket/socket.config';
-import { socketAuthMiddleware } from './middleware/auth.middleware';
 import { ChatHandler } from './handlers/chat.handler';
 import { StreamHandler } from './handlers/stream.handler';
 import { RoomManager } from './managers/room.manager';
+import { socketAuthMiddleware } from './middleware/auth.middleware';
 
 export function initializeSocketServer(httpServer: HTTPServer): void {
   const socketServer = SocketServer.getInstance(httpServer);
   const io = socketServer.getIO();
   const roomManager = RoomManager.getInstance();
-  
+
   // Initialize handlers
   const chatHandler = new ChatHandler();
   const streamHandler = new StreamHandler();
@@ -27,21 +28,21 @@ export function initializeSocketServer(httpServer: HTTPServer): void {
     }
 
     // Stream events
-    socket.on('stream:join', (data) => streamHandler.handleJoinStream(socket, data));
-    socket.on('stream:leave', (data) => streamHandler.handleLeaveStream(socket, data));
-    socket.on('stream:update', (data) => streamHandler.handleStreamUpdate(socket, data));
-    socket.on('stream:feature-product', (data) => streamHandler.handleFeatureProduct(socket, data));
-    socket.on('stream:get-analytics', (data) => streamHandler.handleGetAnalytics(socket, data));
+    socket.on('stream:join', data => streamHandler.handleJoinStream(socket, data));
+    socket.on('stream:leave', data => streamHandler.handleLeaveStream(socket, data));
+    socket.on('stream:update', data => streamHandler.handleStreamUpdate(socket, data));
+    socket.on('stream:feature-product', data => streamHandler.handleFeatureProduct(socket, data));
+    socket.on('stream:get-analytics', data => streamHandler.handleGetAnalytics(socket, data));
 
     // Chat events
-    socket.on('chat:send-message', (data) => chatHandler.handleSendMessage(socket, data));
-    socket.on('chat:delete-message', (data) => chatHandler.handleDeleteMessage(socket, data));
-    socket.on('chat:moderate-user', (data) => chatHandler.handleModerateUser(socket, data));
-    socket.on('chat:typing', (data) => chatHandler.handleTyping(socket, data));
-    socket.on('chat:get-history', (data) => chatHandler.handleGetHistory(socket, data));
-    socket.on('chat:react', (data) => chatHandler.handleReactToMessage(socket, data));
-    socket.on('chat:pin-message', (data) => chatHandler.handlePinMessage(socket, data));
-    socket.on('chat:slowmode', (data) => chatHandler.handleSlowMode(socket, data));
+    socket.on('chat:send-message', data => chatHandler.handleSendMessage(socket, data));
+    socket.on('chat:delete-message', data => chatHandler.handleDeleteMessage(socket, data));
+    socket.on('chat:moderate-user', data => chatHandler.handleModerateUser(socket, data));
+    socket.on('chat:typing', data => chatHandler.handleTyping(socket, data));
+    socket.on('chat:get-history', data => chatHandler.handleGetHistory(socket, data));
+    socket.on('chat:react', data => chatHandler.handleReactToMessage(socket, data));
+    socket.on('chat:pin-message', data => chatHandler.handlePinMessage(socket, data));
+    socket.on('chat:slowmode', data => chatHandler.handleSlowMode(socket, data));
 
     // Handle disconnect
     socket.on('disconnect', async () => {
@@ -50,7 +51,7 @@ export function initializeSocketServer(httpServer: HTTPServer): void {
     });
 
     // Error handling
-    socket.on('error', (error) => {
+    socket.on('error', error => {
       console.error(`Socket error for ${socket.id}:`, error);
     });
   });
@@ -64,12 +65,12 @@ export function initializeSocketServer(httpServer: HTTPServer): void {
 // Chat namespace - dedicated to chat functionality
 function createChatNamespace(io: any): void {
   const chatNamespace = io.of('/chat');
-  
+
   chatNamespace.use(socketAuthMiddleware);
-  
+
   chatNamespace.on('connection', (socket: SocketWithAuth) => {
     console.log(`Chat namespace connected: ${socket.id}`);
-    
+
     // Chat-specific events can be handled here
     // This provides better separation of concerns
   });
@@ -78,20 +79,20 @@ function createChatNamespace(io: any): void {
 // Notification namespace - for real-time notifications
 function createNotificationNamespace(io: any): void {
   const notificationNamespace = io.of('/notifications');
-  
+
   notificationNamespace.use(socketAuthMiddleware);
-  
+
   notificationNamespace.on('connection', (socket: SocketWithAuth) => {
     if (!socket.userId) {
       socket.disconnect();
       return;
     }
-    
+
     console.log(`Notification namespace connected: ${socket.userId}`);
-    
+
     // Join user-specific notification room
     socket.join(`notifications:${socket.userId}`);
-    
+
     // Handle notification acknowledgment
     socket.on('notification:ack', async (notificationId: string) => {
       // TODO: Mark notification as read in database
@@ -102,28 +103,28 @@ function createNotificationNamespace(io: any): void {
 // Analytics namespace - for streamer analytics
 function createAnalyticsNamespace(io: any): void {
   const analyticsNamespace = io.of('/analytics');
-  
+
   analyticsNamespace.use(socketAuthMiddleware);
-  
+
   analyticsNamespace.on('connection', (socket: SocketWithAuth) => {
     console.log(`Analytics namespace connected: ${socket.id}`);
-    
+
     // Only streamers can connect to analytics
     if (socket.role !== 'streamer' && socket.role !== 'admin') {
       socket.emit('error', { message: 'Unauthorized' });
       socket.disconnect();
       return;
     }
-    
+
     // Handle real-time analytics requests
     socket.on('analytics:subscribe', async (streamId: string) => {
       // TODO: Verify user owns the stream
       socket.join(`analytics:${streamId}`);
-      
+
       // Send initial analytics data
       // Start sending periodic updates
     });
-    
+
     socket.on('analytics:unsubscribe', (streamId: string) => {
       socket.leave(`analytics:${streamId}`);
     });
@@ -137,20 +138,20 @@ export const socketEmitters = {
     const socketServer = SocketServer.getInstance();
     socketServer.emitToUser(userId, event, data);
   },
-  
+
   // Emit to stream room
   emitToStream: (streamId: string, event: string, data: any) => {
     const socketServer = SocketServer.getInstance();
     socketServer.emitToRoom(`stream:${streamId}`, event, data);
   },
-  
+
   // Emit notification
   emitNotification: (userId: string, notification: any) => {
     const socketServer = SocketServer.getInstance();
     const io = socketServer.getIO();
     io.of('/notifications').to(`notifications:${userId}`).emit('notification:new', notification);
   },
-  
+
   // Emit analytics update
   emitAnalytics: (streamId: string, analytics: any) => {
     const socketServer = SocketServer.getInstance();

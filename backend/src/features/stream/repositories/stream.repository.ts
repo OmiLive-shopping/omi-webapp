@@ -337,7 +337,7 @@ export class StreamRepository {
 
   async getStreamViewers(streamId: string) {
     return this.prisma.streamViewer.findMany({
-      where: { 
+      where: {
         streamId,
         leftAt: null, // Only active viewers
       },

@@ -1,8 +1,9 @@
+import { Request, Response } from 'express';
 import rateLimit, { Options, RateLimitRequestHandler } from 'express-rate-limit';
 import RedisStore from 'rate-limit-redis';
-import { RedisClient } from '../config/redis.config';
-import { Request, Response } from 'express';
 import { unifiedResponse } from 'uni-response';
+
+import { RedisClient } from '../config/redis.config';
 
 export interface RateLimitOptions {
   windowMs?: number;
@@ -67,7 +68,7 @@ export function createRateLimiter(options: RateLimitOptions = {}): RateLimitRequ
           retryAfter: req.rateLimit?.resetTime
             ? new Date(req.rateLimit.resetTime).toISOString()
             : undefined,
-        })
+        }),
       );
     },
     skipSuccessfulRequests: options.skipSuccessfulRequests || false,
@@ -98,7 +99,7 @@ export const searchRateLimiter = createRateLimiter(RATE_LIMIT_CONFIGS.search);
 
 // Role-based rate limiting
 export function createRoleBasedRateLimiter(
-  getRoleFromRequest: (req: Request) => string | undefined
+  getRoleFromRequest: (req: Request) => string | undefined,
 ): RateLimitRequestHandler {
   const rateLimiters: Record<string, RateLimitRequestHandler> = {
     anonymous: createRateLimiter({ max: 50, windowMs: 15 * 60 * 1000 }),

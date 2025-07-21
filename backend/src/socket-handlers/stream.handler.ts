@@ -82,8 +82,10 @@ export class StreamSocketHandler {
         }
 
         // Create comment
-        const commentResponse = await this.streamService.addComment(streamId, socket.user!.id, { content });
-        
+        const commentResponse = await this.streamService.addComment(streamId, socket.user!.id, {
+          content,
+        });
+
         if (!commentResponse.success || !commentResponse.data) {
           socket.emit('error', { message: 'Failed to send message' });
           return;
@@ -131,4 +133,3 @@ export class StreamSocketHandler {
     });
   }
 }
-

@@ -1,9 +1,10 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { ChatCommandHandler } from '../chat-commands';
-import { SocketWithAuth } from '../../../config/socket/socket.config';
-import { RoomManager } from '../../managers/room.manager';
-import { SlowModeManager } from '../../managers/rate-limiter';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
 import { PrismaService } from '../../../config/prisma.config';
+import { SocketWithAuth } from '../../../config/socket/socket.config';
+import { SlowModeManager } from '../../managers/rate-limiter';
+import { RoomManager } from '../../managers/room.manager';
+import { ChatCommandHandler } from '../chat-commands';
 
 // Mock all dependencies
 vi.mock('../../managers/room.manager');
@@ -32,7 +33,7 @@ describe('ChatCommandHandler', () => {
       id: 'socket-123',
       userId: userId,
       username: 'testuser',
-      role: 'viewer',
+      role: 'user',
       emit: vi.fn(),
       to: vi.fn().mockReturnThis(),
     } as any;
@@ -100,7 +101,7 @@ describe('ChatCommandHandler', () => {
 
     it('should execute valid commands', async () => {
       mockRoomManager.getViewerCount.mockReturnValue(100);
-      
+
       const result = await commandHandler.processCommand(mockSocket, streamId, '/viewers');
       expect(result).toBe(true);
       expect(mockSocket.emit).toHaveBeenCalledWith('chat:system:message', {
@@ -139,12 +140,11 @@ describe('ChatCommandHandler', () => {
     });
 
     it('should reject non-moderators', async () => {
+      // Setup: user is not a moderator and not the stream owner
       mockRoomManager.isModerator.mockReturnValue(false);
-      // Make sure the user is also not the stream owner
-      mockPrisma.stream.findUnique.mockResolvedValue({ userId: streamOwnerId }); // Different from socket userId
-      
-      // The command handler will check permissions first, before trying to find the user
-      // So user.findUnique should not be called when permissions fail
+      // Stream owner is different from socket user
+      mockPrisma.stream.findUnique.mockResolvedValue({ userId: streamOwnerId });
+
       await commandHandler.processCommand(mockSocket, streamId, '/timeout baduser 300');
 
       expect(mockSocket.emit).toHaveBeenCalledWith('chat:command:error', {
@@ -308,7 +308,7 @@ describe('ChatCommandHandler', () => {
   describe('help command', () => {
     it('should show basic commands to viewers', async () => {
       mockPrisma.stream.findUnique.mockResolvedValue({ userId: streamOwnerId });
-      
+
       await commandHandler.processCommand(mockSocket, streamId, '/help');
 
       expect(mockSocket.emit).toHaveBeenCalledWith('chat:system:message', {

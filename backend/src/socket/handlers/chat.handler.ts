@@ -1,9 +1,10 @@
-import { SocketWithAuth } from '../../config/socket/socket.config';
-import { RoomManager } from '../managers/room.manager';
-import { ChatRateLimiter, SlowModeManager } from '../managers/rate-limiter';
-import { ChatCommandHandler } from './chat-commands';
-import { PrismaService } from '../../config/prisma.config';
 import { z } from 'zod';
+
+import { PrismaService } from '../../config/prisma.config';
+import { SocketWithAuth } from '../../config/socket/socket.config';
+import { ChatRateLimiter, SlowModeManager } from '../managers/rate-limiter';
+import { RoomManager } from '../managers/room.manager';
+import { ChatCommandHandler } from './chat-commands';
 
 // Message schemas
 const sendMessageSchema = z.object({
@@ -53,7 +54,7 @@ export class ChatHandler {
     try {
       // Validate input
       const validated = sendMessageSchema.parse(data);
-      
+
       // Check if user is authenticated
       if (!socket.userId) {
         socket.emit('error', { message: 'Authentication required to send messages' });
@@ -76,28 +77,31 @@ export class ChatHandler {
       const userRole = socket.role || 'viewer';
       if (this.rateLimiter.isInCooldown(socket.userId)) {
         const resetTime = this.rateLimiter.getResetTime(socket.userId, userRole);
-        socket.emit('error', { 
+        socket.emit('error', {
           message: 'You are in cooldown. Please wait.',
-          cooldownRemaining: Math.ceil(resetTime / 1000)
+          cooldownRemaining: Math.ceil(resetTime / 1000),
         });
         return;
       }
 
       if (!this.rateLimiter.canSendMessage(socket.userId, userRole)) {
         const resetTime = this.rateLimiter.getResetTime(socket.userId, userRole);
-        socket.emit('error', { 
+        socket.emit('error', {
           message: 'Rate limit exceeded. Please slow down.',
-          resetIn: Math.ceil(resetTime / 1000)
+          resetIn: Math.ceil(resetTime / 1000),
         });
         return;
       }
 
       // Check slow mode
       if (!this.slowModeManager.canSendInSlowMode(socket.userId, validated.streamId, userRole)) {
-        const remaining = this.slowModeManager.getRemainingSlowModeTime(socket.userId, validated.streamId);
-        socket.emit('error', { 
+        const remaining = this.slowModeManager.getRemainingSlowModeTime(
+          socket.userId,
+          validated.streamId,
+        );
+        socket.emit('error', {
           message: `Slow mode is enabled. Wait ${Math.ceil(remaining)} seconds.`,
-          slowModeRemaining: Math.ceil(remaining)
+          slowModeRemaining: Math.ceil(remaining),
         });
         return;
       }
@@ -110,22 +114,22 @@ export class ChatHandler {
           action: { in: ['timeout', 'ban'] },
           OR: [
             { expiresAt: null }, // Permanent ban
-            { expiresAt: { gt: new Date() } } // Active timeout
-          ]
+            { expiresAt: { gt: new Date() } }, // Active timeout
+          ],
         },
-        orderBy: { createdAt: 'desc' }
+        orderBy: { createdAt: 'desc' },
       });
 
       if (activeModeration) {
         if (activeModeration.action === 'ban') {
           socket.emit('error', { message: 'You are banned from this chat' });
         } else {
-          const remaining = activeModeration.expiresAt 
+          const remaining = activeModeration.expiresAt
             ? Math.ceil((activeModeration.expiresAt.getTime() - Date.now()) / 1000)
             : 0;
-          socket.emit('error', { 
+          socket.emit('error', {
             message: `You are timed out for ${remaining} seconds`,
-            timeoutRemaining: remaining
+            timeoutRemaining: remaining,
           });
         }
         return;
@@ -152,17 +156,19 @@ export class ChatHandler {
               },
             },
           },
-          replyTo: validated.replyTo ? {
-            select: {
-              id: true,
-              content: true,
-              user: {
+          replyTo: validated.replyTo
+            ? {
                 select: {
-                  username: true,
+                  id: true,
+                  content: true,
+                  user: {
+                    select: {
+                      username: true,
+                    },
+                  },
                 },
-              },
-            },
-          } : undefined,
+              }
+            : undefined,
           _count: {
             select: {
               reactions: true,
@@ -187,7 +193,6 @@ export class ChatHandler {
       // Broadcast to all users in the stream
       socket.to(`stream:${validated.streamId}`).emit('chat:message', chatMessage);
       socket.emit('chat:message:sent', chatMessage);
-
     } catch (error) {
       if (error instanceof z.ZodError) {
         socket.emit('error', { message: 'Invalid message data', errors: error.errors });
@@ -239,7 +244,6 @@ export class ChatHandler {
         messageId: validated.messageId,
         deletedBy: socket.userId,
       });
-
     } catch (error) {
       if (error instanceof z.ZodError) {
         socket.emit('error', { message: 'Invalid data', errors: error.errors });
@@ -277,15 +281,21 @@ export class ChatHandler {
         return;
       }
 
-      if (this.roomManager.isModerator(validated.streamId, validated.userId) && socket.role !== 'admin') {
+      if (
+        this.roomManager.isModerator(validated.streamId, validated.userId) &&
+        socket.role !== 'admin'
+      ) {
         socket.emit('error', { message: 'Cannot moderate other moderators' });
         return;
       }
 
       // Create moderation record
-      const expiresAt = validated.action === 'timeout' && validated.duration
-        ? new Date(Date.now() + validated.duration * 1000)
-        : validated.action === 'ban' ? null : undefined;
+      const expiresAt =
+        validated.action === 'timeout' && validated.duration
+          ? new Date(Date.now() + validated.duration * 1000)
+          : validated.action === 'ban'
+            ? null
+            : undefined;
 
       const moderation = await this.prisma.chatModeration.create({
         data: {
@@ -330,7 +340,6 @@ export class ChatHandler {
           expiresAt,
         });
       }
-
     } catch (error) {
       if (error instanceof z.ZodError) {
         socket.emit('error', { message: 'Invalid moderation data', errors: error.errors });
@@ -353,10 +362,13 @@ export class ChatHandler {
   };
 
   // Get chat history
-  handleGetHistory = async (socket: SocketWithAuth, data: { streamId: string; before?: string; limit?: number }) => {
+  handleGetHistory = async (
+    socket: SocketWithAuth,
+    data: { streamId: string; before?: string; limit?: number },
+  ) => {
     try {
       const limit = Math.min(data.limit || 50, 100);
-      
+
       const messages = await this.prisma.comment.findMany({
         where: {
           streamId: data.streamId,
@@ -380,22 +392,23 @@ export class ChatHandler {
         take: limit,
       });
 
-      const formattedMessages = messages.map(msg => ({
-        id: msg.id,
-        content: msg.content,
-        userId: msg.user.id,
-        username: msg.user.username,
-        avatarUrl: msg.user.avatarUrl,
-        role: msg.user.role?.name || 'viewer',
-        timestamp: msg.createdAt,
-        type: 'message' as const,
-      })).reverse();
+      const formattedMessages = messages
+        .map(msg => ({
+          id: msg.id,
+          content: msg.content,
+          userId: msg.user.id,
+          username: msg.user.username,
+          avatarUrl: msg.user.avatarUrl,
+          role: msg.user.role?.name || 'viewer',
+          timestamp: msg.createdAt,
+          type: 'message' as const,
+        }))
+        .reverse();
 
       socket.emit('chat:history', {
         streamId: data.streamId,
         messages: formattedMessages,
       });
-
     } catch (error) {
       console.error('Error getting chat history:', error);
       socket.emit('error', { message: 'Failed to get chat history' });
@@ -472,9 +485,8 @@ export class ChatHandler {
 
       socket.emit('chat:reaction:success', {
         messageId: validated.messageId,
-        reactions: reactions.map(r => ({ emoji: r.emoji, count: r._count })),
+        reactions: reactions ? reactions.map(r => ({ emoji: r.emoji, count: r._count })) : [],
       });
-
     } catch (error) {
       if (error instanceof z.ZodError) {
         socket.emit('error', { message: 'Invalid reaction data', errors: error.errors });
@@ -554,7 +566,6 @@ export class ChatHandler {
       }
 
       socket.emit('chat:pin:success', { messageId: validated.messageId, pinned: validated.pin });
-
     } catch (error) {
       if (error instanceof z.ZodError) {
         socket.emit('error', { message: 'Invalid pin data', errors: error.errors });
@@ -576,7 +587,10 @@ export class ChatHandler {
         select: { userId: true },
       });
 
-      if (stream?.userId !== socket.userId && !this.roomManager.isModerator(validated.streamId, socket.userId!)) {
+      if (
+        stream?.userId !== socket.userId &&
+        !this.roomManager.isModerator(validated.streamId, socket.userId!)
+      ) {
         socket.emit('error', { message: 'Moderator permissions required' });
         return;
       }
@@ -605,7 +619,6 @@ export class ChatHandler {
         socket.to(`stream:${validated.streamId}`).emit('chat:slowmode:disabled');
         socket.emit('chat:slowmode:success', { enabled: false });
       }
-
     } catch (error) {
       if (error instanceof z.ZodError) {
         socket.emit('error', { message: 'Invalid slow mode data', errors: error.errors });

@@ -2,6 +2,7 @@ import { Router } from 'express';
 
 import { PrismaService } from '../../../config/prisma.config';
 import { authMiddleware } from '../../../middleware/auth-enhanced.middleware';
+import { requireAdmin, requirePermission } from '../../../middleware/role.middleware';
 import { validateRequest } from '../../../middleware/validation.middleware';
 import { ProductController } from '../controllers/product.controller';
 import { ProductRepository } from '../repositories/product.repository';
@@ -30,11 +31,26 @@ router.get('/:id', productController.getProductById);
 // Protected routes (require authentication)
 router.use(authMiddleware);
 
-// Admin routes
-router.post('/', validateRequest(createProductSchema), productController.createProduct);
-router.put('/:id', validateRequest(updateProductSchema), productController.updateProduct);
-router.patch('/:id', validateRequest(updateProductSchema), productController.updateProduct);
-router.delete('/:id', productController.deleteProduct);
+// Admin routes - require admin role
+router.post(
+  '/',
+  requireAdmin,
+  validateRequest(createProductSchema),
+  productController.createProduct,
+);
+router.put(
+  '/:id',
+  requireAdmin,
+  validateRequest(updateProductSchema),
+  productController.updateProduct,
+);
+router.patch(
+  '/:id',
+  requireAdmin,
+  validateRequest(updateProductSchema),
+  productController.updateProduct,
+);
+router.delete('/:id', requireAdmin, productController.deleteProduct);
 
 // Wishlist routes
 router.post('/wishlist/add', validateRequest(wishlistSchema), productController.addToWishlist);

@@ -1,20 +1,21 @@
 import cors, { CorsOptions } from 'cors';
+
 import { env } from './env-config';
 
 // Helper to parse allowed origins from environment
 const getAllowedOrigins = (): string[] => {
   const origins: string[] = [];
-  
+
   // Add whitelisted URLs from env
   if (env.WHITE_LIST_URLS) {
     origins.push(...env.WHITE_LIST_URLS);
   }
-  
+
   // Add client URL if specified
   if (env.CLIENT_URL) {
     origins.push(env.CLIENT_URL);
   }
-  
+
   // In development, allow localhost origins
   if (env.NODE_ENV === 'development') {
     origins.push(
@@ -23,10 +24,10 @@ const getAllowedOrigins = (): string[] => {
       'http://localhost:5174',
       'http://127.0.0.1:3000',
       'http://127.0.0.1:5173',
-      'http://127.0.0.1:5174'
+      'http://127.0.0.1:5174',
     );
   }
-  
+
   return [...new Set(origins)]; // Remove duplicates
 };
 
@@ -34,12 +35,12 @@ const getAllowedOrigins = (): string[] => {
 export const corsOptions: CorsOptions = {
   origin: (origin, callback) => {
     const allowedOrigins = getAllowedOrigins();
-    
+
     // Allow requests with no origin (like mobile apps or Postman)
     if (!origin) {
       return callback(null, true);
     }
-    
+
     // Check if origin is allowed
     if (allowedOrigins.includes(origin)) {
       callback(null, true);
@@ -52,11 +53,11 @@ export const corsOptions: CorsOptions = {
       callback(new Error(`CORS: Origin ${origin} not allowed`));
     }
   },
-  
+
   credentials: true, // Allow cookies and auth headers
-  
+
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  
+
   allowedHeaders: [
     'Content-Type',
     'Authorization',
@@ -64,7 +65,7 @@ export const corsOptions: CorsOptions = {
     'X-Request-ID',
     env.API_KEY_HEADER || 'x-api-key',
   ],
-  
+
   exposedHeaders: [
     'X-Request-ID',
     'X-RateLimit-Limit',
@@ -72,9 +73,9 @@ export const corsOptions: CorsOptions = {
     'X-RateLimit-Reset',
     'X-Total-Count', // For pagination
   ],
-  
+
   maxAge: 86400, // 24 hours - how long browsers can cache preflight
-  
+
   preflightContinue: false,
   optionsSuccessStatus: 204,
 };
@@ -87,7 +88,7 @@ export const strictCorsOptions: CorsOptions = {
   ...corsOptions,
   origin: (origin, callback) => {
     const allowedOrigins = getAllowedOrigins();
-    
+
     if (!origin || !allowedOrigins.includes(origin)) {
       callback(new Error('CORS: Strict mode - origin not allowed'));
     } else {
@@ -103,15 +104,8 @@ export const apiCorsOptions: CorsOptions = {
   origin: '*',
   credentials: false,
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  allowedHeaders: [
-    'Content-Type',
-    env.API_KEY_HEADER || 'x-api-key',
-  ],
-  exposedHeaders: [
-    'X-RateLimit-Limit',
-    'X-RateLimit-Remaining',
-    'X-RateLimit-Reset',
-  ],
+  allowedHeaders: ['Content-Type', env.API_KEY_HEADER || 'x-api-key'],
+  exposedHeaders: ['X-RateLimit-Limit', 'X-RateLimit-Remaining', 'X-RateLimit-Reset'],
 };
 
 export const apiCorsMiddleware = cors(apiCorsOptions);

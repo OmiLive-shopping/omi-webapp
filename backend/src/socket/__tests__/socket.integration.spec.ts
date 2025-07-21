@@ -1,8 +1,9 @@
 import { createServer } from 'http';
+import jwt from 'jsonwebtoken';
 import { AddressInfo } from 'net';
 import { io as ioClient, Socket as ClientSocket } from 'socket.io-client';
-import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
-import jwt from 'jsonwebtoken';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+
 import { env } from '../../config/env-config';
 import { SocketServer } from '../../config/socket/socket.config';
 import { initializeSocketServer } from '../index';
@@ -17,7 +18,7 @@ describe('Socket.IO Integration Tests', () => {
   const validToken = jwt.sign({ userId: 'test-user-id', role: 'viewer' }, env.JWT_SECRET);
   const streamerToken = jwt.sign({ userId: 'streamer-id', role: 'streamer' }, env.JWT_SECRET);
 
-  beforeAll((done) => {
+  beforeAll(done => {
     httpServer = createServer();
     httpServer.listen(() => {
       port = (httpServer.address() as AddressInfo).port;
@@ -27,7 +28,7 @@ describe('Socket.IO Integration Tests', () => {
     });
   });
 
-  afterAll((done) => {
+  afterAll(done => {
     serverSocket.close();
     httpServer.close();
     done();
@@ -40,7 +41,7 @@ describe('Socket.IO Integration Tests', () => {
   });
 
   describe('Authentication', () => {
-    it('should allow connection with valid token', (done) => {
+    it('should allow connection with valid token', done => {
       clientSocket = ioClient(`http://localhost:${port}`, {
         auth: {
           token: validToken,
@@ -53,7 +54,7 @@ describe('Socket.IO Integration Tests', () => {
       });
     });
 
-    it('should allow anonymous connection without token', (done) => {
+    it('should allow anonymous connection without token', done => {
       clientSocket = ioClient(`http://localhost:${port}`);
 
       clientSocket.on('connect', () => {
@@ -64,7 +65,7 @@ describe('Socket.IO Integration Tests', () => {
   });
 
   describe('Stream Room Management', () => {
-    beforeEach((done) => {
+    beforeEach(done => {
       clientSocket = ioClient(`http://localhost:${port}`, {
         auth: {
           token: validToken,
@@ -73,32 +74,32 @@ describe('Socket.IO Integration Tests', () => {
       clientSocket.on('connect', done);
     });
 
-    it('should join stream room successfully', (done) => {
+    it('should join stream room successfully', done => {
       const streamId = '123e4567-e89b-12d3-a456-426614174000';
 
       clientSocket.emit('stream:join', { streamId });
 
-      clientSocket.on('stream:joined', (data) => {
+      clientSocket.on('stream:joined', data => {
         expect(data.streamId).toBe(streamId);
         done();
       });
 
-      clientSocket.on('error', (error) => {
+      clientSocket.on('error', error => {
         // Stream might not exist in test, but room should still be created
         done();
       });
     });
 
-    it('should leave stream room successfully', (done) => {
+    it('should leave stream room successfully', done => {
       const streamId = '123e4567-e89b-12d3-a456-426614174000';
 
       clientSocket.emit('stream:join', { streamId });
-      
+
       clientSocket.on('stream:joined', () => {
         clientSocket.emit('stream:leave', { streamId });
       });
 
-      clientSocket.on('stream:left', (data) => {
+      clientSocket.on('stream:left', data => {
         expect(data.streamId).toBe(streamId);
         done();
       });
@@ -106,7 +107,7 @@ describe('Socket.IO Integration Tests', () => {
   });
 
   describe('Chat Functionality', () => {
-    beforeEach((done) => {
+    beforeEach(done => {
       clientSocket = ioClient(`http://localhost:${port}`, {
         auth: {
           token: validToken,
@@ -115,7 +116,7 @@ describe('Socket.IO Integration Tests', () => {
       clientSocket.on('connect', done);
     });
 
-    it('should reject message from unauthenticated user', (done) => {
+    it('should reject message from unauthenticated user', done => {
       const anonClient = ioClient(`http://localhost:${port}`);
 
       anonClient.on('connect', () => {
@@ -125,21 +126,21 @@ describe('Socket.IO Integration Tests', () => {
         });
       });
 
-      anonClient.on('error', (error) => {
+      anonClient.on('error', error => {
         expect(error.message).toContain('Authentication required');
         anonClient.disconnect();
         done();
       });
     });
 
-    it('should handle typing indicators', (done) => {
+    it('should handle typing indicators', done => {
       const streamId = '123e4567-e89b-12d3-a456-426614174000';
 
       clientSocket.emit('stream:join', { streamId });
 
       clientSocket.on('stream:joined', () => {
         clientSocket.emit('chat:typing', { streamId, isTyping: true });
-        
+
         // Since we're the only client, we won't receive our own typing event
         // In a real scenario, another client would receive this
         setTimeout(() => {
@@ -150,7 +151,7 @@ describe('Socket.IO Integration Tests', () => {
   });
 
   describe('Namespaces', () => {
-    it('should connect to chat namespace', (done) => {
+    it('should connect to chat namespace', done => {
       const chatClient = ioClient(`http://localhost:${port}/chat`, {
         auth: {
           token: validToken,
@@ -164,7 +165,7 @@ describe('Socket.IO Integration Tests', () => {
       });
     });
 
-    it('should connect to notifications namespace with auth', (done) => {
+    it('should connect to notifications namespace with auth', done => {
       const notifClient = ioClient(`http://localhost:${port}/notifications`, {
         auth: {
           token: validToken,
@@ -178,7 +179,7 @@ describe('Socket.IO Integration Tests', () => {
       });
     });
 
-    it('should reject analytics namespace for non-streamers', (done) => {
+    it('should reject analytics namespace for non-streamers', done => {
       const analyticsClient = ioClient(`http://localhost:${port}/analytics`, {
         auth: {
           token: validToken, // viewer token
@@ -193,7 +194,7 @@ describe('Socket.IO Integration Tests', () => {
         done();
       });
 
-      analyticsClient.on('error', (error) => {
+      analyticsClient.on('error', error => {
         expect(error.message).toContain('Unauthorized');
         done();
       });

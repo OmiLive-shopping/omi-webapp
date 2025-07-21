@@ -1,8 +1,9 @@
-import { SocketWithAuth } from '../../config/socket/socket.config';
-import { RoomManager } from '../managers/room.manager';
-import { SocketServer } from '../../config/socket/socket.config';
-import { PrismaService } from '../../config/prisma.config';
 import { z } from 'zod';
+
+import { PrismaService } from '../../config/prisma.config';
+import { SocketWithAuth } from '../../config/socket/socket.config';
+import { SocketServer } from '../../config/socket/socket.config';
+import { RoomManager } from '../managers/room.manager';
 
 const joinStreamSchema = z.object({
   streamId: z.string().uuid(),
@@ -66,12 +67,13 @@ export class StreamHandler {
       // Notify others of new viewer
       socket.to(`stream:${validated.streamId}`).emit('stream:viewer:joined', {
         viewerCount: this.roomManager.getViewerCount(validated.streamId),
-        viewer: socket.userId ? {
-          id: socket.userId,
-          username: socket.username,
-        } : null,
+        viewer: socket.userId
+          ? {
+              id: socket.userId,
+              username: socket.username,
+            }
+          : null,
       });
-
     } catch (error) {
       if (error instanceof z.ZodError) {
         socket.emit('error', { message: 'Invalid stream data', errors: error.errors });
@@ -92,14 +94,15 @@ export class StreamHandler {
       // Notify others
       socket.to(`stream:${validated.streamId}`).emit('stream:viewer:left', {
         viewerCount: this.roomManager.getViewerCount(validated.streamId),
-        viewer: socket.userId ? {
-          id: socket.userId,
-          username: socket.username,
-        } : null,
+        viewer: socket.userId
+          ? {
+              id: socket.userId,
+              username: socket.username,
+            }
+          : null,
       });
 
       socket.emit('stream:left', { streamId: validated.streamId });
-
     } catch (error) {
       console.error('Error leaving stream:', error);
     }
@@ -137,7 +140,6 @@ export class StreamHandler {
         description: updatedStream.description,
         thumbnailUrl: updatedStream.thumbnailUrl,
       });
-
     } catch (error) {
       if (error instanceof z.ZodError) {
         socket.emit('error', { message: 'Invalid update data', errors: error.errors });
@@ -189,7 +191,6 @@ export class StreamHandler {
           username: socket.username,
         },
       });
-
     } catch (error) {
       if (error instanceof z.ZodError) {
         socket.emit('error', { message: 'Invalid product data', errors: error.errors });
@@ -207,7 +208,7 @@ export class StreamHandler {
 
     // Notify followers that stream is live
     // TODO: Implement follower notification system
-    
+
     // Broadcast to all connected users
     this.socketServer.getIO().emit('stream:went-live', {
       streamId,
@@ -255,13 +256,14 @@ export class StreamHandler {
         currentViewers: viewerCount,
         authenticatedViewers,
         anonymousViewers,
-        viewerList: viewers.filter(v => v.userId).map(v => ({
-          userId: v.userId,
-          username: v.username,
-          joinedAt: v.joinedAt,
-        })),
+        viewerList: viewers
+          .filter(v => v.userId)
+          .map(v => ({
+            userId: v.userId,
+            username: v.username,
+            joinedAt: v.joinedAt,
+          })),
       });
-
     } catch (error) {
       console.error('Error getting analytics:', error);
       socket.emit('error', { message: 'Failed to get analytics' });

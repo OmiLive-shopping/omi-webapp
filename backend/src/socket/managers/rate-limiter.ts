@@ -6,12 +6,12 @@ interface RateLimitEntry {
 export class ChatRateLimiter {
   private static instance: ChatRateLimiter;
   private limits: Map<string, RateLimitEntry> = new Map();
-  
+
   // Configuration
   private readonly MAX_MESSAGES_PER_WINDOW = 10; // 10 messages
   private readonly WINDOW_DURATION = 60 * 1000; // 1 minute
   private readonly COOLDOWN_DURATION = 5 * 60 * 1000; // 5 minutes cooldown after limit hit
-  
+
   // Role-based limits
   private readonly ROLE_LIMITS: Record<string, { maxMessages: number; windowDuration: number }> = {
     anonymous: { maxMessages: 5, windowDuration: 60 * 1000 },
@@ -40,7 +40,7 @@ export class ChatRateLimiter {
    */
   canSendMessage(userId: string, role: string = 'viewer'): boolean {
     const limits = this.ROLE_LIMITS[role] || this.ROLE_LIMITS.viewer;
-    
+
     // Unlimited for certain roles
     if (limits.maxMessages === -1) {
       return true;
@@ -84,7 +84,7 @@ export class ChatRateLimiter {
    */
   getRemainingMessages(userId: string, role: string = 'viewer'): number {
     const limits = this.ROLE_LIMITS[role] || this.ROLE_LIMITS.viewer;
-    
+
     if (limits.maxMessages === -1) {
       return -1; // Unlimited
     }
@@ -119,7 +119,7 @@ export class ChatRateLimiter {
   applyCooldown(userId: string, duration?: number): void {
     const cooldownDuration = duration || this.COOLDOWN_DURATION;
     const key = `${userId}:cooldown`;
-    
+
     this.limits.set(key, {
       count: 999, // High number to ensure blocking
       resetTime: Date.now() + cooldownDuration,
@@ -132,7 +132,7 @@ export class ChatRateLimiter {
   isInCooldown(userId: string): boolean {
     const key = `${userId}:cooldown`;
     const entry = this.limits.get(key);
-    
+
     return entry ? Date.now() < entry.resetTime : false;
   }
 
@@ -188,7 +188,7 @@ export class SlowModeManager {
    */
   disableSlowMode(streamId: string): void {
     this.slowModes.delete(streamId);
-    
+
     // Clean up user timestamps for this stream
     for (const key of this.userLastMessage.keys()) {
       if (key.endsWith(`:${streamId}`)) {

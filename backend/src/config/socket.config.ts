@@ -3,9 +3,9 @@ import { Server as HttpServer } from 'http';
 import jwt from 'jsonwebtoken';
 import { Server as SocketServer, Socket } from 'socket.io';
 
+import { initializeSocketServer } from '../socket';
 import { env } from './env-config';
 import { PrismaService } from './prisma.config';
-import { initializeSocketServer } from '../socket';
 
 export interface SocketUser {
   id: string;
@@ -45,7 +45,7 @@ export class SocketService {
 
     // Initialize our comprehensive Socket.IO server
     initializeSocketServer(httpServer);
-    
+
     // Get the initialized IO instance
     const { SocketServer } = require('./socket/socket.config');
     const socketServerInstance = SocketServer.getInstance();

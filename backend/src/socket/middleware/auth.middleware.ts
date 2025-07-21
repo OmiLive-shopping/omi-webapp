@@ -1,8 +1,9 @@
-import { Socket } from 'socket.io';
 import jwt from 'jsonwebtoken';
+import { Socket } from 'socket.io';
+
 import { env } from '../../config/env-config';
-import { SocketWithAuth } from '../../config/socket/socket.config';
 import { PrismaService } from '../../config/prisma.config';
+import { SocketWithAuth } from '../../config/socket/socket.config';
 
 interface JwtPayload {
   userId: string;
@@ -24,7 +25,7 @@ export const socketAuthMiddleware = async (socket: SocketWithAuth, next: (err?: 
 
     // Verify JWT token
     const decoded = jwt.verify(token as string, env.JWT_SECRET) as JwtPayload;
-    
+
     // Get user from database to verify they still exist and are active
     const prisma = PrismaService.getInstance().client;
     const user = await prisma.user.findUnique({

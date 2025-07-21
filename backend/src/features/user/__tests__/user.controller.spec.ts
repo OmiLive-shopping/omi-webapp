@@ -27,8 +27,12 @@ describe('UserController', () => {
       updateProfile: vi
         .fn()
         .mockResolvedValue({ success: true, user: { id: 1, bio: 'Updated bio' } }),
-      followUser: vi.fn().mockResolvedValue({ success: true, message: 'Successfully followed user' }),
-      unfollowUser: vi.fn().mockResolvedValue({ success: true, message: 'Successfully unfollowed user' }),
+      followUser: vi
+        .fn()
+        .mockResolvedValue({ success: true, message: 'Successfully followed user' }),
+      unfollowUser: vi
+        .fn()
+        .mockResolvedValue({ success: true, message: 'Successfully unfollowed user' }),
       getFollowers: vi.fn().mockResolvedValue({ success: true, data: [] }),
       getFollowing: vi.fn().mockResolvedValue({ success: true, data: [] }),
     } as unknown as UserService;
@@ -83,7 +87,11 @@ describe('UserController', () => {
     mockRequest.params = { id: '2' };
     mockRequest.userId = '1'; // Viewer ID
 
-    await userController.getPublicProfile(mockRequest as Request, mockResponse as Response, mockNext);
+    await userController.getPublicProfile(
+      mockRequest as Request,
+      mockResponse as Response,
+      mockNext,
+    );
     expect(mockUserService.getPublicProfile).toHaveBeenCalledWith('2', '1');
     expect(mockResponse.status).toHaveBeenCalledWith(200);
     expect(mockResponse.json).toHaveBeenCalledWith({

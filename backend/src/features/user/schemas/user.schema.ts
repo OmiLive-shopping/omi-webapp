@@ -77,12 +77,6 @@ export const updateProfileSchema = z.object({
     .string()
     .min(2, { message: 'Last name must be at least 2 characters long' })
     .optional(),
-  bio: z
-    .string()
-    .max(500, { message: 'Bio must not exceed 500 characters' })
-    .optional(),
-  avatarUrl: z
-    .string()
-    .url({ message: 'Invalid URL format' })
-    .optional(),
+  bio: z.string().max(500, { message: 'Bio must not exceed 500 characters' }).optional(),
+  avatarUrl: z.string().url({ message: 'Invalid URL format' }).optional(),
 });
