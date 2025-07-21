@@ -93,4 +93,9 @@ export class ProductService {
     const wishlist = await this.productRepository.getUserWishlist(userId);
     return unifiedResponse(true, 'Wishlist retrieved successfully', wishlist);
   }
+
+  async searchProducts(searchQuery: string, filters: ProductFilters) {
+    const results = await this.productRepository.searchProducts(searchQuery, filters);
+    return unifiedResponse(true, 'Search results retrieved successfully', results);
+  }
 }

@@ -75,4 +75,17 @@ export class ProductController {
     const result = await this.productService.getUserWishlist(userId);
     res.status(200).json(result);
   };
+
+  searchProducts = async (req: Request, res: Response) => {
+    const { q, ...filters } = req.query;
+    const searchQuery = q as string;
+    
+    if (!searchQuery || searchQuery.trim() === '') {
+      res.status(400).json({ success: false, message: 'Search query is required' });
+      return;
+    }
+
+    const result = await this.productService.searchProducts(searchQuery, filters as ProductFilters);
+    res.status(200).json(result);
+  };
 }

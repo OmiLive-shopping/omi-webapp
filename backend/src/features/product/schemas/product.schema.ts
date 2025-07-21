@@ -84,6 +84,41 @@ export const productFiltersSchema = z.object({
     .string()
     .transform(val => val === 'true')
     .optional(),
+  categoryId: z.string().uuid().optional(),
+  minPrice: z
+    .string()
+    .transform(val => parseFloat(val))
+    .pipe(z.number().min(0))
+    .optional(),
+  maxPrice: z
+    .string()
+    .transform(val => parseFloat(val))
+    .pipe(z.number().min(0))
+    .optional(),
+  featured: z
+    .string()
+    .transform(val => val === 'true')
+    .optional(),
+  inStock: z
+    .string()
+    .transform(val => val === 'true')
+    .optional(),
+  tags: z
+    .string()
+    .transform(val => val.split(',').filter(Boolean))
+    .optional(),
+  page: z
+    .string()
+    .transform(val => parseInt(val, 10))
+    .pipe(z.number().int().min(1))
+    .optional(),
+  limit: z
+    .string()
+    .transform(val => parseInt(val, 10))
+    .pipe(z.number().int().min(1).max(100))
+    .optional(),
+  sortBy: z.enum(['price', 'name', 'createdAt', 'rating']).optional(),
+  sortOrder: z.enum(['asc', 'desc']).optional(),
 });
 
 // Wishlist schema
