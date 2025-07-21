@@ -136,9 +136,24 @@ export class StreamController {
 
   getStreamComments = async (req: Request, res: Response) => {
     const { id } = req.params;
-
-    const result = await this.streamService.getStreamComments(id);
-    res.status(200).json(result);
+    const { before, after, limit, cursor, includeDeleted, orderBy } = req.query;
+    
+    const options = {
+      before: before as string,
+      after: after as string,
+      limit: limit ? parseInt(limit as string, 10) : undefined,
+      cursor: cursor as string,
+      includeDeleted: includeDeleted === 'true',
+      orderBy: orderBy as 'asc' | 'desc',
+    };
+    
+    // Remove undefined values
+    Object.keys(options).forEach(key => 
+      options[key as keyof typeof options] === undefined && delete options[key as keyof typeof options]
+    );
+    
+    const result = await this.streamService.getStreamComments(id, options);
+    res.status(result.success ? 200 : 404).json(result);
   };
 
   getStreamStats = async (req: Request, res: Response) => {

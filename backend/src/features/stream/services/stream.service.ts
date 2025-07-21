@@ -238,7 +238,27 @@ export class StreamService {
     return unifiedResponse(true, 'Comment added successfully', comment);
   }
 
-  async getStreamComments(streamId: string) {
+  async getStreamComments(streamId: string, options?: {
+    before?: string;
+    after?: string;
+    limit?: number;
+    cursor?: string;
+    includeDeleted?: boolean;
+    orderBy?: 'asc' | 'desc';
+  }) {
+    // Check if stream exists
+    const stream = await this.streamRepository.findStreamById(streamId);
+    if (!stream) {
+      return unifiedResponse(false, 'Stream not found');
+    }
+
+    // Use the new method if options are provided, otherwise use the basic method
+    if (options && Object.keys(options).length > 0) {
+      const chatHistory = await this.streamRepository.getStreamChatHistory(streamId, options);
+      return unifiedResponse(true, 'Chat history retrieved successfully', chatHistory);
+    }
+
+    // Fallback to basic method for backward compatibility
     const comments = await this.streamRepository.getStreamComments(streamId);
     return unifiedResponse(true, 'Comments retrieved successfully', comments);
   }

@@ -12,6 +12,7 @@ import { StreamRepository } from '../repositories/stream.repository';
 import {
   addStreamProductSchema,
   commentSchema,
+  commentHistorySchema,
   createStreamSchema,
   endStreamSchema,
   goLiveSchema,
@@ -37,7 +38,11 @@ const streamController = new StreamController(streamService);
 router.get('/', validateRequest(streamFiltersSchema, 'query'), streamController.getStreams);
 router.get('/:id', streamController.getStreamById);
 router.get('/:id/products', streamController.getStreamProducts);
-router.get('/:id/comments', streamController.getStreamComments);
+router.get(
+  '/:id/comments',
+  validateRequest(commentHistorySchema, 'query'),
+  streamController.getStreamComments,
+);
 router.get('/:id/stats', streamController.getStreamStats);
 router.get('/:id/viewers', streamController.getStreamViewers);
 

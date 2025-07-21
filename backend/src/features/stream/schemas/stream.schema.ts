@@ -111,3 +111,13 @@ export const startStreamSchema = z.object({
   streamId: z.string().uuid({ message: 'Invalid stream ID' }),
   streamKey: z.string().optional(),
 });
+
+// Comment history schema
+export const commentHistorySchema = z.object({
+  before: z.string().datetime().optional(), // ISO 8601 datetime
+  after: z.string().datetime().optional(),
+  limit: z.coerce.number().int().min(1).max(100).optional().default(50),
+  cursor: z.string().uuid().optional(), // For cursor-based pagination
+  includeDeleted: z.coerce.boolean().optional().default(false),
+  orderBy: z.enum(['asc', 'desc']).optional().default('asc'), // asc for chat history
+});

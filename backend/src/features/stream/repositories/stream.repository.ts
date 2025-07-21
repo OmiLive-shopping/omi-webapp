@@ -354,4 +354,132 @@ export class StreamRepository {
       },
     });
   }
+
+  async getStreamChatHistory(
+    streamId: string,
+    options: {
+      before?: string;
+      after?: string;
+      limit?: number;
+      cursor?: string;
+      includeDeleted?: boolean;
+      orderBy?: 'asc' | 'desc';
+    } = {},
+  ) {
+    const {
+      before,
+      after,
+      limit = 50,
+      cursor,
+      includeDeleted = false,
+      orderBy = 'asc',
+    } = options;
+
+    const where: any = {
+      streamId,
+      ...(includeDeleted ? {} : { isDeleted: false }),
+    };
+
+    // Date range filtering
+    if (before || after) {
+      where.createdAt = {};
+      if (before) where.createdAt.lt = new Date(before);
+      if (after) where.createdAt.gt = new Date(after);
+    }
+
+    // Cursor-based pagination
+    if (cursor) {
+      const cursorComment = await this.prisma.comment.findUnique({
+        where: { id: cursor },
+        select: { createdAt: true },
+      });
+      
+      if (cursorComment) {
+        where.createdAt = where.createdAt || {};
+        if (orderBy === 'asc') {
+          where.createdAt.gt = cursorComment.createdAt;
+        } else {
+          where.createdAt.lt = cursorComment.createdAt;
+        }
+      }
+    }
+
+    const comments = await this.prisma.comment.findMany({
+      where,
+      include: {
+        user: {
+          select: {
+            id: true,
+            username: true,
+            avatarUrl: true,
+            role: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
+        replyTo: {
+          select: {
+            id: true,
+            content: true,
+            user: {
+              select: {
+                username: true,
+              },
+            },
+          },
+        },
+        reactions: {
+          select: {
+            emoji: true,
+            userId: true,
+          },
+        },
+        _count: {
+          select: {
+            reactions: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: orderBy,
+      },
+      take: limit + 1, // Fetch one extra to determine if there are more
+    });
+
+    const hasMore = comments.length > limit;
+    const messages = hasMore ? comments.slice(0, -1) : comments;
+    const nextCursor = hasMore ? messages[messages.length - 1].id : null;
+
+    // Format messages to match socket format
+    const formattedMessages = messages.map(msg => ({
+      id: msg.id,
+      content: msg.content,
+      userId: msg.user.id,
+      username: msg.user.username,
+      avatarUrl: msg.user.avatarUrl,
+      role: msg.user.role?.name || 'viewer',
+      timestamp: msg.createdAt,
+      type: 'message' as const,
+      isPinned: msg.isPinned,
+      isDeleted: msg.isDeleted,
+      replyTo: msg.replyTo ? {
+        id: msg.replyTo.id,
+        content: msg.replyTo.content,
+        username: msg.replyTo.user.username,
+      } : null,
+      reactions: msg.reactions.map(r => ({
+        emoji: r.emoji,
+        userId: r.userId,
+      })),
+      reactionCount: msg._count.reactions,
+    }));
+
+    return {
+      messages: formattedMessages,
+      hasMore,
+      nextCursor,
+    };
+  }
 }
