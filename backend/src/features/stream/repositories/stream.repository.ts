@@ -273,4 +273,85 @@ export class StreamRepository {
       take: limit,
     });
   }
+
+  async getStreamStats(streamId: string) {
+    const [stream, commentCount, uniqueViewers, productCount, peakViewers] = await Promise.all([
+      this.prisma.stream.findUnique({
+        where: { id: streamId },
+        select: {
+          id: true,
+          title: true,
+          viewerCount: true,
+          isLive: true,
+          startedAt: true,
+          endedAt: true,
+          createdAt: true,
+        },
+      }),
+      this.prisma.comment.count({
+        where: { streamId },
+      }),
+      this.prisma.streamViewer.count({
+        where: { streamId },
+      }),
+      this.prisma.streamProduct.count({
+        where: { streamId },
+      }),
+      // Get peak viewer count from StreamViewer records
+      this.prisma.streamViewer.groupBy({
+        by: ['streamId'],
+        where: { streamId },
+        _count: {
+          id: true,
+        },
+      }),
+    ]);
+
+    if (!stream) {
+      return null;
+    }
+
+    // Calculate duration if stream has ended
+    let duration = 0;
+    if (stream.startedAt && stream.endedAt) {
+      duration = Math.floor((stream.endedAt.getTime() - stream.startedAt.getTime()) / 1000);
+    } else if (stream.startedAt && stream.isLive) {
+      duration = Math.floor((Date.now() - stream.startedAt.getTime()) / 1000);
+    }
+
+    return {
+      streamId: stream.id,
+      title: stream.title,
+      isLive: stream.isLive,
+      currentViewers: stream.viewerCount,
+      totalUniqueViewers: uniqueViewers,
+      peakViewers: peakViewers[0]?._count?.id || stream.viewerCount,
+      totalComments: commentCount,
+      totalProducts: productCount,
+      duration, // in seconds
+      startedAt: stream.startedAt,
+      endedAt: stream.endedAt,
+      createdAt: stream.createdAt,
+    };
+  }
+
+  async getStreamViewers(streamId: string) {
+    return this.prisma.streamViewer.findMany({
+      where: { 
+        streamId,
+        leftAt: null, // Only active viewers
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            username: true,
+          },
+        },
+      },
+      orderBy: {
+        joinedAt: 'desc',
+      },
+    });
+  }
 }

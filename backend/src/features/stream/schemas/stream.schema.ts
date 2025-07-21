@@ -105,3 +105,9 @@ export const commentSchema = z.object({
     .min(1, { message: 'Comment cannot be empty' })
     .max(1000, { message: 'Comment must not exceed 1000 characters' }),
 });
+
+// Start stream schema
+export const startStreamSchema = z.object({
+  streamId: z.string().uuid({ message: 'Invalid stream ID' }),
+  streamKey: z.string().optional(),
+});

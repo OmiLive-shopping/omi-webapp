@@ -75,13 +75,13 @@ describe('StreamService', () => {
   });
 
   it('should go live with valid stream key', async () => {
-    const mockStream = { id: '123', title: 'Test Stream', isLive: false };
+    const mockStream = { id: '123', title: 'Test Stream', isLive: false, userId: 'user-123' };
     const mockLiveStream = { ...mockStream, isLive: true };
 
-    mockStreamRepository.findStreamByUserStreamKey.mockResolvedValue(mockStream);
+    mockStreamRepository.findStreamById.mockResolvedValue(mockStream);
     mockStreamRepository.goLive.mockResolvedValue(mockLiveStream);
 
-    const result = await streamService.goLive({ streamKey: 'test-key' });
+    const result = await streamService.goLive('123', 'user-123');
 
     expect(result.success).toBe(true);
     expect(result.message).toBe('Stream is now live');
@@ -89,12 +89,12 @@ describe('StreamService', () => {
   });
 
   it('should not go live if stream not found', async () => {
-    mockStreamRepository.findStreamByUserStreamKey.mockResolvedValue(null);
+    mockStreamRepository.findStreamById.mockResolvedValue(null);
 
-    const result = await streamService.goLive({ streamKey: 'invalid-key' });
+    const result = await streamService.goLive('invalid-id', 'user-123');
 
     expect(result.success).toBe(false);
-    expect(result.message).toBe('No scheduled stream found for this stream key');
+    expect(result.message).toBe('Stream not found');
   });
 
   it('should update stream if user owns it', async () => {

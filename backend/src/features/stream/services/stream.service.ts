@@ -12,6 +12,7 @@ import {
   StreamFilters,
   UpdateStreamInput,
   UpdateViewerCountInput,
+  StartStreamInput,
 } from '../types/stream.types';
 
 export class StreamService {
@@ -79,11 +80,15 @@ export class StreamService {
     return unifiedResponse(true, 'Stream deleted successfully');
   }
 
-  async goLive(input: GoLiveInput) {
-    const stream = await this.streamRepository.findStreamByUserStreamKey(input.streamKey);
+  async goLive(streamId: string, userId: string) {
+    const stream = await this.streamRepository.findStreamById(streamId);
 
     if (!stream) {
-      return unifiedResponse(false, 'No scheduled stream found for this stream key');
+      return unifiedResponse(false, 'Stream not found');
+    }
+
+    if (stream.userId !== userId) {
+      return unifiedResponse(false, 'Unauthorized: You can only start your own streams');
     }
 
     if (stream.isLive) {
@@ -92,6 +97,25 @@ export class StreamService {
 
     const liveStream = await this.streamRepository.goLive(stream.id);
     return unifiedResponse(true, 'Stream is now live', liveStream);
+  }
+
+  async startStream(userId: string, input: StartStreamInput) {
+    const stream = await this.streamRepository.findStreamById(input.streamId);
+
+    if (!stream) {
+      return unifiedResponse(false, 'Stream not found');
+    }
+
+    if (stream.userId !== userId) {
+      return unifiedResponse(false, 'Unauthorized: You can only start your own streams');
+    }
+
+    if (stream.isLive) {
+      return unifiedResponse(false, 'Stream is already live');
+    }
+
+    const liveStream = await this.streamRepository.goLive(stream.id);
+    return unifiedResponse(true, 'Stream started successfully', liveStream);
   }
 
   async endStream(input: EndStreamInput) {
@@ -111,6 +135,25 @@ export class StreamService {
     }
 
     const endedStream = await this.streamRepository.endStream(stream[0].id);
+    return unifiedResponse(true, 'Stream ended successfully', endedStream);
+  }
+
+  async endStreamById(streamId: string, userId: string) {
+    const stream = await this.streamRepository.findStreamById(streamId);
+
+    if (!stream) {
+      return unifiedResponse(false, 'Stream not found');
+    }
+
+    if (stream.userId !== userId) {
+      return unifiedResponse(false, 'Unauthorized: You can only end your own streams');
+    }
+
+    if (!stream.isLive) {
+      return unifiedResponse(false, 'Stream is not live');
+    }
+
+    const endedStream = await this.streamRepository.endStream(stream.id);
     return unifiedResponse(true, 'Stream ended successfully', endedStream);
   }
 
@@ -198,5 +241,27 @@ export class StreamService {
   async getStreamComments(streamId: string) {
     const comments = await this.streamRepository.getStreamComments(streamId);
     return unifiedResponse(true, 'Comments retrieved successfully', comments);
+  }
+
+  async getStreamStats(streamId: string) {
+    const stream = await this.streamRepository.findStreamById(streamId);
+
+    if (!stream) {
+      return unifiedResponse(false, 'Stream not found');
+    }
+
+    const stats = await this.streamRepository.getStreamStats(streamId);
+    return unifiedResponse(true, 'Stream stats retrieved successfully', stats);
+  }
+
+  async getStreamViewers(streamId: string) {
+    const stream = await this.streamRepository.findStreamById(streamId);
+
+    if (!stream) {
+      return unifiedResponse(false, 'Stream not found');
+    }
+
+    const viewers = await this.streamRepository.getStreamViewers(streamId);
+    return unifiedResponse(true, 'Stream viewers retrieved successfully', viewers);
   }
 }

@@ -10,6 +10,7 @@ import {
   StreamFilters,
   UpdateStreamInput,
   UpdateViewerCountInput,
+  StartStreamInput,
 } from '../types/stream.types';
 
 export class StreamController {
@@ -58,9 +59,18 @@ export class StreamController {
   };
 
   goLive = async (req: Request, res: Response) => {
-    const input: GoLiveInput = req.body;
+    const { id } = req.params;
+    const userId = (req as any).user.id;
 
-    const result = await this.streamService.goLive(input);
+    const result = await this.streamService.goLive(id, userId);
+    res.status(result.success ? 200 : 404).json(result);
+  };
+
+  startStream = async (req: Request, res: Response) => {
+    const input: StartStreamInput = req.body;
+    const userId = (req as any).user.id;
+
+    const result = await this.streamService.startStream(userId, input);
     res.status(result.success ? 200 : 404).json(result);
   };
 
@@ -68,6 +78,14 @@ export class StreamController {
     const input: EndStreamInput = req.body;
 
     const result = await this.streamService.endStream(input);
+    res.status(result.success ? 200 : 404).json(result);
+  };
+
+  endStreamById = async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const userId = (req as any).user.id;
+
+    const result = await this.streamService.endStreamById(id, userId);
     res.status(result.success ? 200 : 404).json(result);
   };
 
@@ -121,5 +139,19 @@ export class StreamController {
 
     const result = await this.streamService.getStreamComments(id);
     res.status(200).json(result);
+  };
+
+  getStreamStats = async (req: Request, res: Response) => {
+    const { id } = req.params;
+
+    const result = await this.streamService.getStreamStats(id);
+    res.status(result.success ? 200 : 404).json(result);
+  };
+
+  getStreamViewers = async (req: Request, res: Response) => {
+    const { id } = req.params;
+
+    const result = await this.streamService.getStreamViewers(id);
+    res.status(result.success ? 200 : 404).json(result);
   };
 }

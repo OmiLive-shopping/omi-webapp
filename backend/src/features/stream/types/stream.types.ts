@@ -40,3 +40,8 @@ export interface AddStreamProductInput {
 export interface CommentInput {
   content: string;
 }
+
+export interface StartStreamInput {
+  streamId: string;
+  streamKey?: string;
+}
