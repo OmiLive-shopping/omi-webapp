@@ -14,7 +14,7 @@ import {
 import clsx from 'clsx';
 import StreamControls from './StreamControls';
 import { useQuery } from '@tanstack/react-query';
-import { api } from '@/lib/api';
+import { apiClient } from '@/lib/api-client';
 import { useAuthStore } from '@/stores/auth.store';
 
 interface StreamerStudioProps {
@@ -54,8 +54,8 @@ export const StreamerStudio: React.FC<StreamerStudioProps> = ({
   const { data: streamKeyData, isLoading: loadingKey } = useQuery({
     queryKey: ['stream-key'],
     queryFn: async () => {
-      const response = await api.get('/users/stream-key');
-      return response.data.data;
+      const response = await apiClient.get<any>('/users/stream-key');
+      return response.data;
     },
     enabled: !!user,
   });
