@@ -7,7 +7,7 @@ const prismaClient = PrismaService.getInstance().client;
 
 export const auth = betterAuth({
   baseURL: "http://localhost:9000",
-  basePath: "/api/auth",
+  basePath: "/v1/auth",
   secret: process.env.BETTER_AUTH_SECRET || "default-secret-change-this-in-production",
   
   database: prismaAdapter(prismaClient, {

@@ -13,9 +13,9 @@ import {
 } from 'lucide-react';
 import clsx from 'clsx';
 import StreamControls from './StreamControls';
-import { useQuery } from '@tanstack/react-query';
-import { apiClient } from '@/lib/api-client';
-import { useAuthState } from '@/lib/auth-client';
+// No longer need separate API call for stream key
+import { useAuthState, isStreamer } from '@/lib/auth-client';
+import { useNavigate } from 'react-router-dom';
 
 interface StreamerStudioProps {
   onStreamStart: () => void;
@@ -48,36 +48,22 @@ export const StreamerStudio: React.FC<StreamerStudioProps> = ({
   });
   const [activeTab, setActiveTab] = useState<'products' | 'chat' | 'settings'>('products');
   const iframeRef = useRef<HTMLIFrameElement>(null);
-  const { user } = useAuthState();
+  const { user, isAuthenticated, isLoading: authLoading } = useAuthState();
+  const navigate = useNavigate();
+  const canStream = isStreamer(user);
 
   // Debug logging
   console.log('StreamerStudio - Current user:', user);
-  console.log('StreamerStudio - User exists:', !!user);
+  console.log('StreamerStudio - User role:', user?.role);
+  console.log('StreamerStudio - Can stream:', canStream);
 
-  // Fetch stream key from backend
-  const { data: streamKeyData, isLoading: loadingKey, error } = useQuery({
-    queryKey: ['stream-key'],
-    queryFn: async () => {
-      console.log('StreamerStudio - Fetching stream key...');
-      try {
-        const response = await apiClient.get<any>('/users/stream-key');
-        console.log('StreamerStudio - Stream key response:', response.data);
-        return response.data;
-      } catch (error) {
-        console.error('StreamerStudio - Stream key error:', error);
-        throw error;
-      }
-    },
-    enabled: !!user,
-  });
-
-  // More debug logging
-  console.log('StreamerStudio - Query state:', {
-    streamKeyData,
-    loadingKey,
-    error,
-    queryEnabled: !!user
-  });
+  // Stream key is already in the user object from Better Auth
+  const streamKeyData = user?.streamKey ? {
+    streamKey: user.streamKey,
+    vdoRoomName: `room-${user.id}` // Generate room name from user ID
+  } : null;
+  const loadingKey = false; // No need to load separately
+  const error = !user?.streamKey ? new Error('No stream key found') : null;
 
 
   const handleStreamStart = () => {
@@ -89,6 +75,47 @@ export const StreamerStudio: React.FC<StreamerStudioProps> = ({
     setIsStreaming(false);
     onStreamEnd();
   };
+
+  // Handle authentication and authorization
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      navigate('/auth');
+    } else if (!authLoading && isAuthenticated && !canStream) {
+      // User is authenticated but not a streamer
+      console.log('User is not authorized to stream');
+    }
+  }, [authLoading, isAuthenticated, canStream, navigate]);
+
+  // Show loading state while checking auth
+  if (authLoading) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-lg text-gray-600 dark:text-gray-400">Loading...</div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show unauthorized message if user can't stream
+  if (!canStream) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <div className="text-center">
+          <AlertCircle className="w-12 h-12 text-yellow-500 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+            Streaming Access Required
+          </h2>
+          <p className="text-gray-600 dark:text-gray-400">
+            You need streamer permissions to access this feature.
+          </p>
+          <p className="text-sm text-gray-500 dark:text-gray-500 mt-2">
+            Contact an administrator to upgrade your account.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-full p-4">

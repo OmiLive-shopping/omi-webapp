@@ -3,8 +3,8 @@ import type { InferUser, InferSession } from 'better-auth/client';
 
 // Create the auth client with proper configuration
 export const authClient = createAuthClient({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:9000',
-  basePath: '/api/auth',
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:9000/v1',
+  basePath: '/auth',
 });
 
 // Export Better Auth hooks and functions

@@ -7,10 +7,10 @@ const router = Router();
 /**
  * Better Auth handler for all authentication endpoints
  * This handles:
- * - POST /api/auth/sign-up
- * - POST /api/auth/sign-in
- * - POST /api/auth/sign-out
- * - GET /api/auth/session
+ * - POST /v1/auth/sign-up/email
+ * - POST /v1/auth/sign-in/email
+ * - POST /v1/auth/sign-out
+ * - GET /v1/auth/get-session
  * - And all other Better Auth endpoints
  * 
  * IMPORTANT: This must be mounted BEFORE express.json() middleware

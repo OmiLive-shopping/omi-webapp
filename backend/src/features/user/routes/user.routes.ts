@@ -24,7 +24,7 @@ const router = Router();
 
 router.get('/', userController.heartbeat);
 
-// Auth routes removed - now handled by Better Auth at /api/auth/*
+// Auth routes removed - now handled by Better Auth at /v1/auth/*
 
 // Protected routes - require authentication
 router.get('/profile', auth, userController.getProfile);

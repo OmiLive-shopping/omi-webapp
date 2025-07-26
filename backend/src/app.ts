@@ -47,8 +47,8 @@ app.use(
 app.use(corsMiddleware);
 
 // Better Auth routes MUST be mounted BEFORE body parsing middleware
-console.log('Mounting Better Auth routes at /api/auth');
-app.all('/api/auth/*', toNodeHandler(auth));
+console.log('Mounting Better Auth routes at /v1/auth');
+app.all('/v1/auth/*', toNodeHandler(auth));
 
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));

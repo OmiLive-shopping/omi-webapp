@@ -150,13 +150,14 @@ export interface ApiResponse<T> {
 
 // API endpoints
 export const API_ENDPOINTS = {
-  // Auth
+  // Auth - Note: These are not used with Better Auth client
+  // Better Auth handles auth endpoints internally
   auth: {
-    login: '/auth/login',
-    register: '/auth/register',
-    logout: '/auth/logout',
-    refresh: '/auth/refresh',
-    profile: '/auth/profile',
+    login: '/auth/sign-in/email',
+    register: '/auth/sign-up/email',
+    logout: '/auth/sign-out',
+    refresh: '/auth/refresh', // Not used in Better Auth
+    profile: '/users/profile', // User profile is at /v1/users/profile
   },
 
   // Streams
