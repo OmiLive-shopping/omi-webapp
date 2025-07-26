@@ -23,9 +23,15 @@ import {
   FileText,
   Download,
   Check,
-  Clock
+  Clock,
+  Loader,
+  Key,
+  Copy
 } from 'lucide-react';
-import Layout from '@/components/layouts/Layout';
+// Layout is already provided by the router, no need to import it
+import { useProfile, UpdateProfileData } from '@/hooks/useProfile';
+import { signOut } from '@/lib/auth-client';
+import clsx from 'clsx';
 
 interface Order {
   id: number;
@@ -50,8 +56,12 @@ interface Address {
 
 const ProfilePage: React.FC = () => {
   const navigate = useNavigate();
+  const { profile, loading, error, updateProfile } = useProfile();
   const [activeTab, setActiveTab] = useState('overview');
   const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [showStreamKey, setShowStreamKey] = useState(false);
+  const [copiedStreamKey, setCopiedStreamKey] = useState(false);
   const [notifications, setNotifications] = useState({
     email: true,
     push: true,
@@ -61,79 +71,30 @@ const ProfilePage: React.FC = () => {
     promotions: false
   });
 
-  // Mock user data
-  const user = {
-    id: 1,
-    name: "Alex Johnson",
-    username: "@alexj",
-    email: "alex.johnson@example.com",
-    phone: "+1 (555) 123-4567",
-    avatar: "/placeholder-avatar.jpg",
-    joinDate: "January 2023",
-    bio: "Tech enthusiast and live shopping addict. Always looking for the latest gadgets and deals!",
-    isStreamer: true,
-    stats: {
-      orders: 42,
-      wishlist: 18,
-      following: 156,
-      reviews: 23,
-      streams: 12,
-      viewers: 3420,
-      earnings: 1234.56
-    }
-  };
+  // Form state for editing
+  const [formData, setFormData] = useState<UpdateProfileData>({
+    firstName: '',
+    lastName: '',
+    bio: '',
+    avatarUrl: ''
+  });
 
-  const recentOrders: Order[] = [
-    {
-      id: 1,
-      orderNumber: "ORD-2024-001",
-      date: "2 days ago",
-      status: "delivered",
-      total: 299.99,
-      items: 1
-    },
-    {
-      id: 2,
-      orderNumber: "ORD-2024-002",
-      date: "1 week ago",
-      status: "shipped",
-      total: 149.99,
-      items: 2
-    },
-    {
-      id: 3,
-      orderNumber: "ORD-2024-003",
-      date: "2 weeks ago",
-      status: "processing",
-      total: 89.99,
-      items: 1
+  // Initialize form data when profile loads
+  React.useEffect(() => {
+    if (profile) {
+      setFormData({
+        firstName: profile.firstName || '',
+        lastName: profile.lastName || '',
+        bio: profile.bio || '',
+        avatarUrl: profile.avatarUrl || ''
+      });
     }
-  ];
+  }, [profile]);
 
-  const addresses: Address[] = [
-    {
-      id: 1,
-      type: "Home",
-      name: "Alex Johnson",
-      street: "123 Main Street",
-      city: "San Francisco",
-      state: "CA",
-      zip: "94105",
-      phone: "+1 (555) 123-4567",
-      isDefault: true
-    },
-    {
-      id: 2,
-      type: "Work",
-      name: "Alex Johnson",
-      street: "456 Business Ave",
-      city: "San Francisco",
-      state: "CA",
-      zip: "94107",
-      phone: "+1 (555) 987-6543",
-      isDefault: false
-    }
-  ];
+  // Mock data for orders (replace with real API later)
+  const recentOrders: Order[] = [];
+
+  const addresses: Address[] = [];
 
   const menuItems = [
     { id: 'overview', label: 'Overview', icon: User },
@@ -146,14 +107,34 @@ const ProfilePage: React.FC = () => {
     { id: 'help', label: 'Help & Support', icon: HelpCircle }
   ];
 
-  const handleSaveProfile = () => {
-    setIsEditing(false);
-    console.log('Saving profile...');
+  const handleSaveProfile = async () => {
+    setIsSaving(true);
+    const result = await updateProfile(formData);
+    
+    if (result.success) {
+      setIsEditing(false);
+    } else {
+      // TODO: Show error toast
+      console.error('Failed to update profile:', result.error);
+    }
+    setIsSaving(false);
   };
 
-  const handleLogout = () => {
-    console.log('Logging out...');
+  const handleLogout = async () => {
+    await signOut();
     navigate('/');
+  };
+
+  const copyStreamKey = async () => {
+    if (profile?.streamKey) {
+      try {
+        await navigator.clipboard.writeText(profile.streamKey);
+        setCopiedStreamKey(true);
+        setTimeout(() => setCopiedStreamKey(false), 2000);
+      } catch (err) {
+        console.error('Failed to copy stream key:', err);
+      }
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -175,17 +156,44 @@ const ProfilePage: React.FC = () => {
     }
   };
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader className="w-8 h-8 animate-spin text-primary-500" />
+      </div>
+    );
+  }
+
+  if (error || !profile) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen">
+        <p className="text-red-500 mb-4">{error || 'Failed to load profile'}</p>
+        <button 
+          onClick={() => navigate('/')}
+          className="bg-primary-600 text-white px-6 py-2 rounded-lg hover:bg-primary-700"
+        >
+          Go Home
+        </button>
+      </div>
+    );
+  }
+
+  const displayName = `${profile.firstName || ''} ${profile.lastName || ''}`.trim() || profile.username;
+  const memberSince = new Date(profile.createdAt).toLocaleDateString('en-US', { 
+    month: 'long', 
+    year: 'numeric' 
+  });
+
   return (
-    <Layout>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Profile Header */}
-        <div className="bg-gray-900 rounded-xl p-6 mb-8">
+        <div className="bg-white dark:bg-gray-900 rounded-xl p-6 mb-8 shadow-lg">
           <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
             {/* Avatar */}
             <div className="relative">
               <img 
-                src={user.avatar} 
-                alt={user.name}
+                src={profile.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=6366f1&color=fff`} 
+                alt={displayName}
                 className="w-24 h-24 rounded-full object-cover"
               />
               <button className="absolute bottom-0 right-0 bg-primary-600 p-2 rounded-full hover:bg-primary-700">
@@ -197,15 +205,15 @@ const ProfilePage: React.FC = () => {
             <div className="flex-1">
               <div className="flex items-start justify-between">
                 <div>
-                  <h1 className="text-2xl font-bold mb-1">{user.name}</h1>
-                  <p className="text-gray-400 mb-2">{user.username}</p>
-                  <p className="text-gray-300 mb-4">{user.bio}</p>
-                  <div className="flex items-center gap-4 text-sm text-gray-400">
+                  <h1 className="text-2xl font-bold mb-1 text-gray-900 dark:text-white">{displayName}</h1>
+                  <p className="text-gray-600 dark:text-gray-400 mb-2">@{profile.username}</p>
+                  <p className="text-gray-700 dark:text-gray-300 mb-4">{profile.bio || 'No bio yet'}</p>
+                  <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
                     <span className="flex items-center gap-1">
                       <Calendar className="w-4 h-4" />
-                      Joined {user.joinDate}
+                      Joined {memberSince}
                     </span>
-                    {user.isStreamer && (
+                    {profile.role === 'streamer' && (
                       <span className="flex items-center gap-1 text-primary-500">
                         <Video className="w-4 h-4" />
                         Verified Streamer
@@ -215,7 +223,7 @@ const ProfilePage: React.FC = () => {
                 </div>
                 <button 
                   onClick={() => setIsEditing(!isEditing)}
-                  className="bg-gray-800 text-white px-4 py-2 rounded-lg hover:bg-gray-700 flex items-center gap-2"
+                  className="bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white px-4 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 flex items-center gap-2 transition-colors"
                 >
                   <Edit3 className="w-4 h-4" />
                   Edit Profile
@@ -225,36 +233,28 @@ const ProfilePage: React.FC = () => {
           </div>
 
           {/* Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 mt-6 pt-6 border-t border-gray-800">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 pt-6 border-t border-gray-200 dark:border-gray-800">
             <div className="text-center">
-              <p className="text-2xl font-bold">{user.stats.orders}</p>
-              <p className="text-sm text-gray-400">Orders</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">0</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Orders</p>
             </div>
             <div className="text-center">
-              <p className="text-2xl font-bold">{user.stats.wishlist}</p>
-              <p className="text-sm text-gray-400">Wishlist</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">0</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Wishlist</p>
             </div>
             <div className="text-center">
-              <p className="text-2xl font-bold">{user.stats.following}</p>
-              <p className="text-sm text-gray-400">Following</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">{profile._count?.following || 0}</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Following</p>
             </div>
             <div className="text-center">
-              <p className="text-2xl font-bold">{user.stats.reviews}</p>
-              <p className="text-sm text-gray-400">Reviews</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">{profile._count?.followers || 0}</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Followers</p>
             </div>
-            {user.isStreamer && (
+            {profile.role === 'streamer' && (
               <>
                 <div className="text-center">
-                  <p className="text-2xl font-bold">{user.stats.streams}</p>
-                  <p className="text-sm text-gray-400">Streams</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-2xl font-bold">{user.stats.viewers.toLocaleString()}</p>
-                  <p className="text-sm text-gray-400">Total Views</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-2xl font-bold">${user.stats.earnings}</p>
-                  <p className="text-sm text-gray-400">Earnings</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white">{profile._count?.streams || 0}</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Streams</p>
                 </div>
               </>
             )}
@@ -301,56 +301,72 @@ const ProfilePage: React.FC = () => {
                     <h2 className="text-xl font-bold mb-4">Edit Profile</h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-medium mb-2">Full Name</label>
+                        <label className="block text-sm font-medium mb-2">First Name</label>
                         <input 
                           type="text" 
-                          defaultValue={user.name}
-                          className="w-full bg-gray-800 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                          value={formData.firstName}
+                          onChange={(e) => setFormData({...formData, firstName: e.target.value})}
+                          className="w-full bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 border border-gray-300 dark:border-gray-700"
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium mb-2">Username</label>
+                        <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Last Name</label>
                         <input 
                           type="text" 
-                          defaultValue={user.username}
-                          className="w-full bg-gray-800 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                          value={formData.lastName}
+                          onChange={(e) => setFormData({...formData, lastName: e.target.value})}
+                          className="w-full bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 border border-gray-300 dark:border-gray-700"
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium mb-2">Email</label>
+                        <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Username</label>
+                        <input 
+                          type="text" 
+                          value={profile.username}
+                          disabled
+                          className="w-full bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg px-4 py-2 opacity-50 cursor-not-allowed border border-gray-300 dark:border-gray-700"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Email</label>
                         <input 
                           type="email" 
-                          defaultValue={user.email}
-                          className="w-full bg-gray-800 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-2">Phone</label>
-                        <input 
-                          type="tel" 
-                          defaultValue={user.phone}
-                          className="w-full bg-gray-800 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                          value={profile.email}
+                          disabled
+                          className="w-full bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg px-4 py-2 opacity-50 cursor-not-allowed border border-gray-300 dark:border-gray-700"
                         />
                       </div>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium mb-2">Bio</label>
+                      <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Bio</label>
                       <textarea 
-                        defaultValue={user.bio}
+                        value={formData.bio}
+                        onChange={(e) => setFormData({...formData, bio: e.target.value})}
                         rows={3}
                         className="w-full bg-gray-800 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        placeholder="Tell us about yourself..."
                       />
                     </div>
                     <div className="flex gap-4">
                       <button 
                         onClick={handleSaveProfile}
-                        className="bg-primary-600 text-white px-6 py-2 rounded-lg hover:bg-primary-700"
+                        disabled={isSaving}
+                        className="bg-primary-600 text-white px-6 py-2 rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                       >
+                        {isSaving && <Loader className="w-4 h-4 animate-spin" />}
                         Save Changes
                       </button>
                       <button 
-                        onClick={() => setIsEditing(false)}
-                        className="bg-gray-800 text-white px-6 py-2 rounded-lg hover:bg-gray-700"
+                        onClick={() => {
+                          setIsEditing(false);
+                          setFormData({
+                            firstName: profile.firstName || '',
+                            lastName: profile.lastName || '',
+                            bio: profile.bio || '',
+                            avatarUrl: profile.avatarUrl || ''
+                          });
+                        }}
+                        className="bg-gray-200 dark:bg-gray-800 text-gray-900 dark:text-white px-6 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-700 transition-colors"
                       >
                         Cancel
                       </button>
@@ -359,54 +375,72 @@ const ProfilePage: React.FC = () => {
                 )}
 
                 {/* Contact Information */}
-                <div className="bg-gray-900 rounded-xl p-6">
-                  <h2 className="text-xl font-bold mb-4">Contact Information</h2>
+                <div className="bg-white dark:bg-gray-900 rounded-xl p-6 shadow-lg">
+                  <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">Contact Information</h2>
                   <div className="space-y-3">
                     <div className="flex items-center gap-3">
-                      <Mail className="w-5 h-5 text-gray-400" />
-                      <span>{user.email}</span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <Phone className="w-5 h-5 text-gray-400" />
-                      <span>{user.phone}</span>
+                      <Mail className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                      <span className="text-gray-700 dark:text-gray-300">{profile.email}</span>
                     </div>
                   </div>
                 </div>
 
+                {/* Streamer Settings */}
+                {profile.role === 'streamer' && (
+                  <div className="bg-white dark:bg-gray-900 rounded-xl p-6 shadow-lg">
+                    <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">Streaming Settings</h2>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Stream Key</label>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type={showStreamKey ? 'text' : 'password'}
+                            value={profile.streamKey || ''}
+                            readOnly
+                            className="flex-1 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg px-4 py-2 font-mono text-sm border border-gray-300 dark:border-gray-700"
+                          />
+                          <button
+                            onClick={() => setShowStreamKey(!showStreamKey)}
+                            className="p-2 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors border border-gray-300 dark:border-gray-700"
+                            title={showStreamKey ? 'Hide' : 'Show'}
+                          >
+                            <Key className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={copyStreamKey}
+                            className="p-2 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors border border-gray-300 dark:border-gray-700"
+                            title="Copy"
+                          >
+                            {copiedStreamKey ? (
+                              <Check className="w-4 h-4 text-green-500" />
+                            ) : (
+                              <Copy className="w-4 h-4" />
+                            )}
+                          </button>
+                        </div>
+                        <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                          Keep this key secret. Use it to stream with OBS or other software.
+                        </p>
+                      </div>
+                      <div className="pt-4">
+                        <button
+                          onClick={() => navigate('/studio')}
+                          className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 flex items-center gap-2"
+                        >
+                          <Video className="w-4 h-4" />
+                          Go to Studio
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* Recent Activity */}
-                <div className="bg-gray-900 rounded-xl p-6">
-                  <h2 className="text-xl font-bold mb-4">Recent Activity</h2>
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-4">
-                      <div className="bg-blue-600/20 p-3 rounded-lg">
-                        <ShoppingBag className="w-5 h-5 text-blue-500" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="font-medium">Order Delivered</p>
-                        <p className="text-sm text-gray-400">Premium Wireless Headphones</p>
-                      </div>
-                      <span className="text-sm text-gray-400">2 days ago</span>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <div className="bg-purple-600/20 p-3 rounded-lg">
-                        <Star className="w-5 h-5 text-purple-500" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="font-medium">Review Posted</p>
-                        <p className="text-sm text-gray-400">5-star review for Gaming Mouse</p>
-                      </div>
-                      <span className="text-sm text-gray-400">5 days ago</span>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <div className="bg-red-600/20 p-3 rounded-lg">
-                        <Heart className="w-5 h-5 text-red-500" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="font-medium">Added to Wishlist</p>
-                        <p className="text-sm text-gray-400">4K Webcam Pro</p>
-                      </div>
-                      <span className="text-sm text-gray-400">1 week ago</span>
-                    </div>
+                <div className="bg-white dark:bg-gray-900 rounded-xl p-6 shadow-lg">
+                  <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">Recent Activity</h2>
+                  <div className="text-center py-8 text-gray-600 dark:text-gray-400">
+                    <MessageSquare className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                    <p>No recent activity</p>
                   </div>
                 </div>
               </div>
@@ -416,51 +450,61 @@ const ProfilePage: React.FC = () => {
             {activeTab === 'orders' && (
               <div className="space-y-6">
                 <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-xl font-bold">Order History</h2>
-                  <button className="text-primary-500 hover:text-primary-400">
-                    View All Orders
-                  </button>
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-white">Order History</h2>
                 </div>
 
-                {recentOrders.map((order) => (
-                  <div key={order.id} className="bg-gray-900 rounded-xl p-6">
-                    <div className="flex items-start justify-between mb-4">
-                      <div>
-                        <p className="font-medium mb-1">{order.orderNumber}</p>
-                        <p className="text-sm text-gray-400">{order.date}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-bold text-lg">${order.total}</p>
-                        <p className="text-sm text-gray-400">{order.items} item(s)</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className={`flex items-center gap-2 ${getStatusColor(order.status)}`}>
-                        {getStatusIcon(order.status)}
-                        <span className="capitalize">{order.status}</span>
-                      </div>
-                      <div className="flex gap-2">
-                        <button className="text-sm text-gray-400 hover:text-white">
-                          Track Order
-                        </button>
-                        <span className="text-gray-600">•</span>
-                        <button className="text-sm text-gray-400 hover:text-white">
-                          View Details
-                        </button>
-                      </div>
-                    </div>
+                {recentOrders.length === 0 ? (
+                  <div className="bg-white dark:bg-gray-900 rounded-xl p-12 text-center shadow-lg">
+                    <Package className="w-16 h-16 text-gray-400 dark:text-gray-600 mx-auto mb-4" />
+                    <p className="text-gray-600 dark:text-gray-400 mb-4">No orders yet</p>
+                    <button 
+                      onClick={() => navigate('/products')}
+                      className="bg-primary-600 text-white px-6 py-2 rounded-lg hover:bg-primary-700"
+                    >
+                      Start Shopping
+                    </button>
                   </div>
-                ))}
+                ) : (
+                  recentOrders.map((order) => (
+                    <div key={order.id} className="bg-gray-900 rounded-xl p-6">
+                      <div className="flex items-start justify-between mb-4">
+                        <div>
+                          <p className="font-medium mb-1 text-gray-900 dark:text-white">{order.orderNumber}</p>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">{order.date}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-bold text-lg">${order.total}</p>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">{order.items} item(s)</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div className={`flex items-center gap-2 ${getStatusColor(order.status)}`}>
+                          {getStatusIcon(order.status)}
+                          <span className="capitalize">{order.status}</span>
+                        </div>
+                        <div className="flex gap-2">
+                          <button className="text-sm text-gray-400 hover:text-white">
+                            Track Order
+                          </button>
+                          <span className="text-gray-600">•</span>
+                          <button className="text-sm text-gray-400 hover:text-white">
+                            View Details
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             )}
 
             {/* Wishlist Tab */}
             {activeTab === 'wishlist' && (
               <div className="space-y-6">
-                <h2 className="text-xl font-bold mb-6">My Wishlist ({user.stats.wishlist} items)</h2>
-                <div className="text-center py-12">
-                  <Heart className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-                  <p className="text-gray-400 mb-4">Your wishlist items will appear here</p>
+                <h2 className="text-xl font-bold mb-6 text-gray-900 dark:text-white">My Wishlist</h2>
+                <div className="bg-white dark:bg-gray-900 rounded-xl p-12 text-center shadow-lg">
+                  <Heart className="w-16 h-16 text-gray-400 dark:text-gray-600 mx-auto mb-4" />
+                  <p className="text-gray-600 dark:text-gray-400 mb-4">Your wishlist is empty</p>
                   <button 
                     onClick={() => navigate('/products')}
                     className="bg-primary-600 text-white px-6 py-2 rounded-lg hover:bg-primary-700"
@@ -471,40 +515,18 @@ const ProfilePage: React.FC = () => {
               </div>
             )}
 
-            {/* Addresses Tab */}
+            {/* Other tabs remain similar but with empty states */}
             {activeTab === 'addresses' && (
               <div className="space-y-6">
                 <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-xl font-bold">Saved Addresses</h2>
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-white">Saved Addresses</h2>
                   <button className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700">
                     Add New Address
                   </button>
                 </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {addresses.map((address) => (
-                    <div key={address.id} className="bg-gray-900 rounded-xl p-6">
-                      <div className="flex items-start justify-between mb-4">
-                        <div>
-                          <p className="font-medium mb-1">{address.type}</p>
-                          {address.isDefault && (
-                            <span className="bg-primary-600/20 text-primary-400 text-xs px-2 py-1 rounded">
-                              Default
-                            </span>
-                          )}
-                        </div>
-                        <button className="text-gray-400 hover:text-white">
-                          <Edit3 className="w-4 h-4" />
-                        </button>
-                      </div>
-                      <div className="space-y-1 text-sm text-gray-300">
-                        <p>{address.name}</p>
-                        <p>{address.street}</p>
-                        <p>{address.city}, {address.state} {address.zip}</p>
-                        <p>{address.phone}</p>
-                      </div>
-                    </div>
-                  ))}
+                <div className="bg-white dark:bg-gray-900 rounded-xl p-12 text-center shadow-lg">
+                  <MapPin className="w-16 h-16 text-gray-400 dark:text-gray-600 mx-auto mb-4" />
+                  <p className="text-gray-600 dark:text-gray-400">No saved addresses</p>
                 </div>
               </div>
             )}
@@ -513,25 +535,14 @@ const ProfilePage: React.FC = () => {
             {activeTab === 'payment' && (
               <div className="space-y-6">
                 <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-xl font-bold">Payment Methods</h2>
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-white">Payment Methods</h2>
                   <button className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700">
                     Add Payment Method
                   </button>
                 </div>
-
-                <div className="bg-gray-900 rounded-xl p-6">
-                  <div className="flex items-center gap-4">
-                    <div className="bg-gray-800 p-3 rounded-lg">
-                      <CreditCard className="w-6 h-6" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-medium">•••• •••• •••• 4242</p>
-                      <p className="text-sm text-gray-400">Expires 12/25</p>
-                    </div>
-                    <button className="text-gray-400 hover:text-white">
-                      <Edit3 className="w-4 h-4" />
-                    </button>
-                  </div>
+                <div className="bg-white dark:bg-gray-900 rounded-xl p-12 text-center shadow-lg">
+                  <CreditCard className="w-16 h-16 text-gray-400 dark:text-gray-600 mx-auto mb-4" />
+                  <p className="text-gray-600 dark:text-gray-400">No payment methods saved</p>
                 </div>
               </div>
             )}
@@ -539,16 +550,16 @@ const ProfilePage: React.FC = () => {
             {/* Notifications Tab */}
             {activeTab === 'notifications' && (
               <div className="space-y-6">
-                <h2 className="text-xl font-bold mb-6">Notification Preferences</h2>
+                <h2 className="text-xl font-bold mb-6 text-gray-900 dark:text-white">Notification Preferences</h2>
 
-                <div className="bg-gray-900 rounded-xl p-6 space-y-4">
+                <div className="bg-white dark:bg-gray-900 rounded-xl p-6 space-y-4 shadow-lg">
                   {Object.entries(notifications).map(([key, value]) => (
                     <div key={key} className="flex items-center justify-between">
                       <div>
-                        <p className="font-medium capitalize">
+                        <p className="font-medium capitalize text-gray-900 dark:text-white">
                           {key.replace(/([A-Z])/g, ' $1').trim()}
                         </p>
-                        <p className="text-sm text-gray-400">
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
                           {key === 'streamAlerts' && 'Get notified when your favorite streamers go live'}
                           {key === 'orderUpdates' && 'Receive updates about your order status'}
                           {key === 'promotions' && 'Special offers and discount codes'}
@@ -557,7 +568,7 @@ const ProfilePage: React.FC = () => {
                       <button
                         onClick={() => setNotifications({ ...notifications, [key]: !value })}
                         className={`relative inline-flex h-6 w-11 items-center rounded-full ${
-                          value ? 'bg-primary-600' : 'bg-gray-700'
+                          value ? 'bg-primary-600' : 'bg-gray-300 dark:bg-gray-700'
                         }`}
                       >
                         <span
@@ -575,26 +586,26 @@ const ProfilePage: React.FC = () => {
             {/* Security Tab */}
             {activeTab === 'security' && (
               <div className="space-y-6">
-                <h2 className="text-xl font-bold mb-6">Security Settings</h2>
+                <h2 className="text-xl font-bold mb-6 text-gray-900 dark:text-white">Security Settings</h2>
 
                 <div className="space-y-4">
-                  <div className="bg-gray-900 rounded-xl p-6">
+                  <div className="bg-white dark:bg-gray-900 rounded-xl p-6 shadow-lg">
                     <div className="flex items-center justify-between mb-4">
                       <div>
-                        <p className="font-medium">Password</p>
-                        <p className="text-sm text-gray-400">Last changed 3 months ago</p>
+                        <p className="font-medium text-gray-900 dark:text-white">Password</p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">Manage your password through Better Auth</p>
                       </div>
-                      <button className="text-primary-500 hover:text-primary-400">
+                      <button className="text-primary-600 dark:text-primary-500 hover:text-primary-700 dark:hover:text-primary-400 transition-colors">
                         Change Password
                       </button>
                     </div>
                   </div>
 
-                  <div className="bg-gray-900 rounded-xl p-6">
+                  <div className="bg-white dark:bg-gray-900 rounded-xl p-6 shadow-lg">
                     <div className="flex items-center justify-between mb-4">
                       <div>
-                        <p className="font-medium">Two-Factor Authentication</p>
-                        <p className="text-sm text-gray-400">Add an extra layer of security</p>
+                        <p className="font-medium text-gray-900 dark:text-white">Two-Factor Authentication</p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">Add an extra layer of security</p>
                       </div>
                       <button className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700">
                         Enable
@@ -602,15 +613,15 @@ const ProfilePage: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="bg-gray-900 rounded-xl p-6">
-                    <p className="font-medium mb-4">Active Sessions</p>
+                  <div className="bg-white dark:bg-gray-900 rounded-xl p-6 shadow-lg">
+                    <p className="font-medium mb-4 text-gray-900 dark:text-white">Active Sessions</p>
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                          <Globe className="w-5 h-5 text-gray-400" />
+                          <Globe className="w-5 h-5 text-gray-600 dark:text-gray-400" />
                           <div>
-                            <p className="text-sm">Chrome on MacOS</p>
-                            <p className="text-xs text-gray-400">San Francisco, CA • Now</p>
+                            <p className="text-sm text-gray-900 dark:text-white">Current Session</p>
+                            <p className="text-xs text-gray-600 dark:text-gray-400">Active now</p>
                           </div>
                         </div>
                         <span className="text-xs bg-green-600/20 text-green-400 px-2 py-1 rounded">
@@ -626,30 +637,30 @@ const ProfilePage: React.FC = () => {
             {/* Help Tab */}
             {activeTab === 'help' && (
               <div className="space-y-6">
-                <h2 className="text-xl font-bold mb-6">Help & Support</h2>
+                <h2 className="text-xl font-bold mb-6 text-gray-900 dark:text-white">Help & Support</h2>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <button className="bg-gray-900 rounded-xl p-6 text-left hover:bg-gray-800 transition-colors">
+                  <button className="bg-white dark:bg-gray-900 rounded-xl p-6 text-left hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors shadow-lg">
                     <FileText className="w-8 h-8 text-primary-500 mb-3" />
-                    <p className="font-medium mb-1">FAQ</p>
+                    <p className="font-medium mb-1 text-gray-900 dark:text-white">FAQ</p>
                     <p className="text-sm text-gray-400">Find answers to common questions</p>
                   </button>
 
-                  <button className="bg-gray-900 rounded-xl p-6 text-left hover:bg-gray-800 transition-colors">
+                  <button className="bg-white dark:bg-gray-900 rounded-xl p-6 text-left hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors shadow-lg">
                     <MessageSquare className="w-8 h-8 text-primary-500 mb-3" />
-                    <p className="font-medium mb-1">Contact Support</p>
+                    <p className="font-medium mb-1 text-gray-900 dark:text-white">Contact Support</p>
                     <p className="text-sm text-gray-400">Get help from our support team</p>
                   </button>
 
-                  <button className="bg-gray-900 rounded-xl p-6 text-left hover:bg-gray-800 transition-colors">
+                  <button className="bg-white dark:bg-gray-900 rounded-xl p-6 text-left hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors shadow-lg">
                     <Download className="w-8 h-8 text-primary-500 mb-3" />
-                    <p className="font-medium mb-1">Download Data</p>
+                    <p className="font-medium mb-1 text-gray-900 dark:text-white">Download Data</p>
                     <p className="text-sm text-gray-400">Export your account data</p>
                   </button>
 
-                  <button className="bg-gray-900 rounded-xl p-6 text-left hover:bg-gray-800 transition-colors">
+                  <button className="bg-white dark:bg-gray-900 rounded-xl p-6 text-left hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors shadow-lg">
                     <Shield className="w-8 h-8 text-primary-500 mb-3" />
-                    <p className="font-medium mb-1">Privacy Policy</p>
+                    <p className="font-medium mb-1 text-gray-900 dark:text-white">Privacy Policy</p>
                     <p className="text-sm text-gray-400">Learn how we protect your data</p>
                   </button>
                 </div>
@@ -658,7 +669,6 @@ const ProfilePage: React.FC = () => {
           </div>
         </div>
       </div>
-    </Layout>
   );
 };
 

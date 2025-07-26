@@ -1,7 +1,7 @@
 import { Router } from 'express';
 
 import { PrismaService } from '../../../config/prisma.config.js';
-import { auth } from '../../../middleware/auth.middleware.js';
+import { authenticate } from '../../../middleware/auth.middleware.js';
 import {
   commonValidations,
   handleValidationErrors,
@@ -27,10 +27,10 @@ router.get('/', userController.heartbeat);
 // Auth routes removed - now handled by Better Auth at /v1/auth/*
 
 // Protected routes - require authentication
-router.get('/profile', auth, userController.getProfile);
+router.get('/profile', authenticate, userController.getProfile);
 router.patch(
   '/profile',
-  auth,
+  authenticate,
   userValidations.updateProfile,
   handleValidationErrors,
   validateRequest(updateProfileSchema),
@@ -38,8 +38,8 @@ router.patch(
 );
 
 // Stream key management - require authentication
-router.get('/stream-key', auth, userController.getStreamKey);
-router.post('/stream-key/regenerate', auth, userController.regenerateStreamKey);
+router.get('/stream-key', authenticate, userController.getStreamKey);
+router.post('/stream-key/regenerate', authenticate, userController.regenerateStreamKey);
 
 // Public routes with optional auth for follow status
 router.get(
@@ -68,7 +68,7 @@ router.get(
 // Follow/Unfollow routes - require authentication
 router.post(
   '/:id/follow',
-  auth,
+  authenticate,
   commonValidations.uuid('id'),
   handleValidationErrors,
   userController.followUser,
@@ -76,7 +76,7 @@ router.post(
 
 router.delete(
   '/:id/follow',
-  auth,
+  authenticate,
   commonValidations.uuid('id'),
   handleValidationErrors,
   userController.unfollowUser,

@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from 'express';
 import { unifiedResponse } from 'uni-response';
-import { auth } from '../auth.js';
+import { auth as betterAuth } from '../auth.js';
 import type { Session, User } from 'better-auth';
 
 // Extend the Better Auth User type with our custom fields
@@ -42,10 +42,14 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
       cookie: req.headers.cookie || '',
     };
 
+    console.log('Auth middleware - headers:', headers);
+
     // Get session using Better Auth's API
-    const session = await auth.api.getSession({
+    const session = await betterAuth.api.getSession({
       headers,
     });
+
+    console.log('Auth middleware - session result:', session);
 
     if (!session) {
       res.status(401).json(unifiedResponse(false, 'No valid session found'));
@@ -81,7 +85,7 @@ export function requireRole(allowedRoles: string[]) {
         cookie: req.headers.cookie || '',
       };
 
-      const session = await auth.api.getSession({
+      const session = await betterAuth.api.getSession({
         headers,
       });
 
@@ -129,5 +133,5 @@ export const requireAdmin = requireRole(['admin']);
 export const requireUser = authenticate; // Any authenticated user
 
 // Legacy exports for backward compatibility
-export const auth = authenticate;
+export const authMiddleware = authenticate;
 export const checkUserRole = requireRole;

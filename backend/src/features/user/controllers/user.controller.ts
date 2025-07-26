@@ -48,12 +48,13 @@ export class UserController {
 
   getProfile = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const userId = req.userId; // Assuming middleware adds `userId` to `req`
-      //TODO: add better logic for userId check
-      if (userId) {
-        const result = await this.userService.getProfile(userId);
-        res.status(result.success ? 200 : 404).json(result);
+      const userId = req.user?.id || req.userId; // Support both Better Auth and legacy
+      if (!userId) {
+        res.status(401).json({ success: false, message: 'Unauthorized' });
+        return;
       }
+      const result = await this.userService.getProfile(userId);
+      res.status(result.success ? 200 : 404).json(result);
     } catch (error) {
       next(error);
     }
@@ -72,7 +73,7 @@ export class UserController {
 
   updateProfile = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const userId = req.userId;
+      const userId = req.user?.id || req.userId;
       if (!userId) {
         res.status(401).json({ success: false, message: 'Unauthorized' });
         return;
@@ -86,7 +87,7 @@ export class UserController {
 
   followUser = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const userId = req.userId;
+      const userId = req.user?.id || req.userId;
       const { id } = req.params;
 
       if (!userId) {
@@ -103,7 +104,7 @@ export class UserController {
 
   unfollowUser = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const userId = req.userId;
+      const userId = req.user?.id || req.userId;
       const { id } = req.params;
 
       if (!userId) {
@@ -144,7 +145,7 @@ export class UserController {
 
   getStreamKey = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const userId = req.userId;
+      const userId = req.user?.id || req.userId;
       if (!userId) {
         res.status(401).json({ success: false, message: 'Unauthorized' });
         return;
@@ -159,7 +160,7 @@ export class UserController {
 
   regenerateStreamKey = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const userId = req.userId;
+      const userId = req.user?.id || req.userId;
       if (!userId) {
         res.status(401).json({ success: false, message: 'Unauthorized' });
         return;

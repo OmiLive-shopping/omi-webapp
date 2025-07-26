@@ -31,7 +31,14 @@ export class UserRepository {
         streamKey: true,
         createdAt: true,
         updatedAt: true,
-        role: { select: { name: true } },
+        role: true,
+        _count: {
+          select: {
+            streams: true,
+            followers: true,
+            following: true,
+          },
+        },
       },
     });
   }
