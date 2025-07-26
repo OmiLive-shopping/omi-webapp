@@ -2,7 +2,7 @@ import { instrument } from '@socket.io/admin-ui';
 import { Server as HTTPServer } from 'http';
 import { Server as SocketIOServer, Socket } from 'socket.io';
 
-import { env } from '../env-config';
+import { env } from '../env-config.js';
 
 export interface SocketWithAuth extends Socket {
   userId?: string;

@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response } from 'express';
 
-import { UserService } from '../services/user.service';
-import { LoginInputTypes, RegisterInputTypes } from '../types/user.types';
+import { UserService } from '../services/user.service.js';
+import { LoginInputTypes, RegisterInputTypes } from '../types/user.types.js';
 export class UserController {
   private userService: UserService;
 

@@ -1,6 +1,6 @@
 import cors, { CorsOptions } from 'cors';
 
-import { env } from './env-config';
+import { env } from './env-config.js';
 
 // Helper to parse allowed origins from environment
 const getAllowedOrigins = (): string[] => {

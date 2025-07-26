@@ -10,12 +10,8 @@ export class UserRepository {
   async findUserByEmail(email: string) {
     return this.prisma.user.findUnique({
       where: { email },
-      select: {
-        id: true,
-        password: true,
-        isAdmin: true,
-        streamKey: true,
-        role: { select: { name: true } },
+      include: {
+        role: true,
       },
     });
   }
@@ -40,13 +36,11 @@ export class UserRepository {
     });
   }
 
-  async createUser(data: { email: string; username: string; password: string; firstName: string }) {
+  async createUser(data: { email: string; username: string; password: string; firstName: string; streamKey?: string }) {
     return this.prisma.user.create({
       data,
-      select: {
-        id: true,
-        streamKey: true,
-        role: { select: { name: true } },
+      include: {
+        role: true,
       },
     });
   }

@@ -2,8 +2,8 @@ import { Prisma } from '@prisma/client';
 import { ErrorRequestHandler, NextFunction, Request, Response } from 'express';
 import { unifiedResponse } from 'uni-response';
 
-import { env } from '../config/env-config';
-import { ERROR } from '../constants/messages';
+import { env } from '../config/env-config.js';
+import { ERROR } from '../constants/messages.js';
 
 const environment = env.NODE_ENV || 'prod';
 

@@ -1,8 +1,8 @@
 import { unifiedResponse } from 'uni-response';
 
-import { ProductRepository } from '../../product/repositories/product.repository';
-import { UserRepository } from '../../user/repositories/user.repository';
-import { StreamRepository } from '../repositories/stream.repository';
+import { ProductRepository } from '../../product/repositories/product.repository.js';
+import { UserRepository } from '../../user/repositories/user.repository.js';
+import { StreamRepository } from '../repositories/stream.repository.js';
 import {
   AddStreamProductInput,
   CommentInput,
@@ -13,8 +13,8 @@ import {
   StreamFilters,
   UpdateStreamInput,
   UpdateViewerCountInput,
-} from '../types/stream.types';
-import { vdoNinjaService } from './vdo-ninja.service';
+} from '../types/stream.types.js';
+import { vdoNinjaService } from './vdo-ninja.service.js';
 
 export class StreamService {
   constructor(

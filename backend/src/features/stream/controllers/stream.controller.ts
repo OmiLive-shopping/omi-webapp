@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 
-import { StreamService } from '../services/stream.service';
+import { StreamService } from '../services/stream.service.js';
 import {
   AddStreamProductInput,
   CommentInput,
@@ -11,7 +11,7 @@ import {
   StreamFilters,
   UpdateStreamInput,
   UpdateViewerCountInput,
-} from '../types/stream.types';
+} from '../types/stream.types.js';
 
 export class StreamController {
   constructor(private readonly streamService: StreamService) {}

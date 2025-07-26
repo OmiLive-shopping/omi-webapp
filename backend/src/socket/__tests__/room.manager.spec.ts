@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { SocketWithAuth } from '../../config/socket/socket.config';
-import { RoomManager } from '../managers/room.manager';
+import { SocketWithAuth } from '../../config/socket/socket.config.js';
+import { RoomManager } from '../managers/room.manager.js';
 
 // Mock PrismaService
 vi.mock('../../config/prisma.config', () => ({

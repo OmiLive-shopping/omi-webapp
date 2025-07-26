@@ -1,7 +1,11 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
-import { useAuthStore } from '@/stores/authStore';
+// TODO: Replace with Better Auth
+// import { useAuthStore } from '@/stores/authStore';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/v1';
+// Construct API URL from server URL and API base path
+const serverURL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3000';
+const apiBase = import.meta.env.VITE_API_BASE || '/v1';
+const API_URL = `${serverURL}${apiBase}`;
 
 // Create axios instance
 export const api = axios.create({
@@ -65,8 +69,9 @@ api.interceptors.response.use(
 
       try {
         // Get the auth store and refresh token
-        const authStore = useAuthStore.getState();
-        await authStore.refreshToken();
+        // TODO: Replace with Better Auth
+        // const authStore = useAuthStore.getState();
+        // await authStore.refreshToken();
         
         const newToken = localStorage.getItem('authToken');
         if (newToken) {
@@ -78,8 +83,9 @@ api.interceptors.response.use(
         }
       } catch (refreshError) {
         // Refresh failed, logout user
-        const authStore = useAuthStore.getState();
-        authStore.logout();
+        // TODO: Replace with Better Auth
+        // const authStore = useAuthStore.getState();
+        // authStore.logout();
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;

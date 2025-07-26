@@ -1,7 +1,7 @@
 import dotenv from 'dotenv';
 import fs from 'fs';
 
-import { envSchema, EnvVars } from './env-schema';
+import { envSchema, EnvVars } from './env-schema.js';
 
 // Determine which .env file to load based on NODE_ENV
 // eslint-disable-next-line node/no-process-env
@@ -38,12 +38,14 @@ export const env: EnvVars = parsedEnv.success
   ? parsedEnv.data
   : ({
       NODE_ENV: 'development',
-      PORT: 4000,
+      PORT: 9000,
       LOG_LEVEL: 'info',
       DATABASE_URL: '',
       SHADOW_DATABASE_URL: '',
       JWT_SECRET: '',
       WHITE_LIST_URLS: [],
+      REDIS_URL: 'redis://localhost:6379',
+      API_KEY_HEADER: 'x-api-key',
     } as EnvVars);
 
 // ✅ Get only user-defined env variables from `.env`
@@ -147,9 +149,29 @@ const extraKeys = definedEnvKeys.filter(
     !key.startsWith('npm_') &&
     !key.startsWith('MSYSTEM') &&
     !key.startsWith('MINGW') &&
-    !key.startsWith('WT_'),
+    !key.startsWith('WT_') &&
+    !key.startsWith('VSCODE_') &&
+    !key.startsWith('CONDA_') &&
+    !key.startsWith('HOMEBREW_') &&
+    !key.startsWith('XPC_') &&
+    !key.startsWith('_CE_') &&
+    !key.startsWith('__CF') &&
+    !key.startsWith('CURSOR_') &&
+    !key.startsWith('CLAUDE_') &&
+    !key.startsWith('TERM_') &&
+    !key.startsWith('NVM_') &&
+    !key.includes('LAUNCH') &&
+    !key.includes('MALLOC') &&
+    ![
+      'CLICOLOR', 'ZDOTDIR', 'ORIGINAL_XDG_CURRENT_DESKTOP', 'MallocNanoZone',
+      'ENABLE_IDE_INTEGRATION', 'USER', 'COMMAND_MODE', 'SSH_AUTH_SOCK',
+      'LSCOLORS', 'LaunchInstanceID', 'USER_ZDOTDIR', '__CFBundleIdentifier',
+      'FORCE_COLOR', 'LOGNAME', 'GIT_ASKPASS', 'SECURITYSESSIONID',
+      'COLORTERM', 'UNUSED_VARIABLE'
+    ].includes(key),
 );
 
+// Only show warning if there are actual custom env vars (not system noise)
 if (extraKeys.length > 0) {
   console.warn(`⚠️ Warning: Unused environment variables detected: ${extraKeys.join(', ')}`);
 }

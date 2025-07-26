@@ -1,102 +1,133 @@
 import { NextFunction, Request, Response } from 'express';
-import jwt, { Secret } from 'jsonwebtoken';
 import { unifiedResponse } from 'uni-response';
+import { auth } from '../auth.js';
+import type { Session, User } from 'better-auth';
 
-import { env } from '../config/env-config';
-
-// Environment variable for JWT secret
-const secret: Secret = env.JWT_SECRET as string;
-
-// AuthPayload interface
-interface AuthPayload {
-  userId: string;
+// Extend the Better Auth User type with our custom fields
+interface AuthUser extends User {
+  streamKey?: string;
+  username: string;
+  firstName?: string;
+  lastName?: string;
+  bio?: string;
+  avatarUrl?: string;
+  isAdmin: boolean;
   role: string;
-  dealerId: string;
 }
 
-// Augment the Express Request object to include custom properties
+// Augment the Express Request object to include Better Auth session
 declare global {
   namespace Express {
     interface Request {
+      user?: AuthUser;
+      session?: Session;
+      // Legacy fields for compatibility
       userId?: string;
       role?: string;
-      dealerId?: string;
     }
   }
 }
 
 /**
- * Authentication Service Class
- * Contains methods for authentication and role-based access control.
+ * Authentication Middleware using Better Auth
+ * Validates session from either Bearer token or cookies
  */
-class AuthService {
-  private secret: Secret;
-
-  constructor(secret: Secret) {
-    this.secret = secret;
-  }
-
-  /**
-   * Authenticate and validate the JWT token
-   */
-  public auth(req: Request, res: Response, next: NextFunction): void {
-    const token = req.headers.authorization?.split(' ')[1];
-
-    if (!token) {
-      res.status(401).json(unifiedResponse(false, 'No token provided'));
-      return; // Ensures the middleware ends
-    }
-
-    try {
-      const decodedToken = jwt.verify(token, this.secret) as AuthPayload;
-      req.userId = decodedToken.userId;
-      req.role = decodedToken.role;
-      req.dealerId = decodedToken.dealerId;
-
-      next(); // Call the next middleware
-    } catch (error) {
-      res.status(401).json(unifiedResponse(false, 'Invalid token'));
-      return; // Ensures the middleware ends
-    }
-  }
-
-  /**
-   * Check if the user has the required role(s)
-   */
-  public checkUserRole(allowedRoles: string[]) {
-    return (req: Request, res: Response, next: NextFunction): void => {
-      const token = req.headers.authorization?.split(' ')[1];
-
-      if (!token) {
-        res.status(401).json(unifiedResponse(false, 'No token provided'));
-        return;
-      }
-
-      try {
-        const decodedToken = jwt.verify(token, this.secret) as AuthPayload;
-
-        if (allowedRoles.includes(decodedToken.role)) {
-          req.userId = decodedToken.userId;
-          req.role = decodedToken.role;
-          req.dealerId = decodedToken.dealerId;
-
-          next();
-          return;
-        }
-
-        res.status(403).json(unifiedResponse(false, 'Forbidden: Insufficient permissions'));
-        return;
-      } catch (error) {
-        res.status(401).json(unifiedResponse(false, 'Invalid token'));
-        return;
-      }
+export async function authenticate(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    // Better Auth can handle both Authorization header and cookies
+    const headers = {
+      // Forward the authorization header if present
+      authorization: req.headers.authorization || '',
+      // Forward cookies
+      cookie: req.headers.cookie || '',
     };
+
+    // Get session using Better Auth's API
+    const session = await auth.api.getSession({
+      headers,
+    });
+
+    if (!session) {
+      res.status(401).json(unifiedResponse(false, 'No valid session found'));
+      return;
+    }
+
+    // Attach session and user to request
+    req.session = session.session;
+    req.user = session.user as AuthUser;
+    
+    // Legacy compatibility
+    req.userId = session.user.id;
+    req.role = (session.user as AuthUser).role;
+
+    next();
+  } catch (error) {
+    console.error('Authentication error:', error);
+    res.status(401).json(unifiedResponse(false, 'Authentication failed'));
+    return;
   }
 }
 
-// Instantiate AuthService
-const authService = new AuthService(secret);
+/**
+ * Role-based access control middleware
+ * Checks if the authenticated user has one of the allowed roles
+ */
+export function requireRole(allowedRoles: string[]) {
+  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      // First authenticate the user
+      const headers = {
+        authorization: req.headers.authorization || '',
+        cookie: req.headers.cookie || '',
+      };
 
-// Export methods for use in routes
-export const auth = authService.auth.bind(authService);
-export const checkUserRole = authService.checkUserRole.bind(authService);
+      const session = await auth.api.getSession({
+        headers,
+      });
+
+      if (!session) {
+        res.status(401).json(unifiedResponse(false, 'No valid session found'));
+        return;
+      }
+
+      // Attach session and user to request
+      req.session = session.session;
+      req.user = session.user as AuthUser;
+      req.userId = session.user.id;
+      req.role = (session.user as AuthUser).role;
+
+      const userRole = (session.user as AuthUser).role;
+      const isAdmin = (session.user as AuthUser).isAdmin;
+
+      // Admin users bypass role checks
+      if (isAdmin) {
+        next();
+        return;
+      }
+
+      // Check if user has one of the allowed roles
+      if (allowedRoles.includes(userRole)) {
+        next();
+        return;
+      }
+
+      res.status(403).json(unifiedResponse(false, 'Forbidden: Insufficient permissions'));
+      return;
+    } catch (error) {
+      console.error('Role check error:', error);
+      res.status(401).json(unifiedResponse(false, 'Authentication failed'));
+      return;
+    }
+  };
+}
+
+/**
+ * Convenience middleware for common role requirements
+ */
+export const requireStreamer = requireRole(['streamer', 'admin']);
+export const requireAdmin = requireRole(['admin']);
+export const requireUser = authenticate; // Any authenticated user
+
+// Legacy exports for backward compatibility
+export const auth = authenticate;
+export const checkUserRole = requireRole;

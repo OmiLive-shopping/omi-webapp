@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { ProductRepository } from '../repositories/product.repository';
-import { ProductService } from '../services/product.service';
+import { ProductRepository } from '../repositories/product.repository.js';
+import { ProductService } from '../services/product.service.js';
 
 vi.mock('../repositories/product.repository');
 

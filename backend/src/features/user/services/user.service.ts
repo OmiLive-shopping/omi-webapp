@@ -1,10 +1,10 @@
 import bcrypt from 'bcrypt';
 import { unifiedResponse } from 'uni-response';
 
-import { ERROR, SUCCESS } from '../../../constants/messages';
-import { generateToken } from '../../../utils/generate-token.util';
-import { UserRepository } from '../repositories/user.repository';
-import { LoginInputTypes, RegisterInputTypes } from '../types/user.types';
+import { ERROR, SUCCESS } from '../../../constants/messages.js';
+import { generateToken } from '../../../utils/generate-token.util.js';
+import { UserRepository } from '../repositories/user.repository.js';
+import { LoginInputTypes, RegisterInputTypes } from '../types/user.types.js';
 
 export class UserService {
   constructor(private readonly userRepository: UserRepository) {}
@@ -27,7 +27,18 @@ export class UserService {
     }
 
     const token = generateToken(user.id, user.role?.name || 'user');
-    return unifiedResponse(true, SUCCESS.LOGIN_SUCCESSFUL, { token });
+    
+    // Return user data along with token (excluding sensitive fields)
+    const { password: userPassword, ...userWithoutPassword } = user;
+    
+    return unifiedResponse(true, SUCCESS.LOGIN_SUCCESSFUL, { 
+      user: userWithoutPassword,
+      tokens: {
+        accessToken: token,
+        refreshToken: token, // TODO: Implement proper refresh token
+        expiresIn: 1800 // 30 minutes
+      }
+    });
   }
 
   async register(registerInputObj: RegisterInputTypes) {
@@ -52,8 +63,17 @@ export class UserService {
     });
 
     const token = generateToken(newUser.id, newUser.role?.name || 'user');
+    
+    // Return user data along with token (excluding sensitive fields)
+    const { password: newUserPassword, ...userWithoutPassword } = newUser;
+    
     return unifiedResponse(true, SUCCESS.REGISTRATION_SUCCESSFUL, {
-      token,
+      user: userWithoutPassword,
+      tokens: {
+        accessToken: token,
+        refreshToken: token, // TODO: Implement proper refresh token
+        expiresIn: 1800 // 30 minutes
+      },
       streamKey: newUser.streamKey,
     });
   }

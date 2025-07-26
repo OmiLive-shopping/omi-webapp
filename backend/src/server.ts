@@ -1,9 +1,9 @@
 import { createServer } from 'http';
 
-import { app } from './app';
-import { env } from './config/env-config';
-import { PrismaService } from './config/prisma.config';
-import { SocketService } from './config/socket.config';
+import { app } from './app.js';
+import { env } from './config/env-config.js';
+import { PrismaService } from './config/prisma.config.js';
+import { SocketService } from './config/socket.config.js';
 
 class Server {
   private readonly port: number | string;
@@ -117,6 +117,6 @@ class Server {
 }
 
 // Initialize and start the server
-const PORT = Number(env.PORT) || 4000;
+const PORT = Number(env.PORT) || 9000;
 const server = new Server(PORT);
 server.start();

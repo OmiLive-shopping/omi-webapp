@@ -1,4 +1,5 @@
-import { useAuthStore } from '@/stores/auth.store';
+// TODO: Replace with Better Auth
+// import { useAuthStore } from '@/stores/auth.store';
 
 export class ApiError extends Error {
   constructor(
@@ -19,8 +20,10 @@ interface RequestOptions extends RequestInit {
 class ApiClient {
   private baseUrl: string;
 
-  constructor(baseUrl: string = import.meta.env.VITE_API_URL || 'http://localhost:3000/v1') {
-    this.baseUrl = baseUrl;
+  constructor(baseUrl?: string) {
+    const serverURL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3000';
+    const apiBase = import.meta.env.VITE_API_BASE || '/v1';
+    this.baseUrl = baseUrl || `${serverURL}${apiBase}`;
   }
 
   private async request<T>(
@@ -45,7 +48,9 @@ class ApiClient {
     }
 
     // Get auth token
-    const authToken = token || useAuthStore.getState().token;
+    // TODO: Replace with Better Auth
+    // const authToken = token || useAuthStore.getState().token;
+    const authToken = token || null; // Temporary placeholder
 
     // Build headers
     const headers: HeadersInit = {
@@ -147,13 +152,14 @@ export interface ApiResponse<T> {
 
 // API endpoints
 export const API_ENDPOINTS = {
-  // Auth
+  // Auth - Note: These are not used with Better Auth client
+  // Better Auth handles auth endpoints internally
   auth: {
-    login: '/auth/login',
-    register: '/auth/register',
-    logout: '/auth/logout',
-    refresh: '/auth/refresh',
-    profile: '/auth/profile',
+    login: '/auth/sign-in/email',
+    register: '/auth/sign-up/email',
+    logout: '/auth/sign-out',
+    refresh: '/auth/refresh', // Not used in Better Auth
+    profile: '/users/profile', // User profile is at /v1/users/profile
   },
 
   // Streams

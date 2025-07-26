@@ -2,8 +2,10 @@
 import { randomUUID } from 'crypto';
 import { NextFunction, Request, Response } from 'express';
 import { ensureDir } from 'fs-extra'; // Optional: to ensure log directory exists
-import { join } from 'path';
-import pino, { Logger } from 'pino';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
+import pino from 'pino';
+import type { Logger } from 'pino';
 import pinoHttp from 'pino-http';
 
 // Extend Express Request interface to include logger
@@ -14,6 +16,10 @@ declare global {
     }
   }
 }
+
+// Get __dirname equivalent in ESM
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 // Configure log file destination for production
 const logDir = join(__dirname, '..', 'logs');

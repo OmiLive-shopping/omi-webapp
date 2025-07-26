@@ -2,10 +2,11 @@ import { NextFunction, Request, Response } from 'express';
 import jwt, { Secret } from 'jsonwebtoken';
 import { unifiedResponse } from 'uni-response';
 
-import { env } from '../config/env-config';
-import prisma from '../config/prisma.config';
+import { env } from '../config/env-config.js';
+import { PrismaService } from '../config/prisma.config.js';
 
 const secret: Secret = env.JWT_SECRET as string;
+const prisma = PrismaService.getInstance().client;
 
 interface AuthPayload {
   userId: string;

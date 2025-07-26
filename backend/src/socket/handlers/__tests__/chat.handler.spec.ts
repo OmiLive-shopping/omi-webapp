@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { PrismaService } from '../../../config/prisma.config';
-import { SocketWithAuth } from '../../../config/socket/socket.config';
-import { ChatRateLimiter, SlowModeManager } from '../../managers/rate-limiter';
-import { RoomManager } from '../../managers/room.manager';
-import { ChatHandler } from '../chat.handler';
+import { PrismaService } from '../../../config/prisma.config.js';
+import { SocketWithAuth } from '../../../config/socket/socket.config.js';
+import { ChatRateLimiter, SlowModeManager } from '../../managers/rate-limiter.js';
+import { RoomManager } from '../../managers/room.manager.js';
+import { ChatHandler } from '../chat.handler.js';
 
 // Mock all dependencies
 vi.mock('../../managers/room.manager');

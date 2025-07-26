@@ -10,22 +10,14 @@ datasource db {
 
 model User {
   id                   String              @id @default(uuid())
-  name                 String?
-  email                String              @unique
-  emailVerified        Boolean             @default(false)
-  image                String?
-  createdAt            DateTime            @default(now())
-  updatedAt            DateTime            @default(now()) @updatedAt
-  
-  // Better Auth role field
-  role                 String              @default("user")
-  
-  // Additional fields from original schema
   firstName            String?
   lastName             String?
+  email                String              @unique
   password             String?
   roleId               String?
   active               Boolean             @default(true)
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @default(now()) @updatedAt
   isAdmin              Boolean             @default(false)
   streamKey            String              @unique @default(cuid())
   username             String              @unique
@@ -33,7 +25,7 @@ model User {
   bio                  String?
   comments             Comment[]
   streams              Stream[]
-  roleRelation         Roles?              @relation(fields: [roleId], references: [id])
+  role                 Roles?              @relation(fields: [roleId], references: [id])
   wishlist             Product[]           @relation("UserWishlist")
   cart                 Cart?
   orders               Order[]
@@ -46,8 +38,6 @@ model User {
   moderatorActions     ChatModeration[]    @relation("ModeratorActions")
   streamModeratorFor   StreamModerator[]   @relation("StreamModeratorUser")
   streamModeratorAddedBy StreamModerator[] @relation("StreamModeratorAddedBy")
-  sessions             Session[]
-  accounts             Account[]
 
   @@index([email])
   @@index([username])
@@ -342,52 +332,4 @@ model StreamModerator {
   @@unique([streamId, userId])
   @@index([streamId])
   @@index([userId])
-}
-
-// Better Auth Tables
-model Session {
-  id        String   @id @default(uuid())
-  userId    String
-  token     String   @unique
-  expiresAt DateTime
-  ipAddress String?
-  userAgent String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now()) @updatedAt
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([token])
-  @@index([userId])
-  @@index([expiresAt])
-}
-
-model Account {
-  id                      String    @id @default(uuid())
-  userId                  String
-  accountId               String
-  providerId              String
-  accessToken             String?
-  refreshToken            String?
-  accessTokenExpiresAt    DateTime?
-  refreshTokenExpiresAt   DateTime?
-  password                String?
-  createdAt               DateTime  @default(now())
-  updatedAt               DateTime  @default(now()) @updatedAt
-  user                    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([providerId, accountId])
-  @@index([userId])
-}
-
-model Verification {
-  id         String   @id @default(uuid())
-  identifier String
-  value      String
-  expiresAt  DateTime
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @default(now()) @updatedAt
-
-  @@unique([identifier, value])
-  @@index([identifier])
-  @@index([expiresAt])
 }

@@ -1,6 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 
-import { CreateProductInput, ProductFilters, UpdateProductInput } from '../types/product.types';
+import { CreateProductInput, ProductFilters, UpdateProductInput } from '../types/product.types.js';
 
 export class ProductRepository {
   private prisma: PrismaClient;

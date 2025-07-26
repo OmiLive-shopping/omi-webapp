@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import request from 'supertest';
 import express from 'express';
-import { UserController } from '../controllers/user.controller';
-import { UserService } from '../services/user.service';
-import { auth } from '../../../middleware/auth.middleware';
-import router from '../routes/user.routes';
+import { UserController } from '../controllers/user.controller.js';
+import { UserService } from '../services/user.service.js';
+import { auth } from '../../../middleware/auth.middleware.js';
+import router from '../routes/user.routes.js';
 
 // Mock the dependencies
 vi.mock('../../../middleware/auth.middleware');

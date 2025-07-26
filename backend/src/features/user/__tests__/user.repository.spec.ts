@@ -1,7 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { UserRepository } from '../repositories/user.repository';
+import { UserRepository } from '../repositories/user.repository.js';
 
 // ✅ Properly mock PrismaClient
 vi.mock('@prisma/client', () => ({

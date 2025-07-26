@@ -1,7 +1,8 @@
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { apiClient, API_ENDPOINTS, PaginatedResponse, ApiResponse } from '@/lib/api';
 import { queryKeys, queryUtils } from '@/lib/query-client';
-import { useAuthStore } from '@/stores/auth.store';
+// TODO: Replace with Better Auth
+// import { useAuthStore } from '@/stores/auth.store';
 
 // Types
 export interface User {
@@ -58,7 +59,9 @@ export function useUserDetail(userId: string, enabled = true) {
 }
 
 export function useUserProfile() {
-  const { token } = useAuthStore();
+  // TODO: Replace with Better Auth
+  // const { token } = useAuthStore();
+  const token = null; // Temporary placeholder
   
   return useQuery({
     queryKey: queryKeys.userProfile(),
@@ -72,7 +75,9 @@ export function useUserProfile() {
 
 // Mutation hooks
 export function useUserUpdate() {
-  const { user } = useAuthStore();
+  // TODO: Replace with Better Auth
+  // const { user } = useAuthStore();
+  const user = null; // Temporary placeholder
   
   return useMutation({
     mutationFn: ({ userId, data }: { userId: string; data: UserUpdateData }) =>

@@ -6,7 +6,7 @@ import {
   CreateStreamInput,
   StreamFilters,
   UpdateStreamInput,
-} from '../types/stream.types';
+} from '../types/stream.types.js';
 
 export class StreamRepository {
   private prisma: PrismaClient;

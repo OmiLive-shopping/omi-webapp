@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response } from 'express';
 import { unifiedResponse } from 'uni-response';
 
-import { Permission, Role, ROLE_PERMISSIONS, ROLES } from '../constants/roles';
+import { Permission, Role, ROLE_PERMISSIONS, ROLES } from '../constants/roles.js';
 
 // Extend the Request interface to include user with role
 declare global {

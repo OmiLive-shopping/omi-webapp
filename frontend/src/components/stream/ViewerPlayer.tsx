@@ -16,7 +16,7 @@ import {
 import clsx from 'clsx';
 import ViewerCount from './ViewerCount';
 import { useQuery } from '@tanstack/react-query';
-import { api } from '@/lib/api';
+import { apiClient } from '@/lib/api-client';
 
 interface ViewerPlayerProps {
   streamId: string;
@@ -53,8 +53,8 @@ export const ViewerPlayer: React.FC<ViewerPlayerProps> = ({
   const { data: viewerData, isLoading: loadingUrl } = useQuery({
     queryKey: ['viewer-url', streamId],
     queryFn: async () => {
-      const response = await api.get(`/streams/${streamId}/viewer-url`);
-      return response.data.data;
+      const response = await apiClient.get<any>(`/streams/${streamId}/viewer-url`);
+      return response.data;
     },
     enabled: !!streamId && isLive,
   });
@@ -114,7 +114,7 @@ export const ViewerPlayer: React.FC<ViewerPlayerProps> = ({
         setIsReconnecting(false);
       };
     }
-  }, [streamKey]);
+  }, [streamId]);
 
   const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newVolume = parseInt(e.target.value);

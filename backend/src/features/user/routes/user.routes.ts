@@ -1,18 +1,17 @@
 import { Router } from 'express';
 
-import { PrismaService } from '../../../config/prisma.config';
-import { auth } from '../../../middleware/auth.middleware';
+import { PrismaService } from '../../../config/prisma.config.js';
+import { auth } from '../../../middleware/auth.middleware.js';
 import {
   commonValidations,
   handleValidationErrors,
   userValidations,
-} from '../../../middleware/input-validation.middleware';
-import { authRateLimiter, searchRateLimiter } from '../../../middleware/rate-limit.middleware';
-import { validateRequest } from '../../../middleware/validation.middleware';
-import { UserController } from '../controllers/user.controller';
-import { UserRepository } from '../repositories/user.repository';
-import { loginSchema, registerSchema, updateProfileSchema } from '../schemas/user.schema';
-import { UserService } from '../services/user.service';
+} from '../../../middleware/input-validation.middleware.js';
+import { validateRequest } from '../../../middleware/validation.middleware.js';
+import { UserController } from '../controllers/user.controller.js';
+import { UserRepository } from '../repositories/user.repository.js';
+import { updateProfileSchema } from '../schemas/user.schema.js';
+import { UserService } from '../services/user.service.js';
 
 // Dependency Injection
 const prismaService = PrismaService.getInstance();
@@ -25,24 +24,7 @@ const router = Router();
 
 router.get('/', userController.heartbeat);
 
-// Auth routes with rate limiting
-router.post(
-  '/register',
-  authRateLimiter,
-  userValidations.register,
-  handleValidationErrors,
-  validateRequest(registerSchema),
-  userController.register,
-);
-
-router.post(
-  '/login',
-  authRateLimiter,
-  userValidations.login,
-  handleValidationErrors,
-  validateRequest(loginSchema),
-  userController.login,
-);
+// Auth routes removed - now handled by Better Auth at /v1/auth/*
 
 // Protected routes - require authentication
 router.get('/profile', auth, userController.getProfile);

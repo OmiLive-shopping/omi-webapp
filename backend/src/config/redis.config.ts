@@ -1,6 +1,6 @@
 import { createClient, RedisClientType } from 'redis';
 
-import { env } from './env-config';
+import { env } from './env-config.js';
 
 export class RedisClient {
   private static instance: RedisClient;

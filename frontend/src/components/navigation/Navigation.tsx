@@ -8,7 +8,8 @@ import {
   X,
   LogOut,
   Settings,
-  Package
+  Package,
+  Video
 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -18,6 +19,7 @@ interface NavigationProps {
     name: string;
     email: string;
     avatar?: string;
+    role?: string;
   };
   onLogout?: () => void;
 }
@@ -237,6 +239,15 @@ export const Navigation: React.FC<NavigationProps> = ({
                           <User className="w-4 h-4" />
                           Profile
                         </Link>
+                        {user?.role === 'streamer' && (
+                          <Link
+                            to="/studio"
+                            className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                          >
+                            <Video className="w-4 h-4" />
+                            Creator Studio
+                          </Link>
+                        )}
                         <Link
                           to="/orders"
                           className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
@@ -336,6 +347,20 @@ export const Navigation: React.FC<NavigationProps> = ({
               >
                 About
               </Link>
+              {isAuthenticated && user?.role === 'streamer' && (
+                <Link
+                  to="/studio"
+                  className={clsx(
+                    "block px-3 py-2 rounded-md text-base font-medium",
+                    isActiveLink('/studio')
+                      ? "bg-primary-100 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400"
+                      : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+                  )}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  Creator Studio
+                </Link>
+              )}
             </div>
 
             {/* Mobile Search */}

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { VdoNinjaService } from '../services/vdo-ninja.service';
+import { VdoNinjaService } from '../services/vdo-ninja.service.js';
 
 describe('VdoNinjaService', () => {
   let service: VdoNinjaService;

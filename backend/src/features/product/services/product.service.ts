@@ -1,13 +1,13 @@
 import { unifiedResponse } from 'uni-response';
 
-import { ERROR, SUCCESS } from '../../../constants/messages';
-import { ProductRepository } from '../repositories/product.repository';
+import { ERROR, SUCCESS } from '../../../constants/messages.js';
+import { ProductRepository } from '../repositories/product.repository.js';
 import {
   CreateProductInput,
   ProductFilters,
   UpdateProductInput,
   WishlistInput,
-} from '../types/product.types';
+} from '../types/product.types.js';
 
 export class ProductService {
   constructor(private readonly productRepository: ProductRepository) {}

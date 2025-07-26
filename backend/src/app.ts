@@ -1,32 +1,24 @@
 import express, { Application, Request, Response } from 'express';
 import helmet from 'helmet';
 
-import { corsMiddleware } from './config/cors.config';
-import { env } from './config/env-config';
-import { RedisClient } from './config/redis.config';
-import apiKeyRoutes from './features/api-key/routes/api-key.routes';
-import productRoutes from './features/product/routes/product.routes';
-import streamRoutes from './features/stream/routes/stream.routes';
-import userRoutes from './features/user/routes/user.routes';
-import { apiErrorHandler, unmatchedRoutes } from './middleware/api-error.middleware';
-import { validateApiKey } from './middleware/api-key.middleware';
-import { logger, requestIdMiddleware } from './middleware/morgan-logger.middleware';
-import { loggerMiddleware, pinoLogger } from './middleware/pino-logger';
-import { apiRateLimiter } from './middleware/rate-limit.middleware';
-import { hostWhitelist } from './middleware/security.middleware';
+import { corsMiddleware } from './config/cors.config.js';
+import { env } from './config/env-config.js';
+import apiKeyRoutes from './features/api-key/routes/api-key.routes.js';
+import productRoutes from './features/product/routes/product.routes.js';
+import streamRoutes from './features/stream/routes/stream.routes.js';
+import userRoutes from './features/user/routes/user.routes.js';
+import { apiErrorHandler, unmatchedRoutes } from './middleware/api-error.middleware.js';
+import { toNodeHandler } from 'better-auth/node';
+import { auth } from './auth.js';
+import { validateApiKey } from './middleware/api-key.middleware.js';
+import { logger, requestIdMiddleware } from './middleware/morgan-logger.middleware.js';
+import { loggerMiddleware, pinoLogger } from './middleware/pino-logger.js';
+import { apiRateLimiter } from './middleware/rate-limit.middleware.js';
+import { hostWhitelist } from './middleware/security.middleware.js';
 
 const app: Application = express();
 
-// Initialize Redis connection
-(async () => {
-  try {
-    const redis = RedisClient.getInstance();
-    await redis.connect();
-    console.log('Redis connection established');
-  } catch (error) {
-    console.warn('Redis connection failed, using memory store for rate limiting');
-  }
-})();
+// Redis disabled for now - using memory store for rate limiting
 
 // Request ID middleware - should be first
 app.use(requestIdMiddleware);
@@ -53,6 +45,10 @@ app.use(
 
 // CORS - before other middleware
 app.use(corsMiddleware);
+
+// Better Auth routes MUST be mounted BEFORE body parsing middleware
+console.log('Mounting Better Auth routes at /v1/auth');
+app.all('/v1/auth/*', toNodeHandler(auth));
 
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
@@ -81,7 +77,6 @@ app.get('/health', (_req: Request, res: Response): void => {
     status: 'healthy',
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
-    redis: RedisClient.getInstance().isReady() ? 'connected' : 'disconnected',
   });
   return;
 });
@@ -119,8 +114,6 @@ app.use(unmatchedRoutes);
 // Graceful shutdown
 process.on('SIGTERM', async () => {
   console.log('SIGTERM received, shutting down gracefully');
-  const redis = RedisClient.getInstance();
-  await redis.disconnect();
   process.exit(0);
 });
 

@@ -1,9 +1,9 @@
 import jwt from 'jsonwebtoken';
 import { Socket } from 'socket.io';
 
-import { env } from '../../config/env-config';
-import { PrismaService } from '../../config/prisma.config';
-import { SocketWithAuth } from '../../config/socket/socket.config';
+import { env } from '../../config/env-config.js';
+import { PrismaService } from '../../config/prisma.config.js';
+import { SocketWithAuth } from '../../config/socket/socket.config.js';
 
 interface JwtPayload {
   userId: string;
