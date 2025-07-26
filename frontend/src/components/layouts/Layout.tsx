@@ -22,7 +22,8 @@ const Layout = ({ children, type }: LayoutProps) => {
         user={user ? {
           name: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.username || user.name || '',
           email: user.email,
-          avatar: user.avatarUrl
+          avatar: user.avatarUrl,
+          role: user.role
         } : undefined}
         onLogout={logout}
       />

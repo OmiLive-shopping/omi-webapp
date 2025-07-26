@@ -100,34 +100,63 @@ export const StreamControls: React.FC<StreamControlsProps> = ({
 
   // Initialize camera preview
   useEffect(() => {
-    if (isCameraOn && videoPreviewRef.current && selectedVideoDevice) {
-      const startPreview = async () => {
+    const startPreview = async () => {
+      if (isCameraOn && videoPreviewRef.current && selectedVideoDevice) {
         try {
+          // Stop any existing stream first
+          if (localStreamRef.current) {
+            localStreamRef.current.getTracks().forEach(track => track.stop());
+          }
+          
+          // Request camera with specific constraints
           const stream = await navigator.mediaDevices.getUserMedia({
-            video: { deviceId: selectedVideoDevice },
+            video: { 
+              deviceId: selectedVideoDevice ? { exact: selectedVideoDevice } : undefined,
+              width: { ideal: 1280 },
+              height: { ideal: 720 }
+            },
             audio: false
           });
+          
           localStreamRef.current = stream;
+          
+          // Make sure the video element still exists
           if (videoPreviewRef.current) {
             videoPreviewRef.current.srcObject = stream;
+            // Ensure video plays
+            videoPreviewRef.current.play().catch(err => {
+              console.error('Error playing video preview:', err);
+            });
           }
         } catch (err) {
           console.error('Error starting video preview:', err);
-          setError('Failed to access camera');
+          if (err instanceof Error) {
+            if (err.name === 'NotAllowedError') {
+              setError('Camera access denied. Please allow camera permissions.');
+            } else if (err.name === 'NotFoundError') {
+              setError('No camera found. Please connect a camera.');
+            } else {
+              setError('Failed to access camera: ' + err.message);
+            }
+          }
         }
-      };
-      
-      startPreview();
-    } else if (!isCameraOn && localStreamRef.current) {
-      // Stop video tracks when camera is off
-      localStreamRef.current.getTracks().forEach(track => {
-        if (track.kind === 'video') track.stop();
-      });
-    }
+      } else if (!isCameraOn && localStreamRef.current) {
+        // Stop all tracks when camera is off
+        localStreamRef.current.getTracks().forEach(track => track.stop());
+        localStreamRef.current = null;
+        if (videoPreviewRef.current) {
+          videoPreviewRef.current.srcObject = null;
+        }
+      }
+    };
     
+    startPreview();
+    
+    // Cleanup on unmount
     return () => {
       if (localStreamRef.current) {
         localStreamRef.current.getTracks().forEach(track => track.stop());
+        localStreamRef.current = null;
       }
     };
   }, [isCameraOn, selectedVideoDevice]);
@@ -378,11 +407,26 @@ export const StreamControls: React.FC<StreamControlsProps> = ({
               autoPlay
               muted
               playsInline
-              className="w-full h-full object-cover"
+              className="w-full h-full object-cover cursor-pointer"
+              onClick={() => {
+                // If no stream, try to request permissions again
+                if (!localStreamRef.current) {
+                  setIsCameraOn(false);
+                  setTimeout(() => setIsCameraOn(true), 100);
+                }
+              }}
             />
             <div className="absolute top-2 left-2 bg-black/50 px-2 py-1 rounded text-xs text-white">
               Camera Preview
             </div>
+            {!localStreamRef.current && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/75">
+                <div className="text-center">
+                  <Camera className="w-8 h-8 text-white mb-2 mx-auto" />
+                  <p className="text-sm text-white">Click to enable camera</p>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
