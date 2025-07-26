@@ -16,8 +16,7 @@ import {
   Hash
 } from 'lucide-react';
 import usePageTitle from '@/hooks/usePageTitle';
-// TODO: Replace with Better Auth
-// import { useAuthStore } from '@/stores/authStore';
+import { signInWithEmail, signUpWithEmail, useAuthState } from '@/lib/auth-client';
 
 const AuthPage: React.FC = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -33,13 +32,7 @@ const AuthPage: React.FC = () => {
   });
   
   const navigate = useNavigate();
-  // TODO: Replace with Better Auth
-  // const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  // const login = useAuthStore((state) => state.login);
-  // const register = useAuthStore((state) => state.register);
-  const isAuthenticated = false; // Temporary placeholder
-  const login = async (data: any) => { console.log('Login placeholder:', data); }; // Temporary
-  const register = async (data: any) => { console.log('Register placeholder:', data); }; // Temporary
+  const { isAuthenticated } = useAuthState();
   
   usePageTitle(isLogin ? 'Login' : 'Register');
 
@@ -56,11 +49,13 @@ const AuthPage: React.FC = () => {
     if (isLogin) {
       // Login
       try {
-        await login({
-          email: formData.email,
-          password: formData.password
-        });
-        navigate('/');
+        const result = await signInWithEmail(formData.email, formData.password);
+        if (result.error) {
+          console.error('Login failed:', result.error);
+          // TODO: Show error to user
+        } else {
+          navigate('/');
+        }
       } catch (error) {
         console.error('Login failed:', error);
       }
@@ -77,15 +72,18 @@ const AuthPage: React.FC = () => {
       }
       
       try {
-        await register({
+        const result = await signUpWithEmail({
           email: formData.email,
           password: formData.password,
-          confirmPassword: formData.confirmPassword,
+          name: formData.name,
           username: formData.email.split('@')[0], // Generate username from email
-          firstName: formData.name.split(' ')[0] || '',
-          lastName: formData.name.split(' ').slice(1).join(' ') || ''
         });
-        navigate('/');
+        if (result.error) {
+          console.error('Registration failed:', result.error);
+          // TODO: Show error to user
+        } else {
+          navigate('/');
+        }
       } catch (error) {
         console.error('Registration failed:', error);
       }

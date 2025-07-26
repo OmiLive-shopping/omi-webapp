@@ -1,7 +1,6 @@
 import { Outlet } from 'react-router-dom';
 import Navigation from '../navigation/Navigation';
-// TODO: Replace with Better Auth
-// import { useAuthStore } from '@/stores/authStore';
+import { useAuthState, signOut } from '@/lib/auth-client';
 
 interface LayoutProps {
   children?: React.ReactNode;
@@ -10,22 +9,20 @@ interface LayoutProps {
 
 const Layout = ({ children, type }: LayoutProps) => {
   const layoutType = type ?? 'responsive';
-  // TODO: Replace with Better Auth
-  // const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  // const user = useAuthStore((state) => state.user);
-  // const logout = useAuthStore((state) => state.logout);
-  const isAuthenticated = false; // Temporary placeholder
-  const user = null as any; // Temporary placeholder
-  const logout = () => {}; // Temporary placeholder
+  const { isAuthenticated, user } = useAuthState();
+  
+  const logout = async () => {
+    await signOut();
+  };
 
   return (
     <div className='min-h-screen bg-gray-50 dark:bg-gray-900'>
       <Navigation 
         isAuthenticated={isAuthenticated}
         user={user ? {
-          name: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.username,
+          name: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.username || user.name || '',
           email: user.email,
-          avatar: user.avatar
+          avatar: user.avatarUrl
         } : undefined}
         onLogout={logout}
       />

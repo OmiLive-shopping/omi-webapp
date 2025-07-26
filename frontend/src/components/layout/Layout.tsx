@@ -1,17 +1,15 @@
 import React from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
-// TODO: Replace with Better Auth
-// import { useAuthStore } from '@/stores/authStore';
+import { useAuthState, signOut } from '@/lib/auth-client';
 import { useAuth } from '@/hooks/useAuth';
 
 const Layout: React.FC = () => {
   const location = useLocation();
-  // TODO: Replace with Better Auth
-  // const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  // const user = useAuthStore((state) => state.user);
-  const isAuthenticated = false; // Temporary placeholder
-  const user = null; // Temporary placeholder
-  const { logout } = useAuth();
+  const { isAuthenticated, user } = useAuthState();
+  // Remove old useAuth hook
+  const handleLogout = async () => {
+    await signOut();
+  };
 
   const isActive = (path: string) => {
     return location.pathname === path;
@@ -99,7 +97,7 @@ const Layout: React.FC = () => {
                       </span>
                     )}
                     <button
-                      onClick={logout}
+                      onClick={handleLogout}
                       className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium transition"
                     >
                       Logout

@@ -15,8 +15,7 @@ import clsx from 'clsx';
 import StreamControls from './StreamControls';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
-// TODO: Replace with Better Auth
-// import { useAuthStore } from '@/stores/auth.store';
+import { useAuthState } from '@/lib/auth-client';
 
 interface StreamerStudioProps {
   onStreamStart: () => void;
@@ -49,9 +48,7 @@ export const StreamerStudio: React.FC<StreamerStudioProps> = ({
   });
   const [activeTab, setActiveTab] = useState<'products' | 'chat' | 'settings'>('products');
   const iframeRef = useRef<HTMLIFrameElement>(null);
-  // TODO: Replace with Better Auth
-  // const { user } = useAuthStore();
-  const user = null; // Temporary placeholder
+  const { user } = useAuthState();
 
   // Debug logging
   console.log('StreamerStudio - Current user:', user);
