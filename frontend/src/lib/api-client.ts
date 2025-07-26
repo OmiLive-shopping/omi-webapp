@@ -20,8 +20,10 @@ interface RequestOptions extends RequestInit {
 class ApiClient {
   private baseUrl: string;
 
-  constructor(baseUrl: string = import.meta.env.VITE_API_URL || 'http://localhost:3000/v1') {
-    this.baseUrl = baseUrl;
+  constructor(baseUrl?: string) {
+    const serverURL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3000';
+    const apiBase = import.meta.env.VITE_API_BASE || '/v1';
+    this.baseUrl = baseUrl || `${serverURL}${apiBase}`;
   }
 
   private async request<T>(

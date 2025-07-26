@@ -2,9 +2,19 @@ import { createAuthClient } from 'better-auth/react';
 import type { InferUser, InferSession } from 'better-auth/client';
 
 // Create the auth client with proper configuration
+const serverURL = import.meta.env.VITE_SERVER_URL || 'http://localhost:9000';
+const apiBase = import.meta.env.VITE_API_BASE || '/v1';
+const authPath = `${apiBase}/auth`;
+
+console.log('Auth client config:', { serverURL, authPath });
+
 export const authClient = createAuthClient({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:9000/v1',
-  basePath: '/auth',
+  baseURL: serverURL,
+  basePath: authPath,
+  // Ensure cookies are included in requests
+  fetchOptions: {
+    credentials: 'include'
+  }
 });
 
 // Export Better Auth hooks and functions
@@ -86,6 +96,7 @@ export function useAuthState() {
 
 // Sign in with email/password
 export async function signInWithEmail(email: string, password: string) {
+  console.log('Signing in with:', { email, serverURL, authPath });
   return signIn.email({
     email,
     password,

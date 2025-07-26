@@ -2,7 +2,10 @@ import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 // TODO: Replace with Better Auth
 // import { useAuthStore } from '@/stores/authStore';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/v1';
+// Construct API URL from server URL and API base path
+const serverURL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3000';
+const apiBase = import.meta.env.VITE_API_BASE || '/v1';
+const API_URL = `${serverURL}${apiBase}`;
 
 // Create axios instance
 export const api = axios.create({

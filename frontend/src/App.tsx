@@ -8,6 +8,7 @@ import { NotFound } from '@/pages/NotFound';
 import { PWAInstallPrompt } from '@/components/PWAInstallPrompt';
 import { SkipLinks, ScreenReaderAnnouncer } from '@/components/accessibility';
 import performanceMonitor from '@/utils/performance-monitoring';
+import { AuthProvider } from '@/providers/AuthProvider';
 import {
   HomePage,
   StreamPage,
@@ -46,11 +47,12 @@ function App() {
   return (
     <ErrorBoundary>
       <BrowserRouter>
-        <SkipLinks />
-        <ScreenReaderAnnouncer />
-        <SuspenseWrapper fullScreen message="Loading application...">
-          <PWAInstallPrompt />
-          <Routes>
+        <AuthProvider>
+          <SkipLinks />
+          <ScreenReaderAnnouncer />
+          <SuspenseWrapper fullScreen message="Loading application...">
+            <PWAInstallPrompt />
+            <Routes>
             <Route path="/" element={<Layout type="responsive" />}>
               {/* Public Routes */}
               <Route index element={<HomePage />} />
@@ -92,6 +94,7 @@ function App() {
             </Route>
           </Routes>
         </SuspenseWrapper>
+        </AuthProvider>
       </BrowserRouter>
     </ErrorBoundary>
   );

@@ -1,5 +1,8 @@
-export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/v1';
-export const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:3000';
+// Construct API URL from server URL and API base path
+const serverURL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3000';
+const apiBase = import.meta.env.VITE_API_BASE || '/v1';
+export const API_BASE_URL = `${serverURL}${apiBase}`;
+export const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || import.meta.env.VITE_SERVER_URL || 'http://localhost:3000';
 
 export const API_ENDPOINTS = {
   auth: {
