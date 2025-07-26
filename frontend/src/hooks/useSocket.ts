@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useSocketStore } from '@/stores/socket-store';
-import { useAuthStore } from '@/stores/auth.store';
+// TODO: Replace with Better Auth
+// import { useAuthStore } from '@/stores/auth.store';
 
 interface UseSocketOptions {
   autoConnect?: boolean;
@@ -9,7 +10,9 @@ interface UseSocketOptions {
 
 export function useSocket(options: UseSocketOptions = {}) {
   const { autoConnect = true, streamId } = options;
-  const { token } = useAuthStore();
+  // TODO: Replace with Better Auth
+  // const { token } = useAuthStore();
+  const token = null; // Temporary placeholder
   
   const {
     isConnected,

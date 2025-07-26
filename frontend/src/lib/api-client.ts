@@ -1,4 +1,5 @@
-import { useAuthStore } from '@/stores/auth.store';
+// TODO: Replace with Better Auth
+// import { useAuthStore } from '@/stores/auth.store';
 
 export class ApiError extends Error {
   constructor(
@@ -45,7 +46,9 @@ class ApiClient {
     }
 
     // Get auth token
-    const authToken = token || useAuthStore.getState().token;
+    // TODO: Replace with Better Auth
+    // const authToken = token || useAuthStore.getState().token;
+    const authToken = token || null; // Temporary placeholder
 
     // Build headers
     const headers: HeadersInit = {

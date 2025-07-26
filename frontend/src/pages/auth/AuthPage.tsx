@@ -16,7 +16,8 @@ import {
   Hash
 } from 'lucide-react';
 import usePageTitle from '@/hooks/usePageTitle';
-import { useAuthStore } from '@/stores/authStore';
+// TODO: Replace with Better Auth
+// import { useAuthStore } from '@/stores/authStore';
 
 const AuthPage: React.FC = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -32,9 +33,13 @@ const AuthPage: React.FC = () => {
   });
   
   const navigate = useNavigate();
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const login = useAuthStore((state) => state.login);
-  const register = useAuthStore((state) => state.register);
+  // TODO: Replace with Better Auth
+  // const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  // const login = useAuthStore((state) => state.login);
+  // const register = useAuthStore((state) => state.register);
+  const isAuthenticated = false; // Temporary placeholder
+  const login = async (data: any) => { console.log('Login placeholder:', data); }; // Temporary
+  const register = async (data: any) => { console.log('Register placeholder:', data); }; // Temporary
   
   usePageTitle(isLogin ? 'Login' : 'Register');
 

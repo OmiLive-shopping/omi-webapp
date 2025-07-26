@@ -1,12 +1,16 @@
 import React from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { useAuthStore } from '@/stores/authStore';
+// TODO: Replace with Better Auth
+// import { useAuthStore } from '@/stores/authStore';
 import { useAuth } from '@/hooks/useAuth';
 
 const Layout: React.FC = () => {
   const location = useLocation();
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const user = useAuthStore((state) => state.user);
+  // TODO: Replace with Better Auth
+  // const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  // const user = useAuthStore((state) => state.user);
+  const isAuthenticated = false; // Temporary placeholder
+  const user = null; // Temporary placeholder
   const { logout } = useAuth();
 
   const isActive = (path: string) => {
