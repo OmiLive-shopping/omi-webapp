@@ -4,9 +4,9 @@ import { AddressInfo } from 'net';
 import { io as ioClient, Socket as ClientSocket } from 'socket.io-client';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
-import { env } from '../../config/env-config';
-import { SocketServer } from '../../config/socket/socket.config';
-import { initializeSocketServer } from '../index';
+import { env } from '../../config/env-config.js';
+import { SocketServer } from '../../config/socket/socket.config.js';
+import { initializeSocketServer } from '../index.js';
 
 describe('Socket.IO Integration Tests', () => {
   let httpServer: any;

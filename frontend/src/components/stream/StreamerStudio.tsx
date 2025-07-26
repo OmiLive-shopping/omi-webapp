@@ -50,14 +50,33 @@ export const StreamerStudio: React.FC<StreamerStudioProps> = ({
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const { user } = useAuthStore();
 
+  // Debug logging
+  console.log('StreamerStudio - Current user:', user);
+  console.log('StreamerStudio - User exists:', !!user);
+
   // Fetch stream key from backend
-  const { data: streamKeyData, isLoading: loadingKey } = useQuery({
+  const { data: streamKeyData, isLoading: loadingKey, error } = useQuery({
     queryKey: ['stream-key'],
     queryFn: async () => {
-      const response = await apiClient.get<any>('/users/stream-key');
-      return response.data;
+      console.log('StreamerStudio - Fetching stream key...');
+      try {
+        const response = await apiClient.get<any>('/users/stream-key');
+        console.log('StreamerStudio - Stream key response:', response.data);
+        return response.data;
+      } catch (error) {
+        console.error('StreamerStudio - Stream key error:', error);
+        throw error;
+      }
     },
     enabled: !!user,
+  });
+
+  // More debug logging
+  console.log('StreamerStudio - Query state:', {
+    streamKeyData,
+    loadingKey,
+    error,
+    queryEnabled: !!user
   });
 
 
@@ -89,25 +108,46 @@ export const StreamerStudio: React.FC<StreamerStudioProps> = ({
               </div>
             </div>
             <div className="flex-1 relative bg-black">
-              {loadingKey ? (
-                <div className="flex items-center justify-center h-full">
-                  <div className="text-white">Loading stream configuration...</div>
-                </div>
-              ) : streamKeyData ? (
-                <iframe
-                  ref={iframeRef}
-                  src={`https://vdo.ninja/?room=${streamKeyData.vdoRoomName}&push=${streamKeyData.streamKey}&meshcast&webcam&bitrate=${settings.bitrate}&director=1`}
-                  className="w-full h-full"
-                  allow="camera; microphone; autoplay"
-                  style={{ border: 'none' }}
-                />
-              ) : (
-                <div className="flex flex-col items-center justify-center h-full text-white">
-                  <AlertCircle className="w-12 h-12 mb-4" />
-                  <p>Unable to load stream configuration</p>
-                  <p className="text-sm text-gray-400 mt-2">Make sure you have streamer permissions</p>
-                </div>
-              )}
+              {(() => {
+                console.log('StreamerStudio - Rendering decision:', {
+                  loadingKey,
+                  hasStreamKeyData: !!streamKeyData,
+                  streamKeyData,
+                  error
+                });
+                
+                if (loadingKey) {
+                  console.log('StreamerStudio - Showing loading state');
+                  return (
+                    <div className="flex items-center justify-center h-full">
+                      <div className="text-white">Loading stream configuration...</div>
+                    </div>
+                  );
+                } else if (streamKeyData) {
+                  console.log('StreamerStudio - Showing iframe with VDO.ninja');
+                  return (
+                    <iframe
+                      ref={iframeRef}
+                      src={`https://vdo.ninja/?room=${streamKeyData.vdoRoomName}&push=${streamKeyData.streamKey}&meshcast&webcam&bitrate=${settings.bitrate}&director=1`}
+                      className="w-full h-full"
+                      allow="camera; microphone; autoplay"
+                      style={{ border: 'none' }}
+                    />
+                  );
+                } else {
+                  console.log('StreamerStudio - Showing error state');
+                  return (
+                    <div className="flex flex-col items-center justify-center h-full text-white">
+                      <AlertCircle className="w-12 h-12 mb-4" />
+                      <p>Unable to load stream configuration</p>
+                      <p className="text-sm text-gray-400 mt-2">Make sure you have streamer permissions</p>
+                      {error && (
+                        <p className="text-sm text-red-400 mt-2">Error: {error.message}</p>
+                      )}
+                    </div>
+                  );
+                }
+              })()}
               {/* Stream Stats Overlay */}
               <div className="absolute top-4 left-4 bg-black/75 backdrop-blur-sm p-3 rounded-lg">
                 <div className="flex items-center gap-4 text-white text-sm">

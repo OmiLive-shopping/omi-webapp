@@ -1,10 +1,10 @@
 import { z } from 'zod';
 
-import { PrismaService } from '../../config/prisma.config';
-import { SocketWithAuth } from '../../config/socket/socket.config';
-import { ChatRateLimiter, SlowModeManager } from '../managers/rate-limiter';
-import { RoomManager } from '../managers/room.manager';
-import { ChatCommandHandler } from './chat-commands';
+import { PrismaService } from '../../config/prisma.config.js';
+import { SocketWithAuth } from '../../config/socket/socket.config.js';
+import { ChatRateLimiter, SlowModeManager } from '../managers/rate-limiter.js';
+import { RoomManager } from '../managers/room.manager.js';
+import { ChatCommandHandler } from './chat-commands.js';
 
 // Message schemas
 const sendMessageSchema = z.object({

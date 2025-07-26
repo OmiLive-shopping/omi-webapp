@@ -1,9 +1,9 @@
 import { Router } from 'express';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { auth } from '../../../middleware/auth.middleware';
-import { validateRequest } from '../../../middleware/validation.middleware';
-import router from '../routes/user.routes'; // Adjust the import path as needed
+import { auth } from '../../../middleware/auth.middleware.js';
+import { validateRequest } from '../../../middleware/validation.middleware.js';
+import router from '../routes/user.routes.js'; // Adjust the import path as needed
 
 // Mock dependencies
 vi.mock('../controllers/user.controller', () => {

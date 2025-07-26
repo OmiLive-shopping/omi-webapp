@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { StreamRepository } from '../repositories/stream.repository';
-import { StreamService } from '../services/stream.service';
-import { ProductRepository } from '../../product/repositories/product.repository';
-import { UserRepository } from '../../user/repositories/user.repository';
+import { StreamRepository } from '../repositories/stream.repository.js';
+import { StreamService } from '../services/stream.service.js';
+import { ProductRepository } from '../../product/repositories/product.repository.js';
+import { UserRepository } from '../../user/repositories/user.repository.js';
 
 vi.mock('../repositories/stream.repository');
 vi.mock('../../product/repositories/product.repository');

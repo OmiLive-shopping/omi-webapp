@@ -1,18 +1,18 @@
 import { Router } from 'express';
 
-import { PrismaService } from '../../../config/prisma.config';
-import { authMiddleware } from '../../../middleware/auth-enhanced.middleware';
-import { requireAdmin, requirePermission } from '../../../middleware/role.middleware';
-import { validateRequest } from '../../../middleware/validation.middleware';
-import { ProductController } from '../controllers/product.controller';
-import { ProductRepository } from '../repositories/product.repository';
+import { PrismaService } from '../../../config/prisma.config.js';
+import { authMiddleware } from '../../../middleware/auth-enhanced.middleware.js';
+import { requireAdmin, requirePermission } from '../../../middleware/role.middleware.js';
+import { validateRequest } from '../../../middleware/validation.middleware.js';
+import { ProductController } from '../controllers/product.controller.js';
+import { ProductRepository } from '../repositories/product.repository.js';
 import {
   createProductSchema,
   productFiltersSchema,
   updateProductSchema,
   wishlistSchema,
-} from '../schemas/product.schema';
-import { ProductService } from '../services/product.service';
+} from '../schemas/product.schema.js';
+import { ProductService } from '../services/product.service.js';
 
 const router = Router();
 

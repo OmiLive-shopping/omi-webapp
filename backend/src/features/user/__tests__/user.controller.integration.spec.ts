@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { Request, Response } from 'express';
-import { UserController } from '../controllers/user.controller';
-import { UserService } from '../services/user.service';
+import { UserController } from '../controllers/user.controller.js';
+import { UserService } from '../services/user.service.js';
 
 describe('UserController Integration Tests', () => {
   let userController: UserController;

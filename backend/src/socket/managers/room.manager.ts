@@ -1,5 +1,5 @@
-import { PrismaService } from '../../config/prisma.config';
-import { SocketWithAuth } from '../../config/socket/socket.config';
+import { PrismaService } from '../../config/prisma.config.js';
+import { SocketWithAuth } from '../../config/socket/socket.config.js';
 
 interface RoomInfo {
   streamId: string;

@@ -2,21 +2,21 @@ import express from 'express';
 import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { corsMiddleware } from '../../config/cors.config';
-import { RedisClient } from '../../config/redis.config';
+import { corsMiddleware } from '../../config/cors.config.js';
+import { RedisClient } from '../../config/redis.config.js';
 import {
   apiKeyRateLimit,
   apiKeyStore,
   requirePermission,
   validateApiKey,
-} from '../api-key.middleware';
-import { handleValidationErrors, userValidations } from '../input-validation.middleware';
+} from '../api-key.middleware.js';
+import { handleValidationErrors, userValidations } from '../input-validation.middleware.js';
 import {
   apiRateLimiter,
   authRateLimiter,
   createRateLimiter,
   RATE_LIMIT_CONFIGS,
-} from '../rate-limit.middleware';
+} from '../rate-limit.middleware.js';
 
 // Mock Redis
 vi.mock('../../config/redis.config', () => ({

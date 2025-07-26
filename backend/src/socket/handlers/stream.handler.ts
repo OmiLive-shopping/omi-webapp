@@ -1,9 +1,9 @@
 import { z } from 'zod';
 
-import { PrismaService } from '../../config/prisma.config';
-import { SocketWithAuth } from '../../config/socket/socket.config';
-import { SocketServer } from '../../config/socket/socket.config';
-import { RoomManager } from '../managers/room.manager';
+import { PrismaService } from '../../config/prisma.config.js';
+import { SocketWithAuth } from '../../config/socket/socket.config.js';
+import { SocketServer } from '../../config/socket/socket.config.js';
+import { RoomManager } from '../managers/room.manager.js';
 
 const joinStreamSchema = z.object({
   streamId: z.string().uuid(),

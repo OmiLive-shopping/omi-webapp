@@ -1,11 +1,11 @@
 import { Socket } from 'socket.io';
 
-import { PrismaService } from '../config/prisma.config';
-import { SocketService } from '../config/socket.config';
-import { ProductRepository } from '../features/product/repositories/product.repository';
-import { StreamRepository } from '../features/stream/repositories/stream.repository';
-import { StreamService } from '../features/stream/services/stream.service';
-import { UserRepository } from '../features/user/repositories/user.repository';
+import { PrismaService } from '../config/prisma.config.js';
+import { SocketService } from '../config/socket.config.js';
+import { ProductRepository } from '../features/product/repositories/product.repository.js';
+import { StreamRepository } from '../features/stream/repositories/stream.repository.js';
+import { StreamService } from '../features/stream/services/stream.service.js';
+import { UserRepository } from '../features/user/repositories/user.repository.js';
 
 export class StreamSocketHandler {
   private streamService: StreamService;

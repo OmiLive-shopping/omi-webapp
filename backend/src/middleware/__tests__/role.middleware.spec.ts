@@ -1,13 +1,13 @@
 import { NextFunction, Request, Response } from 'express';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { ROLES } from '../../constants/roles';
+import { ROLES } from '../../constants/roles.js';
 import {
   requireAdmin,
   requireOwnerOrAdmin,
   requirePermission,
   requireRole,
-} from '../role.middleware';
+} from '../role.middleware.js';
 
 describe('Role Middleware', () => {
   let mockReq: Partial<Request>;

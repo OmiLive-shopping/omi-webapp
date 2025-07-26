@@ -3,7 +3,7 @@ import rateLimit, { Options, RateLimitRequestHandler } from 'express-rate-limit'
 import RedisStore from 'rate-limit-redis';
 import { unifiedResponse } from 'uni-response';
 
-import { RedisClient } from '../config/redis.config';
+import { RedisClient } from '../config/redis.config.js';
 
 export interface RateLimitOptions {
   windowMs?: number;
@@ -85,7 +85,7 @@ export function createRateLimiter(options: RateLimitOptions = {}): RateLimitRequ
       }),
     });
   } else {
-    console.warn('Redis not available, using memory store for rate limiting');
+    // Fall back to memory store silently
     return rateLimit(baseOptions);
   }
 }

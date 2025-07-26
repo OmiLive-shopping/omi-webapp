@@ -3,9 +3,9 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vites
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcrypt';
 import express from 'express';
-import { PrismaService } from '../../../config/prisma.config';
-import userRoutes from '../routes/user.routes';
-import { apiErrorMiddleware } from '../../../middleware/api-error.middleware';
+import { PrismaService } from '../../../config/prisma.config.js';
+import userRoutes from '../routes/user.routes.js';
+import { apiErrorMiddleware } from '../../../middleware/api-error.middleware.js';
 
 // Skip integration tests in CI environment
 const skipInCI = process.env.CI ? it.skip : it;

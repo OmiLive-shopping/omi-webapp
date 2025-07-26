@@ -1,6 +1,6 @@
 import jwt, { Secret } from 'jsonwebtoken';
 
-import { env } from '../config/env-config';
+import { env } from '../config/env-config.js';
 
 const secret: Secret = env.JWT_SECRET as string;
 

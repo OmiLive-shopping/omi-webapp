@@ -1,10 +1,10 @@
 import bcrypt from 'bcrypt';
 import { unifiedResponse } from 'uni-response';
 
-import { ERROR, SUCCESS } from '../../../constants/messages';
-import { generateToken } from '../../../utils/generate-token.util';
-import { UserRepository } from '../repositories/user.repository';
-import { LoginInputTypes, RegisterInputTypes } from '../types/user.types';
+import { ERROR, SUCCESS } from '../../../constants/messages.js';
+import { generateToken } from '../../../utils/generate-token.util.js';
+import { UserRepository } from '../repositories/user.repository.js';
+import { LoginInputTypes, RegisterInputTypes } from '../types/user.types.js';
 
 export class UserService {
   constructor(private readonly userRepository: UserRepository) {}

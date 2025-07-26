@@ -2,7 +2,7 @@ import { NextFunction, Request, Response } from 'express';
 import rateLimit from 'express-rate-limit';
 import { unifiedResponse } from 'uni-response';
 
-import { ERROR } from '../constants/messages';
+import { ERROR } from '../constants/messages.js';
 
 /* The `const rateLimiter` declaration is creating a rate-limiting middleware using the
 `express-rate-limit` package. It is configuring the rate limiter to allow a maximum of 100 requests

@@ -2,7 +2,7 @@ import { NextFunction, Request, Response } from 'express';
 import jwt, { Secret } from 'jsonwebtoken';
 import { unifiedResponse } from 'uni-response';
 
-import { env } from '../config/env-config';
+import { env } from '../config/env-config.js';
 
 // Environment variable for JWT secret
 const secret: Secret = env.JWT_SECRET as string;

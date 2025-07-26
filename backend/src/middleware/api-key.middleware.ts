@@ -2,7 +2,7 @@ import crypto from 'crypto';
 import { NextFunction, Request, Response } from 'express';
 import { unifiedResponse } from 'uni-response';
 
-import { env } from '../config/env-config';
+import { env } from '../config/env-config.js';
 
 // In production, these would be stored in a database
 // For now, we'll use environment variables or a simple in-memory store

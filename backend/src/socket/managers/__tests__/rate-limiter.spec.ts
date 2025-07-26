@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { ChatRateLimiter, SlowModeManager } from '../rate-limiter';
+import { ChatRateLimiter, SlowModeManager } from '../rate-limiter.js';
 
 describe('ChatRateLimiter', () => {
   let rateLimiter: ChatRateLimiter;

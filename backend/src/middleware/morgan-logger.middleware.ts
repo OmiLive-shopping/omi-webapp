@@ -5,7 +5,7 @@ import morgan, { StreamOptions } from 'morgan';
 import path from 'path';
 import { createStream } from 'rotating-file-stream';
 
-import { env } from '../config/env-config';
+import { env } from '../config/env-config.js';
 
 // Extend Request to include custom properties
 interface CustomRequest extends Request {

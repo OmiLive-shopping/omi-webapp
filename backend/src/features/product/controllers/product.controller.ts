@@ -1,12 +1,12 @@
 import { Request, Response } from 'express';
 
-import { ProductService } from '../services/product.service';
+import { ProductService } from '../services/product.service.js';
 import {
   CreateProductInput,
   ProductFilters,
   UpdateProductInput,
   WishlistInput,
-} from '../types/product.types';
+} from '../types/product.types.js';
 
 export class ProductController {
   constructor(private readonly productService: ProductService) {}

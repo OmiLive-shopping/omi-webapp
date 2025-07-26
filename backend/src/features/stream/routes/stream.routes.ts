@@ -1,14 +1,14 @@
 import { Router } from 'express';
 
-import { PrismaService } from '../../../config/prisma.config';
-import { ROLES } from '../../../constants/roles';
-import { authMiddleware } from '../../../middleware/auth-enhanced.middleware';
-import { requirePermission, requireRole } from '../../../middleware/role.middleware';
-import { validateRequest } from '../../../middleware/validation.middleware';
-import { ProductRepository } from '../../product/repositories/product.repository';
-import { UserRepository } from '../../user/repositories/user.repository';
-import { StreamController } from '../controllers/stream.controller';
-import { StreamRepository } from '../repositories/stream.repository';
+import { PrismaService } from '../../../config/prisma.config.js';
+import { ROLES } from '../../../constants/roles.js';
+import { authMiddleware } from '../../../middleware/auth-enhanced.middleware.js';
+import { requirePermission, requireRole } from '../../../middleware/role.middleware.js';
+import { validateRequest } from '../../../middleware/validation.middleware.js';
+import { ProductRepository } from '../../product/repositories/product.repository.js';
+import { UserRepository } from '../../user/repositories/user.repository.js';
+import { StreamController } from '../controllers/stream.controller.js';
+import { StreamRepository } from '../repositories/stream.repository.js';
 import {
   addStreamProductSchema,
   commentSchema,
@@ -20,8 +20,8 @@ import {
   streamFiltersSchema,
   updateStreamSchema,
   updateViewerCountSchema,
-} from '../schemas/stream.schema';
-import { StreamService } from '../services/stream.service';
+} from '../schemas/stream.schema.js';
+import { StreamService } from '../services/stream.service.js';
 
 const router = Router();
 

@@ -1,10 +1,10 @@
 import { Server as HTTPServer } from 'http';
 
-import { SocketServer, SocketWithAuth } from '../config/socket/socket.config';
-import { ChatHandler } from './handlers/chat.handler';
-import { StreamHandler } from './handlers/stream.handler';
-import { RoomManager } from './managers/room.manager';
-import { socketAuthMiddleware } from './middleware/auth.middleware';
+import { SocketServer, SocketWithAuth } from '../config/socket/socket.config.js';
+import { ChatHandler } from './handlers/chat.handler.js';
+import { StreamHandler } from './handlers/stream.handler.js';
+import { RoomManager } from './managers/room.manager.js';
+import { socketAuthMiddleware } from './middleware/auth.middleware.js';
 
 export function initializeSocketServer(httpServer: HTTPServer): void {
   const socketServer = SocketServer.getInstance(httpServer);

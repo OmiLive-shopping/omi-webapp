@@ -1,8 +1,8 @@
 import { NextFunction, Request, Response } from 'express';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { UserController } from '../controllers/user.controller';
-import { UserService } from '../services/user.service';
+import { UserController } from '../controllers/user.controller.js';
+import { UserService } from '../services/user.service.js';
 
 describe('UserController', () => {
   let userController: UserController;

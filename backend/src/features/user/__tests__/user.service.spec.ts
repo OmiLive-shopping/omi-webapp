@@ -2,10 +2,10 @@ import bcrypt from 'bcrypt';
 import { unifiedResponse } from 'uni-response';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { ERROR, SUCCESS } from '../../../constants/messages';
-import { generateToken } from '../../../utils/generate-token.util';
-import { UserRepository } from '../repositories/user.repository';
-import { UserService } from '../services/user.service';
+import { ERROR, SUCCESS } from '../../../constants/messages.js';
+import { generateToken } from '../../../utils/generate-token.util.js';
+import { UserRepository } from '../repositories/user.repository.js';
+import { UserService } from '../services/user.service.js';
 
 vi.mock('bcrypt');
 
