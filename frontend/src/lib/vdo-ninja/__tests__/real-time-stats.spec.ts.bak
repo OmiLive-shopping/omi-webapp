@@ -1,0 +1,539 @@
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { RealTimeStatsTracker } from '../real-time-stats';
+import { VdoEventManager } from '../event-manager';
+import type { StreamStatistics, TrendData } from '../real-time-stats';
+
+describe('RealTimeStatsTracker', () => {
+  let tracker: RealTimeStatsTracker;
+  let eventManager: VdoEventManager;
+  
+  beforeEach(() => {
+    vi.useFakeTimers();
+    eventManager = new VdoEventManager();
+    tracker = new RealTimeStatsTracker({
+      historyInterval: 100,
+      maxHistorySize: 10,
+      aggregationWindow: 1000,
+      trendWindow: 2000,
+      enableCompression: false
+    });
+    tracker.initialize(eventManager);
+  });
+  
+  afterEach(() => {
+    tracker.cleanup();
+    vi.useRealTimers();
+  });
+  
+  describe('Basic Statistics', () => {
+    it('should initialize with empty stats', () => {
+      const stats = tracker.getStats();
+      expect(stats.fps).toBe(0);
+      expect(stats.bitrate).toBe(0);
+      expect(stats.packetLoss).toBe(0);
+      expect(stats.connectionQuality).toBe('good');
+      expect(stats.connectionScore).toBe(100);
+    });
+    
+    it('should update network stats from events', () => {
+      eventManager.emit('stats', {
+        action: 'stats',
+        value: {
+          bitrate: 2500000,
+          packetLoss: 1.5,
+          latency: 45,
+          jitter: 10
+        }
+      });
+      
+      const stats = tracker.getStats();
+      expect(stats.bitrate).toBe(2500000);
+      expect(stats.packetLoss).toBe(1.5);
+      expect(stats.latency).toBe(45);
+      expect(stats.jitter).toBe(10);
+    });
+    
+    it('should update video stats from events', () => {
+      eventManager.emit('videoStats', {
+        action: 'videoStats',
+        value: {
+          fps: 30
+        }
+      });
+      
+      const stats = tracker.getStats();
+      expect(stats.fps).toBe(30);
+    });
+    
+    it('should track min/max values', () => {
+      eventManager.emit('stats', {
+        action: 'stats',
+        value: { bitrate: 1000000 }
+      });
+      
+      eventManager.emit('stats', {
+        action: 'stats',
+        value: { bitrate: 3000000 }
+      });
+      
+      eventManager.emit('stats', {
+        action: 'stats',
+        value: { bitrate: 2000000 }
+      });
+      
+      const stats = tracker.getStats();
+      expect(stats.bitrateMin).toBe(1000000);
+      expect(stats.bitrateMax).toBe(3000000);
+      expect(stats.bitrate).toBe(2000000);
+    });
+    
+    it('should track viewer count', () => {
+      eventManager.emit('viewerJoined', { action: 'viewerJoined' });
+      eventManager.emit('viewerJoined', { action: 'viewerJoined' });
+      eventManager.emit('viewerJoined', { action: 'viewerJoined' });
+      
+      let stats = tracker.getStats();
+      expect(stats.currentViewers).toBe(3);
+      expect(stats.peakViewers).toBe(3);
+      expect(stats.totalUniqueViewers).toBe(3);
+      
+      eventManager.emit('viewerLeft', { action: 'viewerLeft' });
+      
+      stats = tracker.getStats();
+      expect(stats.currentViewers).toBe(2);
+      expect(stats.peakViewers).toBe(3);
+    });
+    
+    it('should track resolution changes', () => {
+      eventManager.emit('resolutionChanged', {
+        action: 'resolutionChanged',
+        value: { width: 1920, height: 1080 }
+      });
+      
+      eventManager.emit('resolutionChanged', {
+        action: 'resolutionChanged',
+        value: { width: 1280, height: 720 }
+      });
+      
+      const stats = tracker.getStats();
+      expect(stats.currentResolution).toEqual({ width: 1280, height: 720 });
+      expect(stats.resolutionChanges).toBe(2);
+    });
+    
+    it('should track audio levels and dropouts', () => {
+      eventManager.emit({
+        action: 'audioLevel',
+        value: { level: 0.5 }
+      });
+      
+      eventManager.emit({
+        action: 'audioLevel',
+        value: { level: 0.8 }
+      });
+      
+      eventManager.emit({ action: 'audioDropout' });
+      eventManager.emit({ action: 'audioDropout' });
+      
+      const stats = tracker.getStats();
+      expect(stats.audioLevel).toBe(0.8);
+      expect(stats.audioLevelPeak).toBe(0.8);
+      expect(stats.audioDropouts).toBe(2);
+    });
+  });
+  
+  describe('Connection Quality', () => {
+    it('should calculate excellent quality', () => {
+      eventManager.emit({
+        action: 'stats',
+        value: {
+          bitrate: 3000000,
+          packetLoss: 0,
+          latency: 20,
+          jitter: 5
+        }
+      });
+      
+      eventManager.emit({
+        action: 'videoStats',
+        value: { fps: 30 }
+      });
+      
+      const stats = tracker.getStats();
+      expect(stats.connectionQuality).toBe('excellent');
+      expect(stats.connectionScore).toBeGreaterThan(90);
+    });
+    
+    it('should calculate poor quality', () => {
+      eventManager.emit({
+        action: 'stats',
+        value: {
+          bitrate: 400000,
+          packetLoss: 15,
+          latency: 250,
+          jitter: 60
+        }
+      });
+      
+      eventManager.emit({
+        action: 'videoStats',
+        value: { fps: 10 }
+      });
+      
+      const stats = tracker.getStats();
+      expect(stats.connectionQuality).toBe('critical');
+      expect(stats.connectionScore).toBeLessThan(30);
+    });
+    
+    it('should degrade quality based on metrics', () => {
+      // Start with good metrics
+      eventManager.emit({
+        action: 'stats',
+        value: {
+          bitrate: 2500000,
+          packetLoss: 0,
+          latency: 30,
+          jitter: 10
+        }
+      });
+      
+      let stats = tracker.getStats();
+      const initialScore = stats.connectionScore;
+      
+      // Degrade packet loss
+      eventManager.emit({
+        action: 'stats',
+        value: { packetLoss: 8 }
+      });
+      
+      stats = tracker.getStats();
+      expect(stats.connectionScore).toBeLessThan(initialScore);
+    });
+  });
+  
+  describe('Moving Averages', () => {
+    it('should calculate moving averages', () => {
+      // Send multiple bitrate updates
+      for (let i = 1; i <= 5; i++) {
+        eventManager.emit({
+          action: 'stats',
+          value: { bitrate: i * 1000000 }
+        });
+      }
+      
+      const stats = tracker.getStats();
+      expect(stats.bitrateAvg).toBe(3000000); // Average of 1,2,3,4,5 million
+    });
+    
+    it('should maintain window size for averages', () => {
+      // Create tracker with small window
+      const smallWindowTracker = new RealTimeStatsTracker({
+        historyInterval: 100,
+        aggregationWindow: 300 // 3 samples
+      });
+      smallWindowTracker.initialize(eventManager);
+      
+      // Send more samples than window size
+      for (let i = 1; i <= 10; i++) {
+        eventManager.emit({
+          action: 'stats',
+          value: { bitrate: i * 1000000 }
+        });
+      }
+      
+      const stats = smallWindowTracker.getStats();
+      // Should only average last 3 values (8, 9, 10 million)
+      expect(stats.bitrateAvg).toBe(9000000);
+      
+      smallWindowTracker.cleanup();
+    });
+  });
+  
+  describe('History Management', () => {
+    it('should take periodic snapshots', () => {
+      expect(tracker.getHistory()).toHaveLength(0);
+      
+      vi.advanceTimersByTime(100);
+      expect(tracker.getHistory()).toHaveLength(1);
+      
+      vi.advanceTimersByTime(400);
+      expect(tracker.getHistory()).toHaveLength(5);
+    });
+    
+    it('should limit history size', () => {
+      // Advance time to create more snapshots than max
+      vi.advanceTimersByTime(1500); // 15 snapshots
+      
+      const history = tracker.getHistory();
+      expect(history).toHaveLength(10); // maxHistorySize
+    });
+    
+    it('should return limited history when requested', () => {
+      vi.advanceTimersByTime(1000); // 10 snapshots
+      
+      const limited = tracker.getHistory(5);
+      expect(limited).toHaveLength(5);
+    });
+  });
+  
+  describe('Trend Analysis', () => {
+    it('should detect improving trends', () => {
+      // Simulate improving bitrate
+      for (let i = 1; i <= 10; i++) {
+        eventManager.emit({
+          action: 'stats',
+          value: { bitrate: i * 500000 }
+        });
+      }
+      
+      const trends = tracker.getTrends(['bitrate']);
+      expect(trends).toHaveLength(1);
+      expect(trends[0].metric).toBe('bitrate');
+      expect(trends[0].trend).toBe('improving');
+      expect(trends[0].changePercent).toBeGreaterThan(0);
+    });
+    
+    it('should detect degrading trends', () => {
+      // Simulate increasing packet loss (bad)
+      for (let i = 1; i <= 10; i++) {
+        eventManager.emit({
+          action: 'stats',
+          value: { packetLoss: i * 0.5 }
+        });
+      }
+      
+      const trends = tracker.getTrends(['packetLoss']);
+      expect(trends).toHaveLength(1);
+      expect(trends[0].metric).toBe('packetLoss');
+      expect(trends[0].trend).toBe('degrading');
+    });
+    
+    it('should detect stable trends', () => {
+      // Simulate stable latency
+      for (let i = 1; i <= 10; i++) {
+        eventManager.emit({
+          action: 'stats',
+          value: { latency: 50 + Math.random() * 2 } // Small variations
+        });
+      }
+      
+      const trends = tracker.getTrends(['latency']);
+      expect(trends).toHaveLength(1);
+      expect(trends[0].metric).toBe('latency');
+      expect(Math.abs(trends[0].changePercent)).toBeLessThan(5);
+    });
+  });
+  
+  describe('Data Export', () => {
+    it('should export to JSON', () => {
+      eventManager.emit({
+        action: 'stats',
+        value: {
+          bitrate: 2500000,
+          packetLoss: 1.5
+        }
+      });
+      
+      vi.advanceTimersByTime(200);
+      
+      const json = tracker.exportToJSON();
+      const exported = JSON.parse(json);
+      
+      expect(exported).toHaveProperty('currentStats');
+      expect(exported).toHaveProperty('history');
+      expect(exported).toHaveProperty('trends');
+      expect(exported).toHaveProperty('metadata');
+      expect(exported.currentStats.bitrate).toBe(2500000);
+    });
+    
+    it('should export to CSV', () => {
+      eventManager.emit({
+        action: 'stats',
+        value: {
+          bitrate: 2500000,
+          packetLoss: 1.5
+        }
+      });
+      
+      vi.advanceTimersByTime(300);
+      
+      const csv = tracker.exportToCSV();
+      const lines = csv.split('\n');
+      
+      expect(lines[0]).toContain('bitrate');
+      expect(lines[0]).toContain('packetLoss');
+      expect(lines.length).toBeGreaterThan(1);
+    });
+    
+    it('should respect export format configuration', () => {
+      const csvTracker = new RealTimeStatsTracker({
+        enableExport: true,
+        exportFormat: 'csv'
+      });
+      
+      const exported = csvTracker.export();
+      expect(exported).toContain(','); // CSV format
+      
+      csvTracker.cleanup();
+    });
+    
+    it('should throw error when export is disabled', () => {
+      const noExportTracker = new RealTimeStatsTracker({
+        enableExport: false
+      });
+      
+      expect(() => noExportTracker.export()).toThrow('Export is disabled');
+      
+      noExportTracker.cleanup();
+    });
+  });
+  
+  describe('Aggregated Statistics', () => {
+    it('should calculate aggregated stats for time window', () => {
+      const now = Date.now();
+      
+      // Simulate data over time
+      for (let i = 0; i < 10; i++) {
+        eventManager.emit({
+          action: 'stats',
+          value: { bitrate: (i + 1) * 1000000 }
+        });
+        vi.advanceTimersByTime(100);
+      }
+      
+      // Get last 500ms of data (5 samples)
+      const aggregated = tracker.getAggregatedStats(500);
+      
+      expect(aggregated.bitrate).toBeDefined();
+      // Should average last 5 values (6,7,8,9,10 million)
+      expect(aggregated.bitrate).toBeCloseTo(8000000, -5);
+    });
+    
+    it('should return empty object for no data in window', () => {
+      const aggregated = tracker.getAggregatedStats(100);
+      expect(aggregated).toEqual({});
+    });
+  });
+  
+  describe('Memory Management', () => {
+    it('should compress old history data', () => {
+      const compressTracker = new RealTimeStatsTracker({
+        historyInterval: 10,
+        maxHistorySize: 1000,
+        enableCompression: true,
+        compressionInterval: 1000,
+        compressionRatio: 5
+      });
+      
+      // Generate lots of data
+      vi.advanceTimersByTime(2000); // 200 snapshots
+      
+      const historyBefore = compressTracker.getHistory().length;
+      
+      // Trigger compression
+      vi.advanceTimersByTime(1000);
+      
+      const historyAfter = compressTracker.getHistory().length;
+      expect(historyAfter).toBeLessThan(historyBefore);
+      
+      compressTracker.cleanup();
+    });
+  });
+  
+  describe('Reset and Clear', () => {
+    it('should reset all statistics', () => {
+      eventManager.emit({
+        action: 'stats',
+        value: {
+          bitrate: 2500000,
+          packetLoss: 5
+        }
+      });
+      
+      vi.advanceTimersByTime(500);
+      
+      tracker.reset();
+      
+      const stats = tracker.getStats();
+      expect(stats.bitrate).toBe(0);
+      expect(stats.packetLoss).toBe(0);
+      expect(tracker.getHistory()).toHaveLength(0);
+    });
+    
+    it('should clear specific metric history', () => {
+      for (let i = 1; i <= 5; i++) {
+        eventManager.emit({
+          action: 'stats',
+          value: { bitrate: i * 1000000 }
+        });
+      }
+      
+      let stats = tracker.getStats();
+      expect(stats.bitrateMin).toBe(1000000);
+      expect(stats.bitrateMax).toBe(5000000);
+      
+      tracker.clearMetricHistory('bitrate');
+      
+      stats = tracker.getStats();
+      expect(stats.bitrateMin).toBe(Infinity);
+      expect(stats.bitrateMax).toBe(0);
+    });
+  });
+  
+  describe('Stream Duration', () => {
+    it('should track stream duration', () => {
+      eventManager.emit({ action: 'connected' });
+      
+      vi.advanceTimersByTime(5000);
+      
+      // Force snapshot to update duration
+      vi.advanceTimersByTime(100);
+      
+      const stats = tracker.getStats();
+      expect(stats.streamDuration).toBeCloseTo(5100, -2);
+    });
+    
+    it('should calculate average view duration', () => {
+      eventManager.emit({ action: 'connected' });
+      
+      // Add viewers
+      eventManager.emit('viewerJoined', { action: 'viewerJoined' });
+      eventManager.emit('viewerJoined', { action: 'viewerJoined' });
+      
+      vi.advanceTimersByTime(2000);
+      vi.advanceTimersByTime(100); // Force snapshot
+      
+      const stats = tracker.getStats();
+      expect(stats.averageViewDuration).toBeCloseTo(1050, -2);
+    });
+  });
+  
+  describe('Data Usage Tracking', () => {
+    it('should track upload and download speeds', () => {
+      const now = Date.now();
+      
+      eventManager.emit({
+        action: 'stats',
+        value: {
+          bytesSent: 1000000,
+          bytesReceived: 2000000
+        }
+      });
+      
+      vi.advanceTimersByTime(1000);
+      
+      eventManager.emit({
+        action: 'stats',
+        value: {
+          bytesSent: 2000000,
+          bytesReceived: 4000000
+        }
+      });
+      
+      const stats = tracker.getStats();
+      expect(stats.totalBytesSent).toBe(2000000);
+      expect(stats.totalBytesReceived).toBe(4000000);
+      expect(stats.averageUploadSpeed).toBeCloseTo(1000000, -2);
+      expect(stats.averageDownloadSpeed).toBeCloseTo(2000000, -2);
+    });
+  });
+});

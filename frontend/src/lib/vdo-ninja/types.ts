@@ -78,6 +78,68 @@ export interface VdoEvent {
   streamId?: string;
   target?: string;
   stats?: VdoStats;
+  timestamp?: number;
+  metadata?: Record<string, any>;
+}
+
+// Extended event types for enhanced functionality
+export interface StreamLifecycleEvent extends VdoEvent {
+  action: 'streamStarted' | 'streamStopped' | 'streamPaused' | 'streamResumed';
+  streamInfo?: {
+    streamId: string;
+    userId?: string;
+    userName?: string;
+    startTime?: number;
+    duration?: number;
+  };
+}
+
+export interface ViewerEvent extends VdoEvent {
+  action: 'viewerJoined' | 'viewerLeft' | 'viewerReconnected';
+  viewerInfo?: {
+    viewerId: string;
+    userName?: string;
+    joinTime?: number;
+    connectionQuality?: 'excellent' | 'good' | 'fair' | 'poor';
+  };
+  viewerCount?: number;
+}
+
+export interface MediaStateEvent extends VdoEvent {
+  action: 'audioMuted' | 'audioUnmuted' | 'videoMuted' | 'videoUnmuted' | 'mediaStateChanged';
+  mediaState?: {
+    audioEnabled: boolean;
+    videoEnabled: boolean;
+    screenShareEnabled: boolean;
+    audioDevice?: string;
+    videoDevice?: string;
+  };
+}
+
+export interface QualityEvent extends VdoEvent {
+  action: 'qualityChanged' | 'bitrateChanged' | 'resolutionChanged' | 'framerateChanged';
+  quality?: {
+    bitrate?: number;
+    resolution?: { width: number; height: number };
+    framerate?: number;
+    codec?: string;
+    level?: 'auto' | 'high' | 'medium' | 'low';
+  };
+}
+
+export interface ConnectionHealthEvent extends VdoEvent {
+  action: 'connectionHealthUpdate' | 'connectionStateChanged' | 'networkQualityChanged';
+  health?: {
+    state: 'connecting' | 'connected' | 'reconnecting' | 'disconnected' | 'failed';
+    quality: 'excellent' | 'good' | 'fair' | 'poor' | 'critical';
+    packetLoss?: number;
+    latency?: number;
+    jitter?: number;
+    bandwidth?: {
+      upload: number;
+      download: number;
+    };
+  };
 }
 
 export interface VdoNinjaConfig {
@@ -85,4 +147,30 @@ export interface VdoNinjaConfig {
   room?: string;
   apiKey?: string;
   defaultParams?: Partial<VdoStreamerParams & VdoViewerParams>;
+  eventThrottling?: {
+    enabled: boolean;
+    interval: number; // milliseconds
+    maxEventsPerInterval?: number;
+  };
+  errorHandling?: {
+    retryAttempts: number;
+    retryDelay: number;
+    logErrors: boolean;
+  };
+}
+
+// Event validation schema
+export interface EventValidationRule {
+  action: string | string[];
+  required?: string[];
+  optional?: string[];
+  validator?: (event: VdoEvent) => boolean;
+}
+
+// Throttling configuration
+export interface ThrottleConfig {
+  interval: number;
+  maxEvents?: number;
+  leading?: boolean;
+  trailing?: boolean;
 }

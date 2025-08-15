@@ -183,6 +183,151 @@ Claude Code's environment is non-interactive (no TTY), which prevents using `pri
 - **Generate SQL**: Use `npx prisma migrate diff` to create migration SQL manually
 - After schema changes: Always run `npx prisma generate` to update the client
 
+## VDO.Ninja Integration
+
+### Testing the VDO.Ninja Enhanced Integration
+
+The project includes a comprehensive VDO.Ninja integration with real-time event handling, state management, and command queueing. To test the integration:
+
+1. **Start the frontend development server:**
+   ```bash
+   cd frontend
+   pnpm dev
+   ```
+
+2. **Navigate to the test page:**
+   ```
+   http://localhost:5173/vdo-ninja-test
+   ```
+
+### VDO.Ninja Architecture
+
+The integration consists of three main components:
+
+#### 1. **VdoEventManager** (`/frontend/src/lib/vdo-ninja/event-manager.ts`)
+- Handles incoming events from VDO.Ninja iframe via postMessage
+- Supports event throttling for high-frequency events
+- Event validation and error handling
+- Event history tracking
+- Enhanced event types:
+  - Stream lifecycle (start/stop/pause/resume)
+  - Viewer management (join/leave/reconnect)
+  - Media state changes (mute/unmute)
+  - Quality changes (bitrate/resolution/framerate)
+  - Connection health monitoring
+
+#### 2. **StreamStateManager** (`/frontend/src/lib/vdo-ninja/stream-state-manager.ts`)
+- Centralized state management for streaming
+- Automatic synchronization with VDO.Ninja events
+- State persistence across page refreshes (localStorage)
+- Automatic retry mechanism with exponential backoff
+- Tracks:
+  - Stream lifecycle state
+  - Viewer count and active viewers
+  - Media controls state
+  - Connection quality metrics
+  - Recording state
+
+#### 3. **VdoCommandManager** (`/frontend/src/lib/vdo-ninja/commands.ts`)
+- Command queue with priority management (low/normal/high/critical)
+- Offline mode support with automatic queuing
+- Command validation and sanitization
+- Response handling with timeouts
+- 100+ pre-built commands in `VdoCommands` object
+- Categories:
+  - Stream control (start/stop/pause/resume)
+  - Audio control (mute/volume/gain/noise suppression)
+  - Video control (hide/show/quality/constraints)
+  - Screen sharing (start/stop/quality)
+  - Recording (start/stop/pause/download)
+  - Camera/microphone control
+  - Effects (blur/mirror/rotate/filters)
+  - Director controls (scene management)
+
+### Usage Example
+
+```typescript
+// Initialize managers
+const eventManager = new VdoEventManager();
+const stateManager = new StreamStateManager();
+const commandManager = new VdoCommandManager();
+
+// Setup with iframe
+eventManager.startListening(iframeRef.current);
+stateManager.initialize(eventManager);
+commandManager.setIframe(iframeRef.current);
+
+// Listen to state changes
+stateManager.onChange((event) => {
+  console.log('State changed:', event);
+});
+
+// Send commands
+await commandManager.sendCommand(VdoCommands.muteAudio(), {
+  priority: 'high',
+  waitForResponse: true
+});
+
+// Check connection health
+const health = stateManager.getConnectionHealth();
+console.log('Connection:', health.state, health.quality);
+```
+
+### Testing Features
+
+The demo page (`/vdo-ninja-test`) provides:
+- **Live stream preview** with VDO.Ninja iframe
+- **Real-time status monitoring** (connection, viewers, quality, bitrate)
+- **Media controls** (audio/video mute, screen share, recording)
+- **Quality settings** (presets and manual bitrate control)
+- **Event log** showing all VDO.Ninja events
+- **Command queue status** for offline/delayed commands
+- **Unique room generation** for testing multi-user scenarios
+
+### Development Workflow
+
+When implementing VDO.Ninja features:
+1. Use `VdoEventManager` to listen for specific events
+2. Use `StreamStateManager` to track and react to state changes
+3. Use `VdoCommandManager` to send commands with automatic validation
+4. Always handle offline scenarios with command queueing
+5. Implement retry logic for critical operations
+6. Use event throttling for high-frequency updates (stats, audio levels)
+
+### Common Commands
+
+```typescript
+// Basic stream control
+VdoCommands.startStream()
+VdoCommands.stopStream()
+VdoCommands.toggleStream()
+
+// Audio/Video control
+VdoCommands.muteAudio()
+VdoCommands.setVolume(50)
+VdoCommands.hideVideo()
+VdoCommands.toggleVideo()
+
+// Quality control
+VdoCommands.setBitrate(2500000)
+VdoCommands.setQuality(80)
+VdoCommands.setFramerate(30)
+VdoCommands.setResolution(1920, 1080)
+
+// Screen sharing
+VdoCommands.startScreenShare()
+VdoCommands.setScreenShareQuality('high')
+
+// Recording
+VdoCommands.startRecording()
+VdoCommands.downloadRecording()
+
+// Effects
+VdoCommands.setBlur(true, 10)
+VdoCommands.setMirror(true)
+VdoCommands.setVirtualBackground('image-url')
+```
+
 ## CRITICAL: UI Component Strategy
 **THIS PROJECT USES TAILWIND CSS EXCLUSIVELY**. We are NOT using any component libraries like bolt.new, Material-UI, Ant Design, or any other UI framework.
 

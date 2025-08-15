@@ -30,6 +30,7 @@ import ViewerCountDemo from '@/components/stream/ViewerCountDemo';
 import ChatInputDebug from '@/components/chat/ChatInputDebug';
 import StreamLayoutDemo from '@/components/stream/StreamLayoutDemo';
 import MockApiDebugPage from '@/pages/debug/MockApiDebugPage';
+import VdoNinjaTestPage from '@/pages/debug/VdoNinjaTestPage';
 
 function App() {
   useEffect(() => {
@@ -71,6 +72,7 @@ function App() {
               <Route path="chat-input-debug" element={<ChatInputDebug />} />
               <Route path="stream-layout-demo" element={<StreamLayoutDemo />} />
               <Route path="mock-api-debug" element={<MockApiDebugPage />} />
+              <Route path="vdo-ninja-test" element={<VdoNinjaTestPage />} />
               
               {/* Protected Routes */}
               <Route path="studio" element={
