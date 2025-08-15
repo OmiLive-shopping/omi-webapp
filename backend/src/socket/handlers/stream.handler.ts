@@ -4,6 +4,7 @@ import { PrismaService } from '../../config/prisma.config.js';
 import { SocketWithAuth } from '../../config/socket/socket.config.js';
 import { SocketServer } from '../../config/socket/socket.config.js';
 import { RoomManager } from '../managers/room.manager.js';
+import { VdoStreamHandler } from './vdo-stream.handler.js';
 
 const joinStreamSchema = z.object({
   streamId: z.string().uuid(),
@@ -46,6 +47,7 @@ export class StreamHandler {
   private roomManager = RoomManager.getInstance();
   private socketServer = SocketServer.getInstance();
   private prisma = PrismaService.getInstance().client;
+  private vdoHandler = new VdoStreamHandler();
 
   handleJoinStream = async (socket: SocketWithAuth, data: any) => {
     try {
@@ -407,4 +409,43 @@ export class StreamHandler {
       socket.emit('error', { message: 'Failed to get stream stats' });
     }
   };
+
+  /**
+   * Register all VDO.Ninja event handlers for a socket
+   */
+  registerVdoHandlers(socket: SocketWithAuth) {
+    // VDO.Ninja stream events
+    socket.on('vdo:stream:event', (data) => this.vdoHandler.handleVdoStreamEvent(socket, data));
+    
+    // VDO.Ninja statistics
+    socket.on('vdo:stats:update', (data) => this.vdoHandler.handleVdoStatsUpdate(socket, data));
+    
+    // VDO.Ninja viewer events
+    socket.on('vdo:viewer:event', (data) => this.vdoHandler.handleVdoViewerEvent(socket, data));
+    
+    // VDO.Ninja media control events
+    socket.on('vdo:media:event', (data) => this.vdoHandler.handleVdoMediaEvent(socket, data));
+    
+    // VDO.Ninja quality events
+    socket.on('vdo:quality:event', (data) => this.vdoHandler.handleVdoQualityEvent(socket, data));
+    
+    // VDO.Ninja recording events
+    socket.on('vdo:recording:event', (data) => this.vdoHandler.handleVdoRecordingEvent(socket, data));
+    
+    // Get VDO.Ninja analytics
+    socket.on('vdo:get:analytics', (data) => this.vdoHandler.handleGetVdoAnalytics(socket, data));
+  }
+
+  /**
+   * Unregister VDO.Ninja handlers when socket disconnects
+   */
+  unregisterVdoHandlers(socket: SocketWithAuth) {
+    socket.removeAllListeners('vdo:stream:event');
+    socket.removeAllListeners('vdo:stats:update');
+    socket.removeAllListeners('vdo:viewer:event');
+    socket.removeAllListeners('vdo:media:event');
+    socket.removeAllListeners('vdo:quality:event');
+    socket.removeAllListeners('vdo:recording:event');
+    socket.removeAllListeners('vdo:get:analytics');
+  }
 }

@@ -19,12 +19,15 @@ export interface ChatMessage {
   content: string;
   timestamp: Date;
   type: 'message' | 'announcement' | 'donation' | 'subscription' | 'system';
+  subType?: 'stream' | 'viewer' | 'quality' | 'error'; // VDO.Ninja system message types
   isPinned: boolean;
   isDeleted: boolean;
   replyTo?: string;
   emotes?: Array<{ id: string; positions: number[] }>;
   badges?: string[];
   color?: string;
+  avatarUrl?: string | null;
+  role?: string;
   donation?: {
     amount: number;
     currency: string;
@@ -71,6 +74,8 @@ interface ChatState {
   pinnedMessage: ChatMessage | null;
   maxMessages: number;
   addMessage: (message: Omit<ChatMessage, 'id' | 'timestamp'>) => void;
+  addSystemMessage: (content: string, subType?: ChatMessage['subType'], metadata?: any) => void;
+  addVdoSystemMessage: (message: any) => void;
   deleteMessage: (messageId: string) => void;
   pinMessage: (messageId: string) => void;
   unpinMessage: () => void;
@@ -150,7 +155,7 @@ export const useChatStore = create<ChatState>()(
     addMessage: (messageData) => {
       const message: ChatMessage = {
         ...messageData,
-        id: `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        id: `msg-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
         timestamp: new Date(),
       };
       
@@ -182,6 +187,36 @@ export const useChatStore = create<ChatState>()(
     },
     unpinMessage: () => set({ pinnedMessage: null }),
     clearMessages: () => set({ messages: [], mentions: [] }),
+    
+    addSystemMessage: (content, subType, metadata) => {
+      get().addMessage({
+        userId: 'system',
+        username: 'System',
+        content,
+        type: 'system',
+        subType,
+        isPinned: false,
+        isDeleted: false,
+        metadata,
+        role: 'system',
+      });
+    },
+    
+    addVdoSystemMessage: (message) => {
+      // Handle VDO.Ninja system messages from socket
+      get().addMessage({
+        userId: message.userId || 'system',
+        username: message.username || 'System',
+        content: message.content,
+        type: message.type || 'system',
+        subType: message.subType,
+        isPinned: false,
+        isDeleted: false,
+        metadata: message.metadata,
+        role: message.role || 'system',
+        avatarUrl: message.avatarUrl,
+      });
+    },
     
     // Users
     users: new Map(),

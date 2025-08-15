@@ -2,9 +2,16 @@ import { io, Socket } from 'socket.io-client';
 
 export interface ServerToClientEvents {
   'chat:message': (message: ChatMessage) => void;
+  'chat:system:message': (message: VdoSystemMessage) => void;
   'stream:viewer-count': (count: number) => void;
   'stream:status': (status: StreamStatus) => void;
   'stream:error': (error: string) => void;
+  // VDO.Ninja events
+  'vdo:stream:live': (data: any) => void;
+  'vdo:viewer:joined': (data: { viewerCount?: number; viewer?: any }) => void;
+  'vdo:viewer:left': (data: { viewerCount?: number; viewer?: any }) => void;
+  'vdo:quality:changed': (data: { quality: any }) => void;
+  'vdo:quality:warning': (data: { message: string; quality?: any }) => void;
   connect: () => void;
   disconnect: (reason: string) => void;
   connect_error: (error: Error) => void;
@@ -19,9 +26,27 @@ export interface ClientToServerEvents {
 export interface ChatMessage {
   id: string;
   username: string;
-  message: string;
+  message?: string; // Optional for compatibility
+  content?: string; // New field name
   timestamp: string;
-  userId?: string;
+  userId: string;
+  type?: 'message' | 'announcement' | 'donation' | 'subscription' | 'system';
+  role?: string;
+  avatarUrl?: string | null;
+  metadata?: Record<string, any>;
+}
+
+export interface VdoSystemMessage {
+  id: string;
+  content: string;
+  userId: string;
+  username: string;
+  avatarUrl: string | null;
+  role: string;
+  timestamp: Date | string;
+  type: 'system';
+  subType?: 'stream' | 'viewer' | 'quality' | 'error';
+  metadata?: any;
 }
 
 export interface StreamStatus {

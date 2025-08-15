@@ -48,6 +48,7 @@ model User {
   streamModeratorAddedBy StreamModerator[] @relation("StreamModeratorAddedBy")
   sessions             Session[]
   accounts             Account[]
+  viewerAnalytics      ViewerAnalytics[]
 
   @@index([email])
   @@index([username])
@@ -138,6 +139,10 @@ model Stream {
   streamViewers   StreamViewer[]
   moderations     ChatModeration[]
   moderators      StreamModerator[]
+  analytics       StreamAnalytics[]
+  realtimeStats   StreamRealtimeStats[]
+  qualityEvents   StreamQualityEvent[]
+  viewerAnalytics ViewerAnalytics[]
 
   @@index([userId])
   @@index([isLive])
@@ -390,4 +395,181 @@ model Verification {
   @@unique([identifier, value])
   @@index([identifier])
   @@index([expiresAt])
+}
+
+// Stream Analytics Models for VDO.Ninja Integration
+
+model StreamAnalytics {
+  id                String   @id @default(uuid())
+  streamId          String
+  stream            Stream   @relation(fields: [streamId], references: [id], onDelete: Cascade)
+  
+  // Time window
+  timestamp         DateTime @default(now())
+  intervalType      String   // 'minute', '5minutes', '15minutes', 'hour', 'day'
+  intervalStart     DateTime
+  intervalEnd       DateTime
+  
+  // Viewer metrics
+  uniqueViewers     Int      @default(0)
+  peakViewers       Int      @default(0)
+  averageViewers    Float    @default(0)
+  totalViewTime     Int      @default(0) // in seconds
+  averageViewTime   Float    @default(0) // in seconds
+  
+  // Stream quality metrics
+  averageFps        Float    @default(0)
+  minFps            Float    @default(0)
+  maxFps            Float    @default(0)
+  averageBitrate    Float    @default(0) // in bps
+  minBitrate        Float    @default(0)
+  maxBitrate        Float    @default(0)
+  averageResolution String?  // e.g., "1920x1080"
+  
+  // Network metrics
+  averageLatency    Float    @default(0) // in ms
+  maxLatency        Float    @default(0)
+  averagePacketLoss Float    @default(0) // percentage
+  maxPacketLoss     Float    @default(0)
+  averageJitter     Float    @default(0) // in ms
+  
+  // Connection health
+  connectionScore   Float    @default(100) // 0-100
+  qualityRating     String   @default("good") // 'excellent', 'good', 'fair', 'poor', 'critical'
+  reconnectCount    Int      @default(0)
+  
+  // Data usage
+  totalBytesOut     BigInt   @default(0)
+  totalBytesIn      BigInt   @default(0)
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @default(now()) @updatedAt
+  
+  @@unique([streamId, intervalType, intervalStart])
+  @@index([streamId])
+  @@index([intervalType])
+  @@index([intervalStart])
+  @@index([timestamp])
+}
+
+model StreamRealtimeStats {
+  id                String   @id @default(uuid())
+  streamId          String
+  stream            Stream   @relation(fields: [streamId], references: [id], onDelete: Cascade)
+  
+  // Timestamp for this stats snapshot
+  timestamp         DateTime @default(now())
+  
+  // Current viewers
+  viewerCount       Int      @default(0)
+  
+  // Video stats
+  fps               Float    @default(0)
+  resolution        String?  // e.g., "1920x1080"
+  bitrate           Float    @default(0) // in bps
+  
+  // Audio stats
+  audioLevel        Float    @default(0) // 0-100
+  audioDropouts     Int      @default(0)
+  
+  // Network stats
+  latency           Float    @default(0) // in ms
+  packetLoss        Float    @default(0) // percentage
+  jitter            Float    @default(0) // in ms
+  uploadSpeed       Float    @default(0) // in bps
+  downloadSpeed     Float    @default(0) // in bps
+  
+  // Connection
+  connectionState   String   @default("connected") // 'connected', 'reconnecting', 'disconnected'
+  connectionQuality String   @default("good") // 'excellent', 'good', 'fair', 'poor', 'critical'
+  
+  // Media states
+  isAudioMuted      Boolean  @default(false)
+  isVideoHidden     Boolean  @default(false)
+  isScreenSharing   Boolean  @default(false)
+  isRecording       Boolean  @default(false)
+  
+  createdAt         DateTime @default(now())
+  
+  @@index([streamId])
+  @@index([timestamp])
+  @@index([createdAt])
+}
+
+model StreamQualityEvent {
+  id                String   @id @default(uuid())
+  streamId          String
+  stream            Stream   @relation(fields: [streamId], references: [id], onDelete: Cascade)
+  
+  timestamp         DateTime @default(now())
+  eventType         String   // 'quality_degraded', 'quality_improved', 'connection_lost', 'connection_restored'
+  severity          String   // 'low', 'medium', 'high', 'critical'
+  
+  // Event details
+  metric            String   // 'fps', 'bitrate', 'latency', 'packet_loss', 'connection'
+  previousValue     Float?
+  currentValue      Float?
+  threshold         Float?
+  
+  // Context
+  message           String?
+  details           Json?    // Additional context as JSON
+  
+  // Resolution
+  resolved          Boolean  @default(false)
+  resolvedAt        DateTime?
+  resolutionTime    Int?     // Time to resolve in seconds
+  
+  createdAt         DateTime @default(now())
+  
+  @@index([streamId])
+  @@index([eventType])
+  @@index([severity])
+  @@index([timestamp])
+  @@index([resolved])
+}
+
+model ViewerAnalytics {
+  id                String   @id @default(uuid())
+  streamId          String
+  userId            String?
+  sessionId         String   // For anonymous viewers
+  
+  stream            Stream   @relation(fields: [streamId], references: [id], onDelete: Cascade)
+  user              User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Session info
+  joinedAt          DateTime
+  leftAt            DateTime?
+  totalWatchTime    Int      @default(0) // in seconds
+  
+  // Engagement metrics
+  chatMessageCount  Int      @default(0)
+  reactionCount     Int      @default(0)
+  
+  // Quality experience
+  averageQuality    String?  // Average quality watched
+  qualityChanges    Int      @default(0) // Number of quality changes
+  bufferingTime     Int      @default(0) // Total buffering time in seconds
+  bufferingEvents   Int      @default(0)
+  
+  // Connection metrics
+  averageLatency    Float    @default(0)
+  averagePacketLoss Float    @default(0)
+  reconnectCount    Int      @default(0)
+  
+  // Device info
+  deviceType        String?  // 'desktop', 'mobile', 'tablet'
+  browser           String?
+  os                String?
+  location          String?
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @default(now()) @updatedAt
+  
+  @@unique([streamId, sessionId])
+  @@index([streamId])
+  @@index([userId])
+  @@index([sessionId])
+  @@index([joinedAt])
 }

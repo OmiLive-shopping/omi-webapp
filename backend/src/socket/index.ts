@@ -35,6 +35,9 @@ export function initializeSocketServer(httpServer: HTTPServer): void {
     socket.on('stream:get-analytics', data => streamHandler.handleGetAnalytics(socket, data));
     socket.on('stream:stats:update', data => streamHandler.handleStreamStats(socket, data));
     socket.on('stream:stats:get', data => streamHandler.handleGetStreamStats(socket, data));
+    
+    // Register VDO.Ninja event handlers
+    streamHandler.registerVdoHandlers(socket);
 
     // Chat events
     socket.on('chat:send-message', data => chatHandler.handleSendMessage(socket, data));
@@ -49,6 +52,7 @@ export function initializeSocketServer(httpServer: HTTPServer): void {
     // Handle disconnect
     socket.on('disconnect', async () => {
       console.log(`User disconnected: ${socket.id} (${socket.username || 'anonymous'})`);
+      streamHandler.unregisterVdoHandlers(socket);
       await roomManager.handleDisconnect(socket);
     });
 

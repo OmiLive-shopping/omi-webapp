@@ -1,6 +1,6 @@
 import React, { useMemo, useEffect, useState } from 'react';
 import {
-  Circle, Square, Play, Pause, Radio, RadioOff,
+  Circle, Square, Play, Pause, Radio, CircleSlash,
   Users, Eye, EyeOff, Wifi, WifiOff, AlertTriangle,
   Activity, Clock, TrendingUp, TrendingDown, Loader2,
   CheckCircle, XCircle, AlertCircle, Info, Signal,
@@ -133,7 +133,7 @@ export const StreamStatusIndicator: React.FC<StreamStatusIndicatorProps> = ({
   // Stream state configuration
   const streamStateConfig = {
     offline: {
-      icon: <RadioOff className={sizes.icon} />,
+      icon: <CircleSlash className={sizes.icon} />,
       label: 'Offline',
       color: 'text-gray-500',
       bgColor: 'bg-gray-500',

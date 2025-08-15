@@ -7,6 +7,7 @@ import apiKeyRoutes from './features/api-key/routes/api-key.routes.js';
 import productRoutes from './features/product/routes/product.routes.js';
 import streamRoutes from './features/stream/routes/stream.routes.js';
 import userRoutes from './features/user/routes/user.routes.js';
+import analyticsRoutes from './features/analytics/routes/analytics.routes.js';
 import { apiErrorHandler, unmatchedRoutes } from './middleware/api-error.middleware.js';
 import { toNodeHandler } from 'better-auth/node';
 import { auth } from './auth.js';
@@ -97,12 +98,14 @@ app.use('/v1/users', userRoutes);
 app.use('/v1/products', productRoutes);
 app.use('/v1/streams', streamRoutes);
 app.use('/v1/api-keys', apiKeyRoutes);
+app.use('/v1/analytics', analyticsRoutes);
 
 // External API endpoints (require API key)
 app.use('/api/v1', validateApiKey(true), [
   express.Router().use('/users', userRoutes),
   express.Router().use('/products', productRoutes),
   express.Router().use('/streams', streamRoutes),
+  express.Router().use('/analytics', analyticsRoutes),
 ]);
 
 // Error Handling Middleware

@@ -4,6 +4,7 @@ import { app } from './app.js';
 import { env } from './config/env-config.js';
 import { PrismaService } from './config/prisma.config.js';
 import { SocketService } from './config/socket.config.js';
+import { analyticsCleanupJob } from './features/analytics/jobs/cleanup.job.js';
 
 class Server {
   private readonly port: number | string;
@@ -32,6 +33,10 @@ class Server {
       if (env.NODE_ENV !== 'production') {
         console.log(`Socket.io Admin UI available at http://localhost:${this.port}/admin`);
       }
+      
+      // Start analytics cleanup job (runs every 24 hours)
+      analyticsCleanupJob.start(24);
+      console.log('Analytics cleanup job started');
     });
 
     // Handle system signals for graceful shutdown
@@ -45,6 +50,9 @@ class Server {
   private async gracefulShutdown(): Promise<void> {
     console.log('Received shutdown signal, shutting down gracefully...');
     try {
+      // Stop analytics cleanup job
+      analyticsCleanupJob.stop();
+      
       // Stop accepting new connections
       this.httpServer.close(async () => {
         console.log('No new requests are being accepted.');

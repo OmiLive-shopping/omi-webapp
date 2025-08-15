@@ -5,6 +5,7 @@ import { SocketWithAuth } from '../../config/socket/socket.config.js';
 import { ChatRateLimiter, SlowModeManager } from '../managers/rate-limiter.js';
 import { RoomManager } from '../managers/room.manager.js';
 import { ChatCommandHandler } from './chat-commands.js';
+import type { VdoStreamEvent, VdoViewerEvent, VdoQualityEvent } from '../types/vdo-events.types.js';
 
 // Message schemas
 const sendMessageSchema = z.object({
@@ -68,7 +69,12 @@ export class ChatHandler {
         return;
       }
 
-      // Check if this is a command
+      // Check if this is a VDO command first
+      if (await this.handleVdoCommand(socket, validated.streamId, validated.content)) {
+        return; // VDO command was processed
+      }
+
+      // Check if this is a regular command
       if (await this.commandHandler.processCommand(socket, validated.streamId, validated.content)) {
         return; // Command was processed, don't send as regular message
       }
@@ -143,37 +149,16 @@ export class ChatHandler {
           streamId: validated.streamId,
           replyToId: validated.replyTo,
         },
-        include: {
-          user: {
-            select: {
-              id: true,
-              username: true,
-              avatarUrl: true,
-              role: {
-                select: {
-                  name: true,
-                },
-              },
-            },
-          },
-          replyTo: validated.replyTo
-            ? {
-                select: {
-                  id: true,
-                  content: true,
-                  user: {
-                    select: {
-                      username: true,
-                    },
-                  },
-                },
-              }
-            : undefined,
-          _count: {
-            select: {
-              reactions: true,
-            },
-          },
+      });
+
+      // Get user info separately since Comment model doesn't have user relation
+      const user = await this.prisma.user.findUnique({
+        where: { id: socket.userId },
+        select: {
+          id: true,
+          username: true,
+          avatarUrl: true,
+          role: true,
         },
       });
 
@@ -181,10 +166,10 @@ export class ChatHandler {
       const chatMessage = {
         id: message.id,
         content: message.content,
-        userId: message.user.id,
-        username: message.user.username,
-        avatarUrl: message.user.avatarUrl,
-        role: message.user.role?.name || 'viewer',
+        userId: user?.id || socket.userId,
+        username: user?.username || socket.username || 'Anonymous',
+        avatarUrl: user?.avatarUrl || null,
+        role: user?.role || 'viewer',
         timestamp: message.createdAt,
         replyTo: validated.replyTo,
         type: 'message' as const,
@@ -374,35 +359,38 @@ export class ChatHandler {
           streamId: data.streamId,
           ...(data.before && { createdAt: { lt: new Date(data.before) } }),
         },
-        include: {
-          user: {
-            select: {
-              id: true,
-              username: true,
-              avatarUrl: true,
-              role: {
-                select: {
-                  name: true,
-                },
-              },
-            },
-          },
-        },
         orderBy: { createdAt: 'desc' },
         take: limit,
       });
 
+      // Get user info for all messages
+      const userIds = [...new Set(messages.map(m => m.userId))];
+      const users = await this.prisma.user.findMany({
+        where: { id: { in: userIds } },
+        select: {
+          id: true,
+          username: true,
+          avatarUrl: true,
+          role: true,
+        },
+      });
+
+      const userMap = new Map(users.map(u => [u.id, u]));
+
       const formattedMessages = messages
-        .map(msg => ({
-          id: msg.id,
-          content: msg.content,
-          userId: msg.user.id,
-          username: msg.user.username,
-          avatarUrl: msg.user.avatarUrl,
-          role: msg.user.role?.name || 'viewer',
-          timestamp: msg.createdAt,
-          type: 'message' as const,
-        }))
+        .map(msg => {
+          const user = userMap.get(msg.userId);
+          return {
+            id: msg.id,
+            content: msg.content,
+            userId: msg.userId,
+            username: user?.username || 'Anonymous',
+            avatarUrl: user?.avatarUrl || null,
+            role: user?.role || 'viewer',
+            timestamp: msg.createdAt,
+            type: 'message' as const,
+          };
+        })
         .reverse();
 
       socket.emit('chat:history', {
@@ -574,6 +562,144 @@ export class ChatHandler {
         socket.emit('error', { message: 'Failed to pin message' });
       }
     }
+  };
+
+  // Send VDO.Ninja system messages
+  sendVdoSystemMessage = async (
+    streamId: string,
+    type: 'stream' | 'viewer' | 'quality' | 'error',
+    message: string,
+    metadata?: any,
+  ) => {
+    try {
+      const systemMessage = {
+        id: `system-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+        content: message,
+        userId: 'system',
+        username: 'System',
+        avatarUrl: null,
+        role: 'system',
+        timestamp: new Date(),
+        type: 'system' as const,
+        subType: type,
+        metadata,
+      };
+
+      // Get the socket server instance to broadcast
+      const io = (global as any).io;
+      if (io) {
+        io.to(`stream:${streamId}`).emit('chat:system:message', systemMessage);
+      }
+    } catch (error) {
+      console.error('Error sending VDO system message:', error);
+    }
+  };
+
+  // Handle VDO.Ninja stream events
+  handleVdoStreamEvent = async (data: VdoStreamEvent) => {
+    const { streamId, action } = data;
+    
+    const messages: Record<string, string> = {
+      'stream-started': '🎬 Stream has started',
+      'stream-stopped': '🛑 Stream has ended',
+      'stream-paused': '⏸️ Stream has been paused',
+      'stream-resumed': '▶️ Stream has resumed',
+      'stream-reconnecting': '🔄 Stream is reconnecting...',
+      'stream-reconnected': '✅ Stream reconnected',
+    };
+
+    const message = messages[action];
+    if (message) {
+      await this.sendVdoSystemMessage(streamId, 'stream', message, { action });
+    }
+  };
+
+  // Handle VDO.Ninja viewer events
+  handleVdoViewerEvent = async (data: VdoViewerEvent) => {
+    const { streamId, action, viewer } = data;
+    
+    if (action === 'joined') {
+      await this.sendVdoSystemMessage(
+        streamId,
+        'viewer',
+        `👋 ${viewer.username || 'Guest'} joined the stream`,
+        { viewerId: viewer.id, action },
+      );
+    } else if (action === 'left') {
+      await this.sendVdoSystemMessage(
+        streamId,
+        'viewer',
+        `👋 ${viewer.username || 'Guest'} left the stream`,
+        { viewerId: viewer.id, action },
+      );
+    }
+  };
+
+  // Handle VDO.Ninja quality events
+  handleVdoQualityEvent = async (data: VdoQualityEvent) => {
+    const { streamId, quality } = data;
+    
+    // Check quality preset levels
+    if (quality.preset === 'low' || (quality.bitrate && quality.bitrate < 1000000)) {
+      await this.sendVdoSystemMessage(
+        streamId,
+        'quality',
+        '⚠️ Stream quality has been reduced due to network conditions',
+        { quality },
+      );
+    } else if (quality.preset === 'high' || quality.preset === 'ultra') {
+      await this.sendVdoSystemMessage(
+        streamId,
+        'quality',
+        '✅ Stream quality has improved',
+        { quality },
+      );
+    }
+  };
+
+  // Handle VDO.Ninja stream commands in chat
+  handleVdoCommand = async (socket: SocketWithAuth, streamId: string, command: string): Promise<boolean> => {
+    const vdoCommands = [
+      '/mute', '/unmute', '/hide', '/show', '/quality', '/stats',
+      '/viewers', '/record', '/stoprecord', '/screenshot',
+    ];
+
+    const cmd = command.split(' ')[0].toLowerCase();
+    if (!vdoCommands.includes(cmd)) {
+      return false;
+    }
+
+    // Check if user is moderator or stream owner
+    const stream = await this.prisma.stream.findUnique({
+      where: { id: streamId },
+      select: { userId: true },
+    });
+
+    const isModerator = this.roomManager.isModerator(streamId, socket.userId!);
+    const isOwner = stream?.userId === socket.userId;
+
+    if (!isModerator && !isOwner) {
+      socket.emit('error', { message: 'Permission denied for VDO.Ninja commands' });
+      return true;
+    }
+
+    // Emit VDO command event to be handled by VDO integration
+    socket.emit('vdo:command', {
+      streamId,
+      command: cmd.substring(1), // Remove the /
+      args: command.split(' ').slice(1),
+      timestamp: new Date(),
+    });
+
+    // Send feedback message
+    await this.sendVdoSystemMessage(
+      streamId,
+      'stream',
+      `🎮 Executing command: ${cmd}`,
+      { command: cmd, executor: socket.username },
+    );
+
+    return true;
   };
 
   // Handle slow mode toggle

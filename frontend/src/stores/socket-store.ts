@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { socketManager, ChatMessage, StreamStatus } from '@/lib/socket';
+import { useChatStore } from './chat-store';
 
 interface SocketState {
   isConnected: boolean;
@@ -39,6 +40,47 @@ export const useSocketStore = create<SocketState>((set, get) => ({
     // Setup event listeners
     socketManager.on('chat:message', (message) => {
       get().addMessage(message);
+      // Also add to chat store
+      useChatStore.getState().addMessage({
+        userId: message.userId,
+        username: message.username,
+        content: message.content || message.message || '',
+        type: message.type || 'message',
+        isPinned: false,
+        isDeleted: false,
+        role: message.role,
+        avatarUrl: message.avatarUrl,
+        metadata: message.metadata,
+      });
+    });
+
+    // VDO.Ninja system messages
+    socketManager.on('chat:system:message', (message) => {
+      // Add to chat store as system message
+      useChatStore.getState().addVdoSystemMessage(message);
+    });
+
+    // VDO.Ninja stream events
+    socketManager.on('vdo:stream:live', (data) => {
+      console.log('VDO stream event:', data);
+    });
+
+    // VDO.Ninja viewer events
+    socketManager.on('vdo:viewer:joined', (data) => {
+      get().setViewerCount(data.viewerCount || get().viewerCount + 1);
+    });
+
+    socketManager.on('vdo:viewer:left', (data) => {
+      get().setViewerCount(data.viewerCount || Math.max(0, get().viewerCount - 1));
+    });
+
+    // VDO.Ninja quality events
+    socketManager.on('vdo:quality:changed', (data) => {
+      console.log('VDO quality changed:', data.quality);
+    });
+
+    socketManager.on('vdo:quality:warning', (data) => {
+      console.warn('VDO quality warning:', data.message);
     });
 
     socketManager.on('stream:viewer-count', (count) => {
