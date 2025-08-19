@@ -35,9 +35,7 @@ import { useNavigate } from 'react-router-dom';
 // VDO.Ninja Integration
 import { VdoEventManager } from '@/lib/vdo-ninja/event-manager';
 import { VdoCommandManager } from '@/lib/vdo-ninja/commands';
-import { useStreamState } from '@/hooks/useStreamState';
-import { useMediaControls } from '@/hooks/useMediaControls';
-import { useRealTimeStats } from '@/hooks/useRealTimeStats';
+import { useVdoStreamStore, useVdoStream, useVdoMediaControls, useVdoStats } from '@/stores/vdo-stream-store';
 import { MediaControlPanel } from './MediaControlPanel';
 import { StatsDashboard } from './stats/StatsDashboard';
 import { MiniStatsBar } from './stats/MiniStatsBar';
@@ -70,7 +68,35 @@ export const StreamerStudio: React.FC<StreamerStudioProps> = ({
   const navigate = useNavigate();
   const canStream = isStreamer(user);
 
-  // Initialize VDO.Ninja managers
+  // VDO Stream Store
+  const { streamState, isStreaming: isVdoStreaming, viewerCount, connectionQuality } = useVdoStream();
+  const { 
+    isAudioMuted,
+    isVideoHidden,
+    isScreenSharing,
+    volume,
+    toggleAudio,
+    toggleVideo,
+    toggleScreenShare,
+    setVolume
+  } = useVdoMediaControls();
+  const { currentStats, aggregatedStats, latency, packetLoss } = useVdoStats();
+  
+  // Store actions
+  const {
+    initializeStream,
+    setManagers,
+    startStream: storeStartStream,
+    stopStream: storeStopStream,
+    pauseStream,
+    resumeStream,
+    updateStreamInfo,
+    setQualityPreset,
+    startRecording,
+    stopRecording
+  } = useVdoStreamStore();
+
+  // Initialize VDO.Ninja managers and connect to store
   useEffect(() => {
     if (iframeRef.current && !eventManagerRef.current) {
       // Create event manager
@@ -84,6 +110,9 @@ export const StreamerStudio: React.FC<StreamerStudioProps> = ({
       // Configure event throttling for high-frequency events
       eventManagerRef.current.configureThrottle('getStats', { interval: 1000 });
       eventManagerRef.current.configureThrottle('audioLevels', { interval: 100 });
+      
+      // Connect managers to store
+      setManagers(eventManagerRef.current, commandManagerRef.current);
     }
     
     return () => {
@@ -91,49 +120,7 @@ export const StreamerStudio: React.FC<StreamerStudioProps> = ({
         eventManagerRef.current.stopListening();
       }
     };
-  }, [iframeRef.current]);
-
-  // VDO.Ninja hooks
-  const { 
-    state: streamState, 
-    startStream: vdoStartStream,
-    stopStream: vdoStopStream,
-    togglePause,
-    isConnected,
-    connectionHealth,
-    streamDuration,
-    metrics
-  } = useStreamState({ 
-    streamId: currentStreamId || undefined,
-    eventManager: eventManagerRef.current || undefined
-  });
-
-  const {
-    devices,
-    permissions,
-    controls,
-    actions: mediaActions,
-    commandQueue
-  } = useMediaControls({
-    streamId: currentStreamId || undefined,
-    commandManager: commandManagerRef.current || undefined
-  });
-
-  const {
-    stats,
-    history,
-    trends,
-    aggregatedStats,
-    qualityMetrics,
-    networkHealth,
-    actions: statsActions
-  } = useRealTimeStats({
-    eventManager: eventManagerRef.current || undefined,
-    refreshInterval: 1000,
-    enableHistory: true,
-    historyLimit: 300, // 5 minutes at 1s intervals
-    aggregateWindows: [60, 300] // 1min, 5min
-  });
+  }, [iframeRef.current, setManagers]);
 
   // Stream key management
   const streamKeyData = user?.streamKey ? {
@@ -143,46 +130,52 @@ export const StreamerStudio: React.FC<StreamerStudioProps> = ({
 
   // Enhanced stream start handler
   const handleStreamStart = useCallback(async () => {
+    // Initialize stream in store
+    initializeStream(streamKey, streamKey, streamKey);
+    
+    // Update stream info
+    updateStreamInfo({
+      title: 'Live Stream',
+      description: 'Streaming live with VDO.Ninja',
+      category: 'General',
+      tags: ['live', 'streaming']
+    });
+    
     setIsStreaming(true);
     onStreamStart();
     
-    // Start VDO.Ninja stream
-    if (vdoStartStream) {
-      await vdoStartStream();
-    }
+    // Start VDO.Ninja stream through store
+    await storeStartStream();
     
     // Log stream start event
     eventManagerRef.current?.emit('custom:streamStarted', {
-      streamId: currentStreamId,
+      streamId: currentStreamId || streamKey,
       timestamp: Date.now(),
       user: user?.email
     });
-  }, [currentStreamId, onStreamStart, vdoStartStream, user]);
+  }, [streamKey, currentStreamId, onStreamStart, initializeStream, updateStreamInfo, storeStartStream, user]);
 
   // Enhanced stream end handler
   const handleStreamEnd = useCallback(async () => {
     setIsStreaming(false);
     onStreamEnd();
     
-    // Stop VDO.Ninja stream
-    if (vdoStopStream) {
-      await vdoStopStream();
-    }
+    // Stop VDO.Ninja stream through store
+    await storeStopStream();
     
     // Export stats before ending
-    if (statsActions) {
-      const exportData = statsActions.exportStats('json');
-      console.log('Stream stats:', exportData);
-    }
+    console.log('Stream stats:', {
+      aggregated: aggregatedStats,
+      current: currentStats
+    });
     
     // Log stream end event
     eventManagerRef.current?.emit('custom:streamEnded', {
-      streamId: currentStreamId,
+      streamId: currentStreamId || streamKey,
       timestamp: Date.now(),
-      duration: streamDuration,
       stats: aggregatedStats
     });
-  }, [currentStreamId, onStreamEnd, vdoStopStream, streamDuration, aggregatedStats, statsActions]);
+  }, [streamKey, currentStreamId, onStreamEnd, storeStopStream, aggregatedStats, currentStats]);
 
   // Handle authentication and authorization
   useEffect(() => {
@@ -252,10 +245,10 @@ export const StreamerStudio: React.FC<StreamerStudioProps> = ({
                   </div>
                   {/* Connection Status */}
                   <NetworkQualityIndicator
-                    quality={connectionHealth?.quality || 'offline'}
-                    score={connectionHealth?.score}
-                    latency={stats?.latency}
-                    packetLoss={stats?.packetLoss}
+                    quality={connectionQuality || 'offline'}
+                    score={0}
+                    latency={latency}
+                    packetLoss={packetLoss}
                     showBars={true}
                     showLabel={false}
                     size="sm"
@@ -288,16 +281,16 @@ export const StreamerStudio: React.FC<StreamerStudioProps> = ({
                   />
                   
                   {/* Enhanced Stats Overlay */}
-                  {showStatsOverlay && streamState.isStreaming && (
+                  {showStatsOverlay && isVdoStreaming && (
                     <div className="absolute top-4 left-4 right-4">
                       <MiniStatsBar
                         stats={{
-                          fps: stats?.fps?.current || 0,
-                          bitrate: stats?.bitrate || 0,
-                          latency: stats?.latency || 0,
-                          packetLoss: stats?.packetLoss || 0,
-                          viewers: streamState.viewerCount || 0,
-                          duration: streamDuration || 0
+                          fps: currentStats?.fps || 0,
+                          bitrate: currentStats?.bitrate || 0,
+                          latency: latency || 0,
+                          packetLoss: packetLoss || 0,
+                          viewers: viewerCount || 0,
+                          duration: 0
                         }}
                         layout="horizontal"
                         showTrends={true}
@@ -353,34 +346,34 @@ export const StreamerStudio: React.FC<StreamerStudioProps> = ({
                 <div className="flex items-center gap-2">
                   {/* Quick Media Controls */}
                   <button
-                    onClick={() => mediaActions?.toggleAudio()}
+                    onClick={toggleAudio}
                     className={clsx(
                       "p-2 rounded-lg transition-colors",
-                      controls?.isAudioMuted 
+                      isAudioMuted 
                         ? "bg-red-100 dark:bg-red-900/30 text-red-600" 
                         : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
                     )}
                   >
-                    {controls?.isAudioMuted ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                    {isAudioMuted ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
                   </button>
                   
                   <button
-                    onClick={() => mediaActions?.toggleVideo()}
+                    onClick={toggleVideo}
                     className={clsx(
                       "p-2 rounded-lg transition-colors",
-                      controls?.isVideoHidden 
+                      isVideoHidden 
                         ? "bg-red-100 dark:bg-red-900/30 text-red-600" 
                         : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
                     )}
                   >
-                    {controls?.isVideoHidden ? <VideoOff className="w-4 h-4" /> : <Video className="w-4 h-4" />}
+                    {isVideoHidden ? <VideoOff className="w-4 h-4" /> : <Video className="w-4 h-4" />}
                   </button>
                   
                   <button
-                    onClick={() => mediaActions?.toggleScreenShare()}
+                    onClick={toggleScreenShare}
                     className={clsx(
                       "p-2 rounded-lg transition-colors",
-                      controls?.isScreenSharing 
+                      isScreenSharing 
                         ? "bg-blue-100 dark:bg-blue-900/30 text-blue-600" 
                         : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
                     )}
@@ -388,16 +381,16 @@ export const StreamerStudio: React.FC<StreamerStudioProps> = ({
                     <MonitorUp className="w-4 h-4" />
                   </button>
                   
-                  {streamState.isStreaming && (
+                  {isVdoStreaming && (
                     <button
-                      onClick={togglePause}
+                      onClick={() => streamState === 'paused' ? resumeStream() : pauseStream()}
                       className="p-2 rounded-lg bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
                     >
-                      {streamState.isPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
+                      {streamState === 'paused' ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
                     </button>
                   )}
                   
-                  {controls?.isRecording && (
+                  {false && (
                     <div className="flex items-center gap-2 px-3 py-1 bg-red-600 text-white rounded-full text-sm">
                       <Circle className="w-3 h-3 fill-current animate-pulse" />
                       <span>REC</span>
@@ -464,16 +457,8 @@ export const StreamerStudio: React.FC<StreamerStudioProps> = ({
                 <div className="flex items-center gap-2">
                   <Users className="w-4 h-4 text-gray-500" />
                   <span className="font-semibold text-gray-900 dark:text-white">
-                    {streamState.viewerCount || 0}
+                    {viewerCount || 0}
                   </span>
-                  {trends?.viewerCount && (
-                    <span className={clsx(
-                      "text-xs",
-                      trends.viewerCount > 0 ? "text-green-500" : "text-red-500"
-                    )}>
-                      {trends.viewerCount > 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                    </span>
-                  )}
                 </div>
               </div>
               
@@ -483,23 +468,18 @@ export const StreamerStudio: React.FC<StreamerStudioProps> = ({
                 <div className="flex items-center gap-2">
                   <Clock className="w-4 h-4 text-gray-500" />
                   <span className="font-semibold text-gray-900 dark:text-white">
-                    {formatDuration(streamDuration || 0)}
+                    {formatDuration(0)}
                   </span>
                 </div>
               </div>
               
-              {/* FPS with trend */}
+              {/* FPS */}
               <div className="flex justify-between items-center">
                 <span className="text-gray-600 dark:text-gray-400">FPS</span>
                 <div className="flex items-center gap-2">
                   <span className="font-semibold text-gray-900 dark:text-white">
-                    {stats?.fps?.current || 0}
+                    {currentStats?.fps || 0}
                   </span>
-                  {stats?.fps?.average && (
-                    <span className="text-xs text-gray-500">
-                      (avg: {stats.fps.average.toFixed(1)})
-                    </span>
-                  )}
                 </div>
               </div>
               
@@ -509,7 +489,7 @@ export const StreamerStudio: React.FC<StreamerStudioProps> = ({
                 <div className="flex items-center gap-2">
                   <Wifi className="w-4 h-4 text-gray-500" />
                   <span className="font-semibold text-gray-900 dark:text-white">
-                    {Math.round((stats?.bitrate || 0) / 1000)} kbps
+                    {Math.round((currentStats?.bitrate || 0) / 1000)} kbps
                   </span>
                 </div>
               </div>
@@ -519,10 +499,10 @@ export const StreamerStudio: React.FC<StreamerStudioProps> = ({
                 <span className="text-gray-600 dark:text-gray-400">Latency</span>
                 <span className={clsx(
                   "font-semibold",
-                  (stats?.latency || 0) < 50 ? "text-green-600" :
-                  (stats?.latency || 0) < 150 ? "text-yellow-600" : "text-red-600"
+                  latency < 50 ? "text-green-600" :
+                  latency < 150 ? "text-yellow-600" : "text-red-600"
                 )}>
-                  {stats?.latency || 0} ms
+                  {latency || 0} ms
                 </span>
               </div>
               
@@ -531,19 +511,19 @@ export const StreamerStudio: React.FC<StreamerStudioProps> = ({
                 <span className="text-gray-600 dark:text-gray-400">Packet Loss</span>
                 <span className={clsx(
                   "font-semibold",
-                  (stats?.packetLoss || 0) < 1 ? "text-green-600" :
-                  (stats?.packetLoss || 0) < 5 ? "text-yellow-600" : "text-red-600"
+                  packetLoss < 1 ? "text-green-600" :
+                  packetLoss < 5 ? "text-yellow-600" : "text-red-600"
                 )}>
-                  {(stats?.packetLoss || 0).toFixed(1)}%
+                  {(packetLoss || 0).toFixed(1)}%
                 </span>
               </div>
               
               {/* Data Usage */}
-              {stats?.bytesSent && (
+              {currentStats?.bytesSent && (
                 <div className="flex justify-between items-center">
                   <span className="text-gray-600 dark:text-gray-400">Data Sent</span>
                   <span className="font-semibold text-gray-900 dark:text-white">
-                    {(stats.bytesSent / 1024 / 1024).toFixed(1)} MB
+                    {(currentStats.bytesSent / 1024 / 1024).toFixed(1)} MB
                   </span>
                 </div>
               )}
@@ -625,19 +605,18 @@ export const StreamerStudio: React.FC<StreamerStudioProps> = ({
               {activeTab === 'stats' && (
                 <div>
                   <StatsDashboard
-                    stats={stats}
-                    history={history}
+                    stats={currentStats}
+                    history={[]}
                     aggregatedStats={aggregatedStats}
-                    qualityMetrics={qualityMetrics}
+                    qualityMetrics={null}
                     layout="grid"
                     showHeader={false}
                     showExport={true}
                     size="sm"
                     onExport={(format) => {
-                      if (statsActions) {
-                        const data = statsActions.exportStats(format);
-                        console.log('Exported stats:', data);
-                      }
+                      console.log('Export format:', format);
+                      console.log('Current stats:', currentStats);
+                      console.log('Aggregated stats:', aggregatedStats);
                     }}
                   />
                 </div>
@@ -648,8 +627,8 @@ export const StreamerStudio: React.FC<StreamerStudioProps> = ({
                   <div>
                     <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">Stream Quality</h4>
                     <select
-                      value={controls?.qualityPreset || 'medium'}
-                      onChange={(e) => mediaActions?.setQualityPreset(e.target.value as any)}
+                      value={'medium'}
+                      onChange={(e) => setQualityPreset(e.target.value as any)}
                       className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg"
                     >
                       <option value="low">Low (480p)</option>
@@ -660,43 +639,19 @@ export const StreamerStudio: React.FC<StreamerStudioProps> = ({
                   </div>
                   
                   <div>
-                    <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">Audio Device</h4>
-                    <select
-                      value={devices.selectedAudioInput || ''}
-                      onChange={(e) => mediaActions?.selectAudioDevice(e.target.value)}
-                      className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg"
-                    >
-                      {devices.audioInputs.map(device => (
-                        <option key={device.deviceId} value={device.deviceId}>
-                          {device.label || `Microphone ${device.deviceId.slice(0, 8)}`}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">Video Device</h4>
-                    <select
-                      value={devices.selectedVideoInput || ''}
-                      onChange={(e) => mediaActions?.selectVideoDevice(e.target.value)}
-                      className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg"
-                    >
-                      {devices.videoInputs.map(device => (
-                        <option key={device.deviceId} value={device.deviceId}>
-                          {device.label || `Camera ${device.deviceId.slice(0, 8)}`}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  
-                  {/* Command Queue Status */}
-                  {commandQueue && commandQueue.size > 0 && (
-                    <div className="mt-4 p-3 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg">
-                      <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                        {commandQueue.size} commands queued
-                      </p>
+                    <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">Volume</h4>
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      value={volume}
+                      onChange={(e) => setVolume(parseInt(e.target.value))}
+                      className="w-full"
+                    />
+                    <div className="text-sm text-gray-600 dark:text-gray-400 text-center">
+                      {volume}%
                     </div>
-                  )}
+                  </div>
                 </div>
               )}
             </div>

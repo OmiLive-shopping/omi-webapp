@@ -1,6 +1,6 @@
 import React from 'react';
 import { useUIStore } from '@/stores/ui-store';
-import { useStreamStore } from '@/stores/stream-store';
+// import { useStreamStore } from '@/stores/stream-store'; // Old store removed - use vdo-stream-store instead
 import { useProductStore } from '@/stores/product-store';
 import { useChatStore } from '@/stores/chat-store';
 import { Button } from '@/components/ui/Button';
@@ -18,16 +18,16 @@ export const StoresDebug: React.FC = () => {
     showToast,
   } = useUIStore();
 
-  // Stream Store
-  const {
-    isLive,
-    status,
-    stats,
-    goLive,
-    endStream,
-    incrementViewerCount,
-    decrementViewerCount,
-  } = useStreamStore();
+  // Stream Store - REMOVED (use vdo-stream-store instead)
+  // const {
+  //   isLive,
+  //   status,
+  //   stats,
+  //   goLive,
+  //   endStream,
+  //   incrementViewerCount,
+  //   decrementViewerCount,
+  // } = useStreamStore();
 
   // Product Store
   const {
@@ -63,14 +63,7 @@ export const StoresDebug: React.FC = () => {
     updatedAt: new Date(),
   };
 
-  const testStream = {
-    id: 'stream-1',
-    title: 'Test Stream',
-    description: 'Testing the stream store',
-    category: 'Gaming',
-    tags: ['test', 'debug'],
-    startedAt: new Date(),
-  };
+  // Removed testStream - not needed after removing old stream store
 
   return (
     <div className="p-4 space-y-4">
@@ -102,8 +95,8 @@ export const StoresDebug: React.FC = () => {
         </div>
       </Card>
 
-      {/* Stream Store Test */}
-      <Card>
+      {/* Stream Store Test - REMOVED (use vdo-stream-store debug instead) */}
+      {/* <Card>
         <div className="p-4">
           <h2 className="text-xl font-bold mb-4">Stream Store</h2>
           <div className="space-y-2">
@@ -143,7 +136,7 @@ export const StoresDebug: React.FC = () => {
             </div>
           </div>
         </div>
-      </Card>
+      </Card> */}
 
       {/* Product Store Test */}
       <Card>

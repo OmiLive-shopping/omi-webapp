@@ -1,6 +1,5 @@
-// This file exports the API client with mock support
+// This file exports the API client
 import { apiClient as realApiClient } from './api-client';
-import { createApiClientWithMock } from './mock-api';
 
 // Re-export types and constants from api-client
 export { 
@@ -10,5 +9,5 @@ export {
   ApiError
 } from './api-client';
 
-// Create and export the wrapped client
-export const apiClient = createApiClientWithMock(realApiClient);
+// Export the client directly (mock support removed)
+export const apiClient = realApiClient;

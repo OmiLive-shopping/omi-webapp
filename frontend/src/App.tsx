@@ -29,7 +29,7 @@ import MessageListComparison from '@/components/chat/MessageListComparison';
 import ViewerCountDemo from '@/components/stream/ViewerCountDemo';
 import ChatInputDebug from '@/components/chat/ChatInputDebug';
 import StreamLayoutDemo from '@/components/stream/StreamLayoutDemo';
-import MockApiDebugPage from '@/pages/debug/MockApiDebugPage';
+// import MockApiDebugPage from '@/pages/debug/MockApiDebugPage'; // Removed - used old stream store
 import VdoNinjaTestPage from '@/pages/debug/VdoNinjaTestPage';
 
 function App() {
@@ -71,7 +71,7 @@ function App() {
               <Route path="viewer-count-demo" element={<ViewerCountDemo />} />
               <Route path="chat-input-debug" element={<ChatInputDebug />} />
               <Route path="stream-layout-demo" element={<StreamLayoutDemo />} />
-              <Route path="mock-api-debug" element={<MockApiDebugPage />} />
+              {/* <Route path="mock-api-debug" element={<MockApiDebugPage />} /> Removed - used old stream store */}
               <Route path="vdo-ninja-test" element={<VdoNinjaTestPage />} />
               
               {/* Protected Routes */}
