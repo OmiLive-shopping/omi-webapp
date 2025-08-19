@@ -1,13 +1,13 @@
 import { PrismaClient, Prisma } from '@prisma/client';
 import { injectable } from 'tsyringe';
-import prisma from '@/config/prisma';
+import { PrismaService } from '@/config/prisma.config';
 
 @injectable()
 export class AnalyticsRepository {
   private prisma: PrismaClient;
 
   constructor() {
-    this.prisma = prisma;
+    this.prisma = PrismaService.getInstance().client;
   }
 
   // StreamAnalytics methods

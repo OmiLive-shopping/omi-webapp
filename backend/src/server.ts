@@ -1,3 +1,4 @@
+import 'reflect-metadata';
 import { createServer } from 'http';
 
 import { app } from './app.js';
@@ -34,9 +35,9 @@ class Server {
         console.log(`Socket.io Admin UI available at http://localhost:${this.port}/admin`);
       }
       
-      // Start analytics cleanup job (runs every 24 hours)
-      analyticsCleanupJob.start(24);
-      console.log('Analytics cleanup job started');
+      // Analytics cleanup job disabled for now
+      // analyticsCleanupJob.start(24);
+      // console.log('Analytics cleanup job started');
     });
 
     // Handle system signals for graceful shutdown
@@ -50,8 +51,8 @@ class Server {
   private async gracefulShutdown(): Promise<void> {
     console.log('Received shutdown signal, shutting down gracefully...');
     try {
-      // Stop analytics cleanup job
-      analyticsCleanupJob.stop();
+      // Stop analytics cleanup job (disabled for now)
+      // analyticsCleanupJob.stop();
       
       // Stop accepting new connections
       this.httpServer.close(async () => {

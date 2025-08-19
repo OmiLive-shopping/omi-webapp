@@ -197,7 +197,7 @@ export const StreamStatusIndicator: React.FC<StreamStatusIndicatorProps> = ({
     }
   };
   
-  const stateConfig = streamStateConfig[state.streamState];
+  const stateConfig = streamStateConfig[state.streamState] || streamStateConfig.offline;
   
   // Connection quality icon
   const getConnectionIcon = () => {
@@ -219,7 +219,7 @@ export const StreamStatusIndicator: React.FC<StreamStatusIndicatorProps> = ({
   
   // Layout components
   const StreamStateDisplay = () => {
-    if (!showStreamState) return null;
+    if (!showStreamState || !stateConfig) return null;
     
     return (
       <div className={`flex items-center ${sizes.gap}`}>

@@ -413,19 +413,23 @@ export const ViewerPlayer: React.FC<ViewerPlayerProps> = ({
     >
       {/* Video Player */}
       <div className="relative w-full h-full">
-        {loadingUrl || !viewerData ? (
-          <div className="flex items-center justify-center h-full">
-            <Loader2 className="w-8 h-8 text-white animate-spin" />
-          </div>
-        ) : (
+        {isLive ? (
           <iframe
             ref={iframeRef}
-            src={viewerData.viewerUrl}
+            src={`https://vdo.ninja/?room=${streamId}&view=${streamId}&autostart`}
             className="w-full h-full"
-            allow="autoplay; camera; microphone; fullscreen; picture-in-picture"
+            allow="autoplay; fullscreen; picture-in-picture"
             style={{ border: 'none' }}
             onLoad={() => setIsLoading(false)}
           />
+        ) : (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center">
+              <WifiOff className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+              <p className="text-white text-xl mb-2">Stream Offline</p>
+              <p className="text-gray-400">The stream is not currently live</p>
+            </div>
+          </div>
         )}
       </div>
 

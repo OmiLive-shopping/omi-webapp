@@ -59,6 +59,9 @@ export const StreamerStudio: React.FC<StreamerStudioProps> = ({
   const [showStatsOverlay, setShowStatsOverlay] = useState(true);
   const [showAdvancedControls, setShowAdvancedControls] = useState(false);
   
+  // Generate a unique stream key for VDO.Ninja room
+  const [streamKey] = useState(() => `stream-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`);
+  
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const eventManagerRef = useRef<VdoEventManager | null>(null);
   const commandManagerRef = useRef<VdoCommandManager | null>(null);
@@ -274,11 +277,11 @@ export const StreamerStudio: React.FC<StreamerStudioProps> = ({
             </div>
             
             <div className="flex-1 relative bg-black">
-              {streamKeyData ? (
+              {isStreaming ? (
                 <>
                   <iframe
                     ref={iframeRef}
-                    src={`https://vdo.ninja/?room=${streamKeyData.vdoRoomName}&push=${streamKeyData.streamKey}&webcam&quality=2&stats`}
+                    src={`https://vdo.ninja/?room=${streamKey}&push=${streamKey}&webcam&microphone&quality=2&autostart&bitrate=2500`}
                     className="w-full h-full"
                     allow="camera; microphone; autoplay; display-capture"
                     style={{ border: 'none' }}
@@ -329,9 +332,17 @@ export const StreamerStudio: React.FC<StreamerStudioProps> = ({
                 </>
               ) : (
                 <div className="flex flex-col items-center justify-center h-full text-white">
-                  <AlertCircle className="w-12 h-12 mb-4" />
-                  <p>Unable to load stream configuration</p>
-                  <p className="text-sm text-gray-400 mt-2">Make sure you have streamer permissions</p>
+                  <Radio className="w-16 h-16 mb-4 text-gray-400" />
+                  <h3 className="text-xl font-semibold mb-2">Ready to Stream</h3>
+                  <p className="text-gray-400 mb-6">Click the button below to start your live stream</p>
+                  <button
+                    onClick={handleStreamStart}
+                    className="px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
+                  >
+                    <Play className="w-5 h-5" />
+                    Start Streaming
+                  </button>
+                  <p className="text-sm text-gray-500 mt-4">Room ID: {streamKey}</p>
                 </div>
               )}
             </div>
@@ -345,31 +356,31 @@ export const StreamerStudio: React.FC<StreamerStudioProps> = ({
                     onClick={() => mediaActions?.toggleAudio()}
                     className={clsx(
                       "p-2 rounded-lg transition-colors",
-                      controls.isAudioMuted 
+                      controls?.isAudioMuted 
                         ? "bg-red-100 dark:bg-red-900/30 text-red-600" 
                         : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
                     )}
                   >
-                    {controls.isAudioMuted ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                    {controls?.isAudioMuted ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
                   </button>
                   
                   <button
                     onClick={() => mediaActions?.toggleVideo()}
                     className={clsx(
                       "p-2 rounded-lg transition-colors",
-                      controls.isVideoHidden 
+                      controls?.isVideoHidden 
                         ? "bg-red-100 dark:bg-red-900/30 text-red-600" 
                         : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
                     )}
                   >
-                    {controls.isVideoHidden ? <VideoOff className="w-4 h-4" /> : <Video className="w-4 h-4" />}
+                    {controls?.isVideoHidden ? <VideoOff className="w-4 h-4" /> : <Video className="w-4 h-4" />}
                   </button>
                   
                   <button
                     onClick={() => mediaActions?.toggleScreenShare()}
                     className={clsx(
                       "p-2 rounded-lg transition-colors",
-                      controls.isScreenSharing 
+                      controls?.isScreenSharing 
                         ? "bg-blue-100 dark:bg-blue-900/30 text-blue-600" 
                         : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
                     )}
@@ -386,7 +397,7 @@ export const StreamerStudio: React.FC<StreamerStudioProps> = ({
                     </button>
                   )}
                   
-                  {controls.isRecording && (
+                  {controls?.isRecording && (
                     <div className="flex items-center gap-2 px-3 py-1 bg-red-600 text-white rounded-full text-sm">
                       <Circle className="w-3 h-3 fill-current animate-pulse" />
                       <span>REC</span>
@@ -637,7 +648,7 @@ export const StreamerStudio: React.FC<StreamerStudioProps> = ({
                   <div>
                     <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">Stream Quality</h4>
                     <select
-                      value={controls.qualityPreset || 'medium'}
+                      value={controls?.qualityPreset || 'medium'}
                       onChange={(e) => mediaActions?.setQualityPreset(e.target.value as any)}
                       className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg"
                     >

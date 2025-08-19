@@ -1,7 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { injectable, inject } from 'tsyringe';
 import { AnalyticsService } from '../services/analytics.service';
-import { ApiError } from '@/middleware/api-error.middleware';
 
 @injectable()
 export class AnalyticsController {
@@ -99,7 +98,11 @@ export class AnalyticsController {
       const { streamId, stats } = req.body;
 
       if (!streamId || !stats) {
-        throw new ApiError('Stream ID and stats are required', 400);
+        res.status(400).json({
+          success: false,
+          message: 'Stream ID and stats are required'
+        });
+        return;
       }
 
       await this.analyticsService.processRealtimeStats(streamId, stats);
@@ -122,7 +125,11 @@ export class AnalyticsController {
       const { streamId, sessionId, event, data } = req.body;
 
       if (!streamId || !sessionId || !event) {
-        throw new ApiError('Stream ID, session ID, and event are required', 400);
+        res.status(400).json({
+          success: false,
+          message: 'Stream ID, session ID, and event are required'
+        });
+        return;
       }
 
       await this.analyticsService.updateViewerAnalytics(
@@ -149,7 +156,11 @@ export class AnalyticsController {
     try {
       // Check if user is admin
       if (!req.user?.isAdmin) {
-        throw new ApiError('Admin access required', 403);
+        res.status(403).json({
+          success: false,
+          message: 'Admin access required'
+        });
+        return;
       }
 
       await this.analyticsService.runCleanup();

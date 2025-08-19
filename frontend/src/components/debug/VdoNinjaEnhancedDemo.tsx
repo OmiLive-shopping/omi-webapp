@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   Mic, MicOff, Video, VideoOff, Monitor, MonitorOff,
   Volume2, Settings, Users, Wifi, WifiOff, Play, Pause,
@@ -34,7 +34,7 @@ export default function VdoNinjaEnhancedDemo() {
   });
   
   const [eventLog, setEventLog] = useState<string[]>([]);
-  const [roomId] = useState(`demo-${Date.now()}`);
+  const [roomId] = useState(() => `demo-${Date.now()}`);
 
   useEffect(() => {
     // Initialize managers
@@ -89,21 +89,27 @@ export default function VdoNinjaEnhancedDemo() {
   };
   
   const startStream = () => {
-    if (!iframeRef.current) return;
-    
-    // Initialize event manager with iframe
-    eventManagerRef.current?.startListening(iframeRef.current);
-    stateManagerRef.current?.initialize(eventManagerRef.current!);
-    commandManagerRef.current?.setIframe(iframeRef.current);
-    
     setIsStreaming(true);
     addToEventLog('Stream started');
+    
+    // Initialize managers after iframe is rendered
+    setTimeout(() => {
+      if (iframeRef.current) {
+        eventManagerRef.current?.startListening(iframeRef.current);
+        stateManagerRef.current?.initialize(eventManagerRef.current!);
+        commandManagerRef.current?.setIframe(iframeRef.current);
+        addToEventLog('VDO.Ninja initialized');
+      }
+    }, 100);
   };
   
   const stopStream = () => {
-    commandManagerRef.current?.sendCommand(VdoCommands.stopStream());
+    // Don't send stop command to avoid download, just hide the iframe
     setIsStreaming(false);
     addToEventLog('Stream stopped');
+    
+    // Clean up event listeners
+    eventManagerRef.current?.stopListening();
   };
   
   const toggleAudio = async () => {
@@ -182,16 +188,26 @@ export default function VdoNinjaEnhancedDemo() {
     return () => clearInterval(interval);
   }, []);
   
-  const streamerUrl = createVdoNinjaUrl({
-    room: roomId,
-    push: roomId,
-    bitrate: 2500,
-    quality: 80,
-    stereo: true,
-    autostart: true
-  });
+  const streamerUrl = useMemo(() => {
+    const url = createVdoNinjaUrl({
+      room: roomId,
+      push: roomId,
+      bitrate: 2500,
+      quality: 80,
+      framerate: 30,
+      stereo: true,
+      autostart: true,
+      webcam: true,
+      microphone: true
+    });
+    console.log('VDO.Ninja URL generated:', { url, roomId });
+    return url;
+  }, [roomId]);
   
-  const viewerUrl = `https://vdo.ninja/?view=${roomId}&room=${roomId}`;
+  const viewerUrl = useMemo(() => 
+    `https://vdo.ninja/?view=${roomId}&room=${roomId}`,
+    [roomId]
+  );
   
   const getQualityBadgeColor = () => {
     switch(streamState.connectionQuality) {
@@ -266,8 +282,11 @@ export default function VdoNinjaEnhancedDemo() {
                   ref={iframeRef}
                   src={streamerUrl}
                   className="w-full h-full"
-                  allow="camera; microphone; display-capture"
+                  allow="camera; microphone; display-capture; autoplay"
+                  allowFullScreen
                   title="VDO.ninja Stream"
+                  onLoad={() => addToEventLog('VDO.Ninja iframe loaded')}
+                  onError={(e) => addToEventLog(`Error loading iframe: ${e}`)}
                 />
               )}
               
