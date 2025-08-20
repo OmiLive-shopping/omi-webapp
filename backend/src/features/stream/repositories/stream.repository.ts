@@ -19,7 +19,7 @@ export class StreamRepository {
     return this.prisma.stream.create({
       data: {
         ...data,
-        scheduled: new Date(data.scheduled),
+        scheduled: data.scheduled ? new Date(data.scheduled) : new Date(),
         userId,
       },
       include: {

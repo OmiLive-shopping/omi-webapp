@@ -32,7 +32,7 @@ interface Product {
 }
 
 const StreamPage: React.FC = () => {
-  const { streamId } = useParams<{ streamId: string }>();
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [messages, setMessages] = useState<any[]>([]);
   const [viewers, setViewers] = useState<any[]>([]);
@@ -43,7 +43,7 @@ const StreamPage: React.FC = () => {
 
   // Mock stream data - replace with real API call
   const streamData: StreamData = {
-    id: streamId || '1',
+    id: id || '1',
     title: 'My Eco-Friendly Hair Care Faves this Spring',
     streamerName: 'Maria Salvidar',
     streamerAvatar: 'https://ui-avatars.com/api/?name=Maria+Salvidar&background=random',
@@ -138,7 +138,7 @@ const StreamPage: React.FC = () => {
       }
     ];
     setMessages(mockMessages);
-  }, [streamId]);
+  }, [id]);
 
   // Handle sending message
   const handleSendMessage = (content: string, mentions?: string[]) => {

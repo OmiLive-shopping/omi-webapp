@@ -2,7 +2,7 @@ import { Router } from 'express';
 
 import { PrismaService } from '../../../config/prisma.config.js';
 import { ROLES } from '../../../constants/roles.js';
-import { authMiddleware } from '../../../middleware/auth-enhanced.middleware.js';
+import { authMiddleware } from '../../../middleware/auth.middleware.js';
 import { requirePermission, requireRole } from '../../../middleware/role.middleware.js';
 import { validateRequest } from '../../../middleware/validation.middleware.js';
 import { ProductRepository } from '../../product/repositories/product.repository.js';

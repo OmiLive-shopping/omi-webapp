@@ -150,7 +150,7 @@ export const StreamerStudio: React.FC<StreamerStudioProps> = ({
     
     // Reload iframe with room URL
     if (iframeRef.current) {
-      iframeRef.current.src = `https://vdo.ninja/?room=${streamKey}&push=${streamKey}&webcam&microphone&quality=2&autostart&bitrate=2500`;
+      iframeRef.current.src = `https://vdo.ninja/?room=${streamKey}&push=host&webcam&microphone&quality=2&autostart&bitrate=2500`;
     }
     
     // Start VDO.Ninja stream through store
@@ -290,7 +290,7 @@ export const StreamerStudio: React.FC<StreamerStudioProps> = ({
                         src={
                           isPreviewMode 
                             ? `https://vdo.ninja/?push&webcam&microphone&quality=2&autostart&bitrate=2500&fullscreen&noroom` // Preview mode - no room
-                            : `https://vdo.ninja/?room=${streamKey}&push=${streamKey}&webcam&microphone&quality=2&autostart&bitrate=2500` // Live mode - with room
+                            : `https://vdo.ninja/?room=${streamKey}&push=host&webcam&microphone&quality=2&autostart&bitrate=2500` // Live mode - with room
                         }
                         className="absolute inset-0 w-full h-full"
                         allow="camera; microphone; autoplay; display-capture"
@@ -367,30 +367,21 @@ export const StreamerStudio: React.FC<StreamerStudioProps> = ({
             <div className="p-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  {/* Show Go Live button in preview mode */}
+                  {/* Show Stop Preview button in preview mode */}
                   {isPreviewMode && !isStreaming && (
-                    <>
-                      <button
-                        onClick={handleStreamStart}
-                        className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
-                      >
-                        <Radio className="w-4 h-4" />
-                        Go Live
-                      </button>
-                      <button
-                        onClick={() => {
-                          setIsPreviewMode(false);
-                          // Clear iframe src to stop camera
-                          if (iframeRef.current) {
-                            iframeRef.current.src = 'about:blank';
-                          }
-                        }}
-                        className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
-                      >
-                        <VideoOff className="w-4 h-4" />
-                        Stop Preview
-                      </button>
-                    </>
+                    <button
+                      onClick={() => {
+                        setIsPreviewMode(false);
+                        // Clear iframe src to stop camera
+                        if (iframeRef.current) {
+                          iframeRef.current.src = 'about:blank';
+                        }
+                      }}
+                      className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
+                    >
+                      <VideoOff className="w-4 h-4" />
+                      Stop Preview
+                    </button>
                   )}
                   
                   {/* Quick Media Controls */}

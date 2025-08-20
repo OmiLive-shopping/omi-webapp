@@ -204,8 +204,8 @@ export const SimpleStreamControls: React.FC<SimpleStreamControlsProps> = ({
           </div>
         )}
 
-        {/* Start/Stop Button - Only show when not in preview mode */}
-        {!isStreaming && !isPreviewMode ? (
+        {/* Start/Stop Button - Show "Go Live" in preview mode */}
+        {!isStreaming ? (
           <button
             onClick={async () => {
               setIsCreatingStream(true);
@@ -214,7 +214,7 @@ export const SimpleStreamControls: React.FC<SimpleStreamControlsProps> = ({
                 const response = await apiClient.post<any>('/streams', {
                   title: `Live Stream ${new Date().toLocaleDateString()}`,
                   description: 'Live streaming now!',
-                  scheduled: new Date().toISOString(), // Set to now for immediate streaming
+                  // No scheduled field - going live immediately
                   vdoRoomId: vdoRoomId
                 });
                 
@@ -239,7 +239,7 @@ export const SimpleStreamControls: React.FC<SimpleStreamControlsProps> = ({
             ) : (
               <Video className="w-5 h-5" />
             )}
-            {isCreatingStream ? 'Creating Stream Page...' : 'Create Stream Page'}
+            {isCreatingStream ? 'Creating Stream...' : (isPreviewMode ? 'Go Live' : 'Create Stream Page')}
           </button>
         ) : (
           <button

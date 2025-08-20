@@ -14,8 +14,12 @@ export const createStreamSchema = z.object({
   scheduled: z
     .string()
     .datetime({ message: 'Invalid date format' })
+    .optional()
     .refine(
       date => {
+        // If no date provided, that's fine (going live now)
+        if (!date) return true;
+        // If date is provided, it should be in the future (for scheduled streams)
         return new Date(date) > new Date();
       },
       { message: 'Scheduled time must be in the future' },

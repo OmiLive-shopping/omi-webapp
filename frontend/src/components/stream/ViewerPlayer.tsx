@@ -110,6 +110,7 @@ export const ViewerPlayer: React.FC<ViewerPlayerProps> = ({
     queryKey: ['stream', streamId],
     queryFn: async () => {
       const response = await apiClient.get<any>(`/streams/${streamId}`);
+      console.log('Stream data fetched:', response?.data);
       return response?.data;
     },
     enabled: !!streamId,
@@ -412,14 +413,17 @@ export const ViewerPlayer: React.FC<ViewerPlayerProps> = ({
       {/* Video Player */}
       <div className="relative w-full h-full">
         {isLive && streamData?.vdoRoomId ? (
-          <iframe
-            ref={iframeRef}
-            src={`https://vdo.ninja/?room=${streamData.vdoRoomId}&view=${streamData.vdoRoomId}&autostart`}
-            className="w-full h-full"
-            allow="autoplay; fullscreen; picture-in-picture"
-            style={{ border: 'none' }}
-            onLoad={() => setIsLoading(false)}
-          />
+          <>
+            {console.log('Viewer iframe URL:', `https://vdo.ninja/?room=${streamData.vdoRoomId}&view=host&scene&autostart`)}
+            <iframe
+              ref={iframeRef}
+              src={`https://vdo.ninja/?room=${streamData.vdoRoomId}&view=host&scene&autostart`}
+              className="w-full h-full"
+              allow="autoplay; fullscreen; picture-in-picture"
+              style={{ border: 'none' }}
+              onLoad={() => setIsLoading(false)}
+            />
+          </>
         ) : (
           <div className="flex items-center justify-center h-full">
             <div className="text-center">
