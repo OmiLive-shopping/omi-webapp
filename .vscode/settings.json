@@ -1,0 +1,7 @@
+{
+  "markdown.preview.theme": "dark",
+  "workbench.colorTheme": "Gruvbox Dark Hard",
+  "markdown.styles": [
+    "/Users/marcosandrade/work/omi-live/omi-webapp/.vscode/markdown-gruvbox.css"
+  ]
+}
