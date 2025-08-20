@@ -31,8 +31,7 @@ import { apiClient } from '@/lib/api-client';
 
 // VDO.Ninja Integration
 import { VdoEventManager } from '@/lib/vdo-ninja/event-manager';
-import { useStreamState } from '@/hooks/useStreamState';
-import { useRealTimeStats } from '@/hooks/useRealTimeStats';
+import { useVdoStreamStore, useVdoStream, useVdoStats } from '@/stores/vdo-stream-store';
 
 // Components
 import ViewerCount from './ViewerCount';
@@ -81,7 +80,7 @@ export const ViewerPlayer: React.FC<ViewerPlayerProps> = ({
   const [showControls, setShowControls] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
   const [isReconnecting, setIsReconnecting] = useState(false);
-  const [connectionQuality, setConnectionQuality] = useState<ConnectionQuality>('good');
+  // Removed local connectionQuality - using store instead
   const [isPiPActive, setIsPiPActive] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showStatsOverlay, setShowStatsOverlay] = useState(false);
@@ -98,26 +97,39 @@ export const ViewerPlayer: React.FC<ViewerPlayerProps> = ({
   
   // Socket.IO
   const { socket, isConnected } = useSocket();
+  
+  // VDO Stream Store
+  const { streamState, isStreaming: isVdoStreaming, viewerCount, connectionQuality } = useVdoStream();
+  const { currentStats, latency, packetLoss } = useVdoStats();
+  
+  // Store actions
+  const { setManagers, addViewer, removeViewer, initializeStream } = useVdoStreamStore();
 
-  // Fetch viewer URL from backend
-  const { data: viewerData, isLoading: loadingUrl, refetch: refetchUrl } = useQuery({
-    queryKey: ['viewer-url', streamId],
+  // Fetch stream data from backend to get vdoRoomId
+  const { data: streamData, isLoading: loadingStream, refetch: refetchStream } = useQuery({
+    queryKey: ['stream', streamId],
     queryFn: async () => {
-      const response = await apiClient.get<any>(`/streams/${streamId}/viewer-url`);
-      return response.data;
+      const response = await apiClient.get<any>(`/streams/${streamId}`);
+      return response?.data;
     },
-    enabled: !!streamId && initialIsLive,
+    enabled: !!streamId,
   });
   
-  // Initialize VDO.Ninja event manager
+  // Initialize VDO.Ninja event manager and connect to store
   useEffect(() => {
     if (iframeRef.current && !eventManagerRef.current) {
       eventManagerRef.current = new VdoEventManager();
       eventManagerRef.current.startListening(iframeRef.current);
       
       // Configure throttling for high-frequency events
-      eventManagerRef.current.configureThrottle('getStats', { interval: 2000 });
-      eventManagerRef.current.configureThrottle('audioLevels', { interval: 100 });
+      eventManagerRef.current.setThrottle('getStats', { interval: 2000 });
+      eventManagerRef.current.setThrottle('audioLevels', { interval: 100 });
+      
+      // Connect to store (viewer doesn't have command manager)
+      setManagers(eventManagerRef.current, null);
+      
+      // Initialize stream in store as viewer
+      initializeStream(streamId, streamId, streamId);
       
       // Listen for stream events
       eventManagerRef.current.on('streamEnded', () => {
@@ -132,6 +144,17 @@ export const ViewerPlayer: React.FC<ViewerPlayerProps> = ({
         setIsLoading(false);
         setIsReconnecting(false);
         setReconnectAttempts(0);
+        
+        // Add self as viewer to store
+        const viewerId = `viewer-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        addViewer({
+          id: viewerId,
+          username: 'Anonymous Viewer',
+          connectionQuality: connectionQuality || 'good',
+          joinTime: new Date(),
+          lastActivity: new Date(),
+          isAuthenticated: false
+        });
       });
       
       eventManagerRef.current.on('disconnected', () => {
@@ -153,29 +176,9 @@ export const ViewerPlayer: React.FC<ViewerPlayerProps> = ({
         eventManagerRef.current = null;
       }
     };
-  }, [iframeRef.current]);
+  }, [iframeRef.current, streamId, setManagers, initializeStream, addViewer, connectionQuality]);
   
-  // VDO.Ninja hooks
-  const {
-    state: streamState,
-    isConnected: isStreamConnected,
-    connectionHealth,
-    streamDuration
-  } = useStreamState({
-    eventManager: eventManagerRef.current || undefined
-  });
-  
-  const {
-    stats,
-    trends,
-    qualityMetrics,
-    networkHealth
-  } = useRealTimeStats({
-    eventManager: eventManagerRef.current || undefined,
-    refreshInterval: 2000,
-    enableHistory: false,
-    isViewer: true
-  });
+  // Removed old hooks - now using vdo-stream-store
   
   // Socket.IO viewer tracking
   useEffect(() => {
@@ -203,7 +206,7 @@ export const ViewerPlayer: React.FC<ViewerPlayerProps> = ({
           action: 'joined',
           viewer: {
             id: socket.id,
-            connectionQuality: connectionHealth?.quality
+            connectionQuality: connectionQuality
           },
           timestamp: new Date().toISOString()
         });
@@ -230,12 +233,7 @@ export const ViewerPlayer: React.FC<ViewerPlayerProps> = ({
     }
   }, [socket, isConnected, streamId]);
   
-  // Update connection quality based on network health
-  useEffect(() => {
-    if (connectionHealth?.quality) {
-      setConnectionQuality(connectionHealth.quality as ConnectionQuality);
-    }
-  }, [connectionHealth]);
+  // Removed - no longer needed since we're using store's connectionQuality directly
   
   // Auto-hide controls after 3 seconds of inactivity
   useEffect(() => {
@@ -295,7 +293,7 @@ export const ViewerPlayer: React.FC<ViewerPlayerProps> = ({
       setIsReconnecting(true);
       setReconnectAttempts(prev => prev + 1);
       setTimeout(() => {
-        refetchUrl();
+        refetchStream();
       }, Math.min(1000 * Math.pow(2, reconnectAttempts), 10000));
     } else {
       handleError(new Error('Failed to connect to stream'));
@@ -351,8 +349,8 @@ export const ViewerPlayer: React.FC<ViewerPlayerProps> = ({
   
   const handleQualityChange = (newQuality: typeof quality) => {
     setQuality(newQuality);
-    if (iframeRef.current && viewerData) {
-      refetchUrl();
+    if (iframeRef.current && streamData) {
+      refetchStream();
     }
   };
 
@@ -391,7 +389,7 @@ export const ViewerPlayer: React.FC<ViewerPlayerProps> = ({
   };
 
   // Check if stream is actually live
-  const isLive = initialIsLive || streamState.isStreaming;
+  const isLive = initialIsLive || isVdoStreaming;
 
   if (!isLive && !isReconnecting) {
     return (
@@ -413,10 +411,10 @@ export const ViewerPlayer: React.FC<ViewerPlayerProps> = ({
     >
       {/* Video Player */}
       <div className="relative w-full h-full">
-        {isLive ? (
+        {isLive && streamData?.vdoRoomId ? (
           <iframe
             ref={iframeRef}
-            src={`https://vdo.ninja/?room=${streamId}&view=${streamId}&autostart`}
+            src={`https://vdo.ninja/?room=${streamData.vdoRoomId}&view=${streamData.vdoRoomId}&autostart`}
             className="w-full h-full"
             allow="autoplay; fullscreen; picture-in-picture"
             style={{ border: 'none' }}
@@ -434,11 +432,11 @@ export const ViewerPlayer: React.FC<ViewerPlayerProps> = ({
       </div>
 
       {/* Loading Overlay */}
-      {isLoading && (
+      {(isLoading || loadingStream) && (
         <div className="absolute inset-0 bg-black/80 flex items-center justify-center">
           <div className="text-center">
             <Loader2 className="w-12 h-12 text-white animate-spin mx-auto mb-4" />
-            <p className="text-white">Connecting to stream...</p>
+            <p className="text-white">{loadingStream ? 'Loading stream...' : 'Connecting to stream...'}</p>
           </div>
         </div>
       )}
@@ -460,15 +458,15 @@ export const ViewerPlayer: React.FC<ViewerPlayerProps> = ({
       )}
       
       {/* Stats Overlay */}
-      {showStats && showStatsOverlay && streamState.isStreaming && (
+      {showStats && showStatsOverlay && isVdoStreaming && (
         <div className="absolute top-20 left-4 right-4 pointer-events-none">
           <MiniStatsBar
             stats={{
-              fps: stats?.fps || 0,
-              bitrate: stats?.bitrate || 0,
-              latency: stats?.latency || 0,
-              packetLoss: stats?.packetLoss || 0,
-              viewers: streamState.viewerCount || initialViewerCount
+              fps: currentStats?.fps || 0,
+              bitrate: currentStats?.bitrate || 0,
+              latency: latency || 0,
+              packetLoss: packetLoss || 0,
+              viewers: viewerCount || initialViewerCount
             }}
             layout="horizontal"
             variant="glass"
@@ -479,14 +477,14 @@ export const ViewerPlayer: React.FC<ViewerPlayerProps> = ({
       )}
       
       {/* Quality Issues Alert */}
-      {qualityMetrics?.issues && qualityMetrics.issues.length > 0 && (
+      {connectionQuality === 'poor' || connectionQuality === 'critical' ? (
         <div className="absolute top-20 right-4 bg-yellow-900/90 text-yellow-200 px-3 py-2 rounded-lg text-sm pointer-events-none">
           <div className="flex items-center gap-2">
             <AlertTriangle className="w-4 h-4" />
             <span>Poor connection quality</span>
           </div>
         </div>
-      )}
+      ) : null}
 
       {/* Top Overlay - Stream Info */}
       <div className={clsx(
@@ -502,17 +500,17 @@ export const ViewerPlayer: React.FC<ViewerPlayerProps> = ({
               </span>
             )}
             <ViewerCount
-              count={streamState.viewerCount || initialViewerCount}
+              count={viewerCount || initialViewerCount}
               variant="compact"
               showTrend={true}
               showAnimation={true}
               className="bg-black/50 text-white"
             />
             <NetworkQualityIndicator
-              quality={connectionHealth?.quality || 'offline'}
-              score={connectionHealth?.score}
-              latency={stats?.latency}
-              packetLoss={stats?.packetLoss}
+              quality={connectionQuality || 'offline'}
+              score={0}
+              latency={latency}
+              packetLoss={packetLoss}
               showBars={true}
               showLabel={false}
               size="sm"
@@ -593,7 +591,7 @@ export const ViewerPlayer: React.FC<ViewerPlayerProps> = ({
               
               {/* Duration */}
               <span className="text-white text-sm">
-                {formatDuration(streamDuration || 0)}
+                {formatDuration(0)}
               </span>
 
               {/* Spacer */}
@@ -672,23 +670,23 @@ export const ViewerPlayer: React.FC<ViewerPlayerProps> = ({
             </div>
             <div className="flex justify-between">
               <span>Bitrate:</span>
-              <span className="text-white">{Math.round((stats?.bitrate || 0) / 1000)} kbps</span>
+              <span className="text-white">{Math.round((currentStats?.bitrate || 0) / 1000)} kbps</span>
             </div>
             <div className="flex justify-between">
               <span>FPS:</span>
-              <span className="text-white">{stats?.fps || 0}</span>
+              <span className="text-white">{currentStats?.fps || 0}</span>
             </div>
             <div className="flex justify-between">
               <span>Latency:</span>
-              <span className="text-white">{stats?.latency || 0} ms</span>
+              <span className="text-white">{latency || 0} ms</span>
             </div>
             <div className="flex justify-between">
               <span>Packet Loss:</span>
-              <span className="text-white">{(stats?.packetLoss || 0).toFixed(1)}%</span>
+              <span className="text-white">{(packetLoss || 0).toFixed(1)}%</span>
             </div>
             <div className="flex justify-between">
               <span>Viewers:</span>
-              <span className="text-white">{streamState.viewerCount || initialViewerCount}</span>
+              <span className="text-white">{viewerCount || initialViewerCount}</span>
             </div>
           </div>
         </div>

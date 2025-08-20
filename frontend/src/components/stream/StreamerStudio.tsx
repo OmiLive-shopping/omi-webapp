@@ -52,12 +52,13 @@ export const StreamerStudio: React.FC<StreamerStudioProps> = ({
   onStreamEnd
 }) => {
   const [isStreaming, setIsStreaming] = useState(false);
+  const [isPreviewMode, setIsPreviewMode] = useState(false); // Don't auto-start preview
   const [currentStreamId, setCurrentStreamId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'products' | 'chat' | 'settings' | 'stats'>('products');
   const [showStatsOverlay, setShowStatsOverlay] = useState(true);
   const [showAdvancedControls, setShowAdvancedControls] = useState(false);
   
-  // Generate a unique stream key for VDO.Ninja room
+  // Generate a unique stream key for VDO.Ninja room (only used when going live)
   const [streamKey] = useState(() => `stream-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`);
   
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -108,8 +109,8 @@ export const StreamerStudio: React.FC<StreamerStudioProps> = ({
       commandManagerRef.current.setIframe(iframeRef.current);
       
       // Configure event throttling for high-frequency events
-      eventManagerRef.current.configureThrottle('getStats', { interval: 1000 });
-      eventManagerRef.current.configureThrottle('audioLevels', { interval: 100 });
+      eventManagerRef.current.setThrottle('getStats', { interval: 1000 });
+      eventManagerRef.current.setThrottle('audioLevels', { interval: 100 });
       
       // Connect managers to store
       setManagers(eventManagerRef.current, commandManagerRef.current);
@@ -128,8 +129,11 @@ export const StreamerStudio: React.FC<StreamerStudioProps> = ({
     vdoRoomName: `room-${user.email?.replace('@', '-').replace('.', '-')}` // Generate safe room name
   } : null;
 
-  // Enhanced stream start handler
+  // Enhanced stream start handler - transition from preview to live
   const handleStreamStart = useCallback(async () => {
+    // Exit preview mode and enter live mode
+    setIsPreviewMode(false);
+    
     // Initialize stream in store
     initializeStream(streamKey, streamKey, streamKey);
     
@@ -143,6 +147,11 @@ export const StreamerStudio: React.FC<StreamerStudioProps> = ({
     
     setIsStreaming(true);
     onStreamStart();
+    
+    // Reload iframe with room URL
+    if (iframeRef.current) {
+      iframeRef.current.src = `https://vdo.ninja/?room=${streamKey}&push=${streamKey}&webcam&microphone&quality=2&autostart&bitrate=2500`;
+    }
     
     // Start VDO.Ninja stream through store
     await storeStartStream();
@@ -227,11 +236,11 @@ export const StreamerStudio: React.FC<StreamerStudioProps> = ({
   };
 
   return (
-    <div className="h-full p-4">
-      <div className="grid grid-cols-12 gap-4 h-full">
+    <div className="h-full p-2 lg:p-4 overflow-y-auto">
+      <div className="grid grid-cols-12 gap-2 lg:gap-4 lg:h-full">
         {/* Main Video Area */}
-        <div className="col-span-8 h-full">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg h-full flex flex-col">
+        <div className="col-span-12 lg:col-span-8 lg:h-full">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg lg:h-full flex flex-col">
             <div className="p-4 border-b border-gray-200 dark:border-gray-700">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
@@ -240,7 +249,8 @@ export const StreamerStudio: React.FC<StreamerStudioProps> = ({
                       VDO.ninja Streaming Interface
                     </h2>
                     <p className="text-sm text-gray-600 dark:text-gray-400">
-                      Professional streaming with real-time analytics
+                      {isPreviewMode && !isStreaming ? 'Preview Mode - Adjust your settings before going live' : 
+                       isStreaming ? 'Live Streaming' : 'Professional streaming with real-time analytics'}
                     </p>
                   </div>
                   {/* Connection Status */}
@@ -269,16 +279,23 @@ export const StreamerStudio: React.FC<StreamerStudioProps> = ({
               </div>
             </div>
             
-            <div className="flex-1 relative bg-black">
-              {isStreaming ? (
-                <>
-                  <iframe
-                    ref={iframeRef}
-                    src={`https://vdo.ninja/?room=${streamKey}&push=${streamKey}&webcam&microphone&quality=2&autostart&bitrate=2500`}
-                    className="w-full h-full"
-                    allow="camera; microphone; autoplay; display-capture"
-                    style={{ border: 'none' }}
-                  />
+            <div className="flex-1 min-h-[300px] lg:min-h-0 flex items-center justify-center bg-black p-4">
+              <div className="relative w-full" style={{ maxWidth: '100%', maxHeight: '100%' }}>
+                {/* 16:9 Aspect Ratio Container */}
+                <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
+                  {isStreaming || isPreviewMode ? (
+                    <>
+                      <iframe
+                        ref={iframeRef}
+                        src={
+                          isPreviewMode 
+                            ? `https://vdo.ninja/?push&webcam&microphone&quality=2&autostart&bitrate=2500&fullscreen&noroom` // Preview mode - no room
+                            : `https://vdo.ninja/?room=${streamKey}&push=${streamKey}&webcam&microphone&quality=2&autostart&bitrate=2500` // Live mode - with room
+                        }
+                        className="absolute inset-0 w-full h-full"
+                        allow="camera; microphone; autoplay; display-capture"
+                        style={{ border: 'none' }}
+                      />
                   
                   {/* Enhanced Stats Overlay */}
                   {showStatsOverlay && isVdoStreaming && (
@@ -314,36 +331,68 @@ export const StreamerStudio: React.FC<StreamerStudioProps> = ({
                   )}
                   
                   {/* Quality Issues Alert */}
-                  {qualityMetrics?.issues && qualityMetrics.issues.length > 0 && (
+                  {connectionQuality === 'poor' || connectionQuality === 'critical' ? (
                     <div className="absolute top-20 left-4 bg-yellow-900/90 text-yellow-200 px-3 py-2 rounded-lg text-sm">
                       <div className="flex items-center gap-2">
                         <AlertTriangle className="w-4 h-4" />
-                        <span>{qualityMetrics.issues[0]}</span>
+                        <span>Poor connection quality</span>
+                      </div>
+                    </div>
+                  ) : null}
+                    </>
+                  ) : (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center text-white bg-gray-900/50">
+                      <div className="text-center max-w-md">
+                        <Video className="w-20 h-20 mb-4 text-gray-400 mx-auto" />
+                        <h3 className="text-2xl font-semibold mb-2">Ready to Set Up Your Stream?</h3>
+                        <p className="text-gray-400 mb-8">Click below to enable your camera and microphone for preview. You can adjust settings before going live.</p>
+                        <button
+                          onClick={() => setIsPreviewMode(true)}
+                          className="px-8 py-4 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-all transform hover:scale-105 flex items-center gap-3 mx-auto"
+                        >
+                          <Video className="w-6 h-6" />
+                          Enable Camera Preview
+                        </button>
+                        <p className="text-xs text-gray-500 mt-4">
+                          Your camera won't be live until you click "Go Live"
+                        </p>
                       </div>
                     </div>
                   )}
-                </>
-              ) : (
-                <div className="flex flex-col items-center justify-center h-full text-white">
-                  <Radio className="w-16 h-16 mb-4 text-gray-400" />
-                  <h3 className="text-xl font-semibold mb-2">Ready to Stream</h3>
-                  <p className="text-gray-400 mb-6">Click the button below to start your live stream</p>
-                  <button
-                    onClick={handleStreamStart}
-                    className="px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
-                  >
-                    <Play className="w-5 h-5" />
-                    Start Streaming
-                  </button>
-                  <p className="text-sm text-gray-500 mt-4">Room ID: {streamKey}</p>
                 </div>
-              )}
+              </div>
             </div>
             
             {/* Bottom Control Bar */}
             <div className="p-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
+                  {/* Show Go Live button in preview mode */}
+                  {isPreviewMode && !isStreaming && (
+                    <>
+                      <button
+                        onClick={handleStreamStart}
+                        className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
+                      >
+                        <Radio className="w-4 h-4" />
+                        Go Live
+                      </button>
+                      <button
+                        onClick={() => {
+                          setIsPreviewMode(false);
+                          // Clear iframe src to stop camera
+                          if (iframeRef.current) {
+                            iframeRef.current.src = 'about:blank';
+                          }
+                        }}
+                        className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
+                      >
+                        <VideoOff className="w-4 h-4" />
+                        Stop Preview
+                      </button>
+                    </>
+                  )}
+                  
                   {/* Quick Media Controls */}
                   <button
                     onClick={toggleAudio}
@@ -431,18 +480,18 @@ export const StreamerStudio: React.FC<StreamerStudioProps> = ({
         </div>
         
         {/* Controls Sidebar */}
-        <div className="col-span-4 h-full flex flex-col gap-4">
+        <div className="col-span-12 lg:col-span-4 lg:h-full flex flex-col gap-4">
           {/* Stream Controls */}
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg">
             <div className="p-6">
               <SimpleStreamControls
-                streamKey={streamKeyData?.streamKey || ''}
-                vdoRoomName={streamKeyData?.vdoRoomName || ''}
+                vdoRoomId={streamKey}  // Use the locally generated streamKey as VDO room ID
                 isStreaming={isStreaming}
                 currentStreamId={currentStreamId || undefined}
                 onStreamStart={handleStreamStart}
                 onStreamEnd={handleStreamEnd}
                 onStreamCreated={(streamId) => setCurrentStreamId(streamId)}
+                isPreviewMode={isPreviewMode}
               />
             </div>
           </div>
@@ -597,7 +646,7 @@ export const StreamerStudio: React.FC<StreamerStudioProps> = ({
                   <MessageSquare className="w-12 h-12 mx-auto mb-4 opacity-50" />
                   <p>Chat moderation tools coming soon</p>
                   <p className="text-sm mt-2">
-                    {streamState.viewerCount > 0 ? `${streamState.viewerCount} viewers connected` : 'No viewers yet'}
+                    {viewerCount > 0 ? `${viewerCount} viewers connected` : 'No viewers yet'}
                   </p>
                 </div>
               )}

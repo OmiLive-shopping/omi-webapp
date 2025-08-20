@@ -126,6 +126,7 @@ model Stream {
   thumbnailUrl    String?
   streamUrl       String?
   streamKey       String?            @unique @default(cuid())
+  vdoRoomId       String?            @unique // VDO.Ninja room identifier
   categoryId      String?
   tags            String[]           @default([])
   status          String             @default("scheduled") // scheduled, live, ended

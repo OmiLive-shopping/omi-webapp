@@ -14,23 +14,23 @@ import { apiClient } from '@/lib/api-client';
 import { useNavigate } from 'react-router-dom';
 
 interface SimpleStreamControlsProps {
-  streamKey: string;
-  vdoRoomName: string;
+  vdoRoomId: string;  // The actual VDO.Ninja room ID being used
   isStreaming: boolean;
   onStreamStart: () => void;
   onStreamEnd: () => void;
   currentStreamId?: string;
   onStreamCreated?: (streamId: string) => void;
+  isPreviewMode?: boolean;
 }
 
 export const SimpleStreamControls: React.FC<SimpleStreamControlsProps> = ({
-  streamKey,
-  vdoRoomName,
+  vdoRoomId,
   isStreaming,
   onStreamStart,
   onStreamEnd,
   currentStreamId,
-  onStreamCreated
+  onStreamCreated,
+  isPreviewMode = false
 }) => {
   const [copiedKey, setCopiedKey] = React.useState(false);
   const [copiedUrl, setCopiedUrl] = React.useState(false);
@@ -38,7 +38,7 @@ export const SimpleStreamControls: React.FC<SimpleStreamControlsProps> = ({
   const [streamId, setStreamId] = React.useState<string | null>(currentStreamId || null);
   const navigate = useNavigate();
 
-  const vdoViewerUrl = `https://vdo.ninja/?room=${vdoRoomName}&view=${streamKey}&scene`;
+  const vdoViewerUrl = `https://vdo.ninja/?room=${vdoRoomId}&view=${vdoRoomId}&scene`;
   const appStreamUrl = streamId ? `${window.location.origin}/stream/${streamId}` : null;
 
   const copyToClipboard = async (text: string, type: 'key' | 'url') => {
@@ -102,17 +102,17 @@ export const SimpleStreamControls: React.FC<SimpleStreamControlsProps> = ({
           </div>
         </div>
 
-        {/* Stream Key */}
+        {/* VDO Room ID */}
         <div className="mb-4">
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Stream Key
+            VDO Room ID
           </label>
           <div className="flex items-center gap-2">
             <code className="flex-1 px-3 py-2 bg-gray-100 dark:bg-gray-700 text-sm rounded-lg font-mono truncate">
-              {streamKey}
+              {vdoRoomId}
             </code>
             <button
-              onClick={() => copyToClipboard(streamKey, 'key')}
+              onClick={() => copyToClipboard(vdoRoomId, 'key')}
               className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
               title="Copy stream key"
             >
@@ -191,19 +191,34 @@ export const SimpleStreamControls: React.FC<SimpleStreamControlsProps> = ({
           </p>
         </div>
 
-        {/* Start/Stop Button */}
-        {!isStreaming ? (
+        {/* Preview Mode Message */}
+        {isPreviewMode && !isStreaming && (
+          <div className="mb-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+            <div className="flex items-start gap-3">
+              <Info className="w-5 h-5 text-yellow-600 dark:text-yellow-400 mt-0.5" />
+              <div className="text-sm text-yellow-800 dark:text-yellow-200">
+                <p className="font-medium mb-1">Preview Mode Active</p>
+                <p>Adjust your camera and microphone settings. When ready, click the "Go Live" button below the video to start streaming.</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Start/Stop Button - Only show when not in preview mode */}
+        {!isStreaming && !isPreviewMode ? (
           <button
             onClick={async () => {
               setIsCreatingStream(true);
               try {
                 // Create a stream in the database
-                const response = await apiClient.post('/streams/start', {
+                const response = await apiClient.post<any>('/streams', {
                   title: `Live Stream ${new Date().toLocaleDateString()}`,
-                  description: 'Live streaming now!'
+                  description: 'Live streaming now!',
+                  scheduled: new Date().toISOString(), // Set to now for immediate streaming
+                  vdoRoomId: vdoRoomId
                 });
                 
-                if (response.success && response.data?.id) {
+                if (response?.success && response?.data?.id) {
                   setStreamId(response.data.id);
                   onStreamCreated?.(response.data.id);
                   onStreamStart();
@@ -257,7 +272,7 @@ export const SimpleStreamControls: React.FC<SimpleStreamControlsProps> = ({
         </p>
         <ol className="list-decimal list-inside text-xs text-gray-500 dark:text-gray-400 space-y-1">
           <li>Add a Browser Source in OBS</li>
-          <li>Set URL to: <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">https://vdo.ninja/?push={streamKey}</code></li>
+          <li>Set URL to: <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">https://vdo.ninja/?push={vdoRoomId}</code></li>
           <li>Set dimensions to 1920x1080</li>
           <li>Start your OBS stream</li>
         </ol>

@@ -2,12 +2,14 @@ export interface CreateStreamInput {
   title: string;
   description?: string;
   scheduled: string | Date;
+  vdoRoomId: string;
 }
 
 export interface UpdateStreamInput {
   title?: string;
   description?: string;
   scheduled?: string | Date;
+  vdoRoomId?: string;
 }
 
 export interface StreamFilters {

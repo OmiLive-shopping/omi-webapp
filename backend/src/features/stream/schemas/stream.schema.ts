@@ -20,6 +20,11 @@ export const createStreamSchema = z.object({
       },
       { message: 'Scheduled time must be in the future' },
     ),
+  vdoRoomId: z
+    .string()
+    .min(1, { message: 'VDO room ID is required' })
+    .max(50, { message: 'VDO room ID must not exceed 50 characters' })
+    .regex(/^[a-zA-Z0-9-_]+$/, { message: 'VDO room ID must contain only alphanumeric characters, hyphens, and underscores' }),
 });
 
 // Update stream schema
@@ -45,6 +50,12 @@ export const updateStreamSchema = z.object({
       },
       { message: 'Scheduled time must be in the future' },
     ),
+  vdoRoomId: z
+    .string()
+    .min(1, { message: 'VDO room ID cannot be empty' })
+    .max(50, { message: 'VDO room ID must not exceed 50 characters' })
+    .regex(/^[a-zA-Z0-9-_]+$/, { message: 'VDO room ID must contain only alphanumeric characters, hyphens, and underscores' })
+    .optional(),
 });
 
 // Stream filters schema
