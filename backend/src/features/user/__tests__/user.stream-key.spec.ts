@@ -1,10 +1,11 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import request from 'supertest';
 import express from 'express';
-import { UserController } from '../controllers/user.controller.js';
-import { UserService } from '../services/user.service.js';
+import request from 'supertest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
 import { auth } from '../../../middleware/auth.middleware.js';
+import { UserController } from '../controllers/user.controller.js';
 import router from '../routes/user.routes.js';
+import { UserService } from '../services/user.service.js';
 
 // Mock the dependencies
 vi.mock('../../../middleware/auth.middleware');
@@ -43,16 +44,16 @@ describe('Stream Key Endpoints', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    
+
     app = express();
     app.use(express.json());
-    
+
     // Mock auth middleware
     vi.mocked(auth).mockImplementation((req: any, res: any, next: any) => {
       req.userId = 'test-user-id';
       next();
     });
-    
+
     // Mock successful responses
     mockUserService = {
       getStreamKey: vi.fn().mockResolvedValue({
@@ -60,21 +61,21 @@ describe('Stream Key Endpoints', () => {
         message: 'Stream key retrieved successfully',
         data: {
           streamKey: 'test-stream-key-123',
-          vdoRoomName: 'omi-test-stream-key-123'
-        }
+          vdoRoomName: 'omi-test-stream-key-123',
+        },
       }),
       regenerateStreamKey: vi.fn().mockResolvedValue({
         success: true,
         message: 'Stream key regenerated successfully',
         data: {
           streamKey: 'new-stream-key-456',
-          vdoRoomName: 'omi-new-stream-key-456'
-        }
+          vdoRoomName: 'omi-new-stream-key-456',
+        },
       }),
     };
-    
+
     vi.mocked(UserService).mockImplementation(() => mockUserService);
-    
+
     app.use('/api/v1/users', router);
   });
 
@@ -90,9 +91,9 @@ describe('Stream Key Endpoints', () => {
         message: 'Stream key retrieved successfully',
         data: {
           streamKey: 'test-stream-key-123',
-          vdoRoomName: 'omi-test-stream-key-123'
+          vdoRoomName: 'omi-test-stream-key-123',
         },
-        timestamp: expect.any(String)
+        timestamp: expect.any(String),
       });
     });
 
@@ -101,8 +102,7 @@ describe('Stream Key Endpoints', () => {
         res.status(401).json({ success: false, message: 'Unauthorized' });
       });
 
-      const response = await request(app)
-        .get('/api/v1/users/stream-key');
+      const response = await request(app).get('/api/v1/users/stream-key');
 
       expect(response.status).toBe(401);
       expect(response.body.success).toBe(false);
@@ -111,7 +111,7 @@ describe('Stream Key Endpoints', () => {
     it('should return error for non-streamer users', async () => {
       mockUserService.getStreamKey.mockResolvedValueOnce({
         success: false,
-        message: 'Only streamers can access stream keys'
+        message: 'Only streamers can access stream keys',
       });
 
       const response = await request(app)
@@ -136,9 +136,9 @@ describe('Stream Key Endpoints', () => {
         message: 'Stream key regenerated successfully',
         data: {
           streamKey: 'new-stream-key-456',
-          vdoRoomName: 'omi-new-stream-key-456'
+          vdoRoomName: 'omi-new-stream-key-456',
         },
-        timestamp: expect.any(String)
+        timestamp: expect.any(String),
       });
     });
 
@@ -147,8 +147,7 @@ describe('Stream Key Endpoints', () => {
         res.status(401).json({ success: false, message: 'Unauthorized' });
       });
 
-      const response = await request(app)
-        .post('/api/v1/users/stream-key/regenerate');
+      const response = await request(app).post('/api/v1/users/stream-key/regenerate');
 
       expect(response.status).toBe(401);
       expect(response.body.success).toBe(false);
@@ -157,7 +156,7 @@ describe('Stream Key Endpoints', () => {
     it('should return error for non-streamer users', async () => {
       mockUserService.regenerateStreamKey.mockResolvedValueOnce({
         success: false,
-        message: 'Only streamers can regenerate stream keys'
+        message: 'Only streamers can regenerate stream keys',
       });
 
       const response = await request(app)

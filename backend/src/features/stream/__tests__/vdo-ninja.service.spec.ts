@@ -1,4 +1,5 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
+
 import { VdoNinjaService } from '../services/vdo-ninja.service.js';
 
 describe('VdoNinjaService', () => {
@@ -22,7 +23,7 @@ describe('VdoNinjaService', () => {
       expect(result.streamerUrl).toContain('webcam=1');
       expect(result.streamerUrl).toContain('meshcast=1');
       expect(result.streamerUrl).toContain('director=1');
-      
+
       expect(result.viewerUrl).toContain('https://vdo.ninja/?');
       expect(result.viewerUrl).toContain(`room=omi-${streamKey}`);
       expect(result.viewerUrl).toContain(`view=${streamKey}`);
@@ -45,7 +46,7 @@ describe('VdoNinjaService', () => {
 
     it('should handle different quality presets', () => {
       const streamKey = 'test123';
-      
+
       const low = service.generateStreamUrls(streamKey, { quality: 'low' });
       expect(low.streamerUrl).toContain('width=640');
       expect(low.streamerUrl).toContain('height=360');
@@ -77,7 +78,7 @@ describe('VdoNinjaService', () => {
     it('should validate stream key format', () => {
       expect(service.isValidStreamKey('abcde12345ABCDE12345fghij')).toBe(true);
       expect(service.isValidStreamKey('1234567890123456789012345')).toBe(true);
-      
+
       expect(service.isValidStreamKey('short')).toBe(false);
       expect(service.isValidStreamKey('too-many-chars-in-this-key')).toBe(false);
       expect(service.isValidStreamKey('special-chars-!@#$%')).toBe(false);
@@ -88,8 +89,10 @@ describe('VdoNinjaService', () => {
   describe('extractStreamKeyFromRoom', () => {
     it('should extract stream key from room name', () => {
       expect(service.extractStreamKeyFromRoom('omi-test123')).toBe('test123');
-      expect(service.extractStreamKeyFromRoom('omi-abcde12345ABCDE12345fghij')).toBe('abcde12345ABCDE12345fghij');
-      
+      expect(service.extractStreamKeyFromRoom('omi-abcde12345ABCDE12345fghij')).toBe(
+        'abcde12345ABCDE12345fghij',
+      );
+
       expect(service.extractStreamKeyFromRoom('invalid-room')).toBeNull();
       expect(service.extractStreamKeyFromRoom('test123')).toBeNull();
       expect(service.extractStreamKeyFromRoom('')).toBeNull();
@@ -124,7 +127,7 @@ describe('VdoNinjaService', () => {
 
     it('should apply quality limits', () => {
       const streamKey = 'quality123';
-      
+
       const url720p = service.generateViewerUrl(streamKey, { maxQuality: '720p' });
       expect(url720p).toContain('maxwidth=1280');
       expect(url720p).toContain('maxheight=720');

@@ -27,17 +27,17 @@ export class UserService {
     }
 
     const token = generateToken(user.id, user.role?.name || 'user');
-    
+
     // Return user data along with token (excluding sensitive fields)
     const { password: userPassword, ...userWithoutPassword } = user;
-    
-    return unifiedResponse(true, SUCCESS.LOGIN_SUCCESSFUL, { 
+
+    return unifiedResponse(true, SUCCESS.LOGIN_SUCCESSFUL, {
       user: userWithoutPassword,
       tokens: {
         accessToken: token,
         refreshToken: token, // TODO: Implement proper refresh token
-        expiresIn: 1800 // 30 minutes
-      }
+        expiresIn: 1800, // 30 minutes
+      },
     });
   }
 
@@ -63,16 +63,16 @@ export class UserService {
     });
 
     const token = generateToken(newUser.id, newUser.role?.name || 'user');
-    
+
     // Return user data along with token (excluding sensitive fields)
     const { password: newUserPassword, ...userWithoutPassword } = newUser;
-    
+
     return unifiedResponse(true, SUCCESS.REGISTRATION_SUCCESSFUL, {
       user: userWithoutPassword,
       tokens: {
         accessToken: token,
         refreshToken: token, // TODO: Implement proper refresh token
-        expiresIn: 1800 // 30 minutes
+        expiresIn: 1800, // 30 minutes
       },
       streamKey: newUser.streamKey,
     });
@@ -190,10 +190,10 @@ export class UserService {
       return unifiedResponse(false, 'Only streamers can access stream keys');
     }
 
-    return unifiedResponse(true, 'Stream key retrieved successfully', { 
+    return unifiedResponse(true, 'Stream key retrieved successfully', {
       streamKey: user.streamKey,
       // Generate VDO.ninja room name from stream key
-      vdoRoomName: `omi-${user.streamKey}`
+      vdoRoomName: `omi-${user.streamKey}`,
     });
   }
 
@@ -209,11 +209,11 @@ export class UserService {
     }
 
     const updatedUser = await this.userRepository.regenerateStreamKey(userId);
-    
-    return unifiedResponse(true, 'Stream key regenerated successfully', { 
+
+    return unifiedResponse(true, 'Stream key regenerated successfully', {
       streamKey: updatedUser.streamKey,
       // Generate VDO.ninja room name from stream key
-      vdoRoomName: `omi-${updatedUser.streamKey}`
+      vdoRoomName: `omi-${updatedUser.streamKey}`,
     });
   }
 }

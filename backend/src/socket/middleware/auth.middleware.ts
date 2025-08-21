@@ -1,14 +1,8 @@
-import jwt from 'jsonwebtoken';
 import { Socket } from 'socket.io';
 
-import { env } from '../../config/env-config.js';
+import { auth } from '../../auth.js';
 import { PrismaService } from '../../config/prisma.config.js';
 import { SocketWithAuth } from '../../config/socket/socket.config.js';
-
-interface JwtPayload {
-  userId: string;
-  role: string;
-}
 
 export const socketAuthMiddleware = async (socket: SocketWithAuth, next: (err?: Error) => void) => {
   try {
@@ -23,18 +17,34 @@ export const socketAuthMiddleware = async (socket: SocketWithAuth, next: (err?: 
       return next();
     }
 
-    // Verify JWT token
-    const decoded = jwt.verify(token as string, env.JWT_SECRET) as JwtPayload;
+    // Validate session with Better Auth
+    // Create headers object for Better Auth
+    const headers = new Headers();
+    headers.set('authorization', `Bearer ${token}`);
 
-    // Get user from database to verify they still exist and are active
+    const session = await auth.api.getSession({
+      headers: headers as any,
+    });
+
+    if (!session || !session.user) {
+      // Invalid session - treat as anonymous
+      socket.userId = undefined;
+      socket.username = undefined;
+      socket.role = 'anonymous';
+      return next();
+    }
+
+    // Get additional user data from database to verify they're active
     const prisma = PrismaService.getInstance().client;
     const user = await prisma.user.findUnique({
-      where: { id: decoded.userId },
+      where: { id: session.user.id },
       select: {
         id: true,
         username: true,
         active: true,
-        role: {
+        isAdmin: true,
+        role: true,
+        roleRelation: {
           select: {
             name: true,
           },
@@ -43,17 +53,32 @@ export const socketAuthMiddleware = async (socket: SocketWithAuth, next: (err?: 
     });
 
     if (!user || !user.active) {
-      return next(new Error('User not found or inactive'));
+      // User exists in session but is inactive
+      socket.userId = undefined;
+      socket.username = undefined;
+      socket.role = 'anonymous';
+      return next();
     }
 
     // Attach user info to socket
     socket.userId = user.id;
     socket.username = user.username;
-    socket.role = user.role?.name || 'viewer';
+
+    // Determine role: admin > roleRelation > Better Auth role > default viewer
+    if (user.isAdmin) {
+      socket.role = 'admin';
+    } else if (user.roleRelation?.name) {
+      socket.role = user.roleRelation.name;
+    } else if (user.role) {
+      socket.role = user.role;
+    } else {
+      socket.role = 'viewer';
+    }
 
     next();
   } catch (error) {
-    // For invalid tokens, still allow connection as anonymous
+    console.error('Socket auth error:', error);
+    // For any errors, allow connection as anonymous
     socket.userId = undefined;
     socket.username = undefined;
     socket.role = 'anonymous';

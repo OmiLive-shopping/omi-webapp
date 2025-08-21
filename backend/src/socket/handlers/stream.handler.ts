@@ -28,17 +28,21 @@ const streamStatsSchema = z.object({
   stats: z.object({
     bitrate: z.number().optional(),
     fps: z.number().optional(),
-    resolution: z.object({
-      width: z.number(),
-      height: z.number(),
-    }).optional(),
+    resolution: z
+      .object({
+        width: z.number(),
+        height: z.number(),
+      })
+      .optional(),
     audioLevel: z.number().optional(),
     packetLoss: z.number().optional(),
     latency: z.number().optional(),
-    bandwidth: z.object({
-      upload: z.number(),
-      download: z.number(),
-    }).optional(),
+    bandwidth: z
+      .object({
+        upload: z.number(),
+        download: z.number(),
+      })
+      .optional(),
   }),
   timestamp: z.string().datetime(),
 });
@@ -331,7 +335,9 @@ export class StreamHandler {
 
       // Log important stats changes
       if (validated.stats.packetLoss && validated.stats.packetLoss > 5) {
-        console.warn(`High packet loss detected for stream ${validated.streamId}: ${validated.stats.packetLoss}%`);
+        console.warn(
+          `High packet loss detected for stream ${validated.streamId}: ${validated.stats.packetLoss}%`,
+        );
       }
 
       // Acknowledge receipt
@@ -369,7 +375,9 @@ export class StreamHandler {
         fps: stats.fps || 0,
         latency: stats.latency || 0,
         packetLoss: stats.packetLoss || 0,
-        resolution: stats.resolution ? `${stats.resolution.width}x${stats.resolution.height}` : null,
+        resolution: stats.resolution
+          ? `${stats.resolution.width}x${stats.resolution.height}`
+          : null,
       });
 
       // In the future, this will save to database:
@@ -389,7 +397,7 @@ export class StreamHandler {
   handleGetStreamStats = async (socket: SocketWithAuth, data: { streamId: string }) => {
     try {
       const roomInfo = this.roomManager.getRoomInfo(data.streamId);
-      
+
       if (!roomInfo || !roomInfo.streamStats) {
         socket.emit('stream:stats:current', {
           streamId: data.streamId,
@@ -415,25 +423,25 @@ export class StreamHandler {
    */
   registerVdoHandlers(socket: SocketWithAuth) {
     // VDO.Ninja stream events
-    socket.on('vdo:stream:event', (data) => this.vdoHandler.handleVdoStreamEvent(socket, data));
-    
+    socket.on('vdo:stream:event', data => this.vdoHandler.handleVdoStreamEvent(socket, data));
+
     // VDO.Ninja statistics
-    socket.on('vdo:stats:update', (data) => this.vdoHandler.handleVdoStatsUpdate(socket, data));
-    
+    socket.on('vdo:stats:update', data => this.vdoHandler.handleVdoStatsUpdate(socket, data));
+
     // VDO.Ninja viewer events
-    socket.on('vdo:viewer:event', (data) => this.vdoHandler.handleVdoViewerEvent(socket, data));
-    
+    socket.on('vdo:viewer:event', data => this.vdoHandler.handleVdoViewerEvent(socket, data));
+
     // VDO.Ninja media control events
-    socket.on('vdo:media:event', (data) => this.vdoHandler.handleVdoMediaEvent(socket, data));
-    
+    socket.on('vdo:media:event', data => this.vdoHandler.handleVdoMediaEvent(socket, data));
+
     // VDO.Ninja quality events
-    socket.on('vdo:quality:event', (data) => this.vdoHandler.handleVdoQualityEvent(socket, data));
-    
+    socket.on('vdo:quality:event', data => this.vdoHandler.handleVdoQualityEvent(socket, data));
+
     // VDO.Ninja recording events
-    socket.on('vdo:recording:event', (data) => this.vdoHandler.handleVdoRecordingEvent(socket, data));
-    
+    socket.on('vdo:recording:event', data => this.vdoHandler.handleVdoRecordingEvent(socket, data));
+
     // Get VDO.Ninja analytics
-    socket.on('vdo:get:analytics', (data) => this.vdoHandler.handleGetVdoAnalytics(socket, data));
+    socket.on('vdo:get:analytics', data => this.vdoHandler.handleGetVdoAnalytics(socket, data));
   }
 
   /**

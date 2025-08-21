@@ -163,11 +163,24 @@ const extraKeys = definedEnvKeys.filter(
     !key.includes('LAUNCH') &&
     !key.includes('MALLOC') &&
     ![
-      'CLICOLOR', 'ZDOTDIR', 'ORIGINAL_XDG_CURRENT_DESKTOP', 'MallocNanoZone',
-      'ENABLE_IDE_INTEGRATION', 'USER', 'COMMAND_MODE', 'SSH_AUTH_SOCK',
-      'LSCOLORS', 'LaunchInstanceID', 'USER_ZDOTDIR', '__CFBundleIdentifier',
-      'FORCE_COLOR', 'LOGNAME', 'GIT_ASKPASS', 'SECURITYSESSIONID',
-      'COLORTERM', 'UNUSED_VARIABLE'
+      'CLICOLOR',
+      'ZDOTDIR',
+      'ORIGINAL_XDG_CURRENT_DESKTOP',
+      'MallocNanoZone',
+      'ENABLE_IDE_INTEGRATION',
+      'USER',
+      'COMMAND_MODE',
+      'SSH_AUTH_SOCK',
+      'LSCOLORS',
+      'LaunchInstanceID',
+      'USER_ZDOTDIR',
+      '__CFBundleIdentifier',
+      'FORCE_COLOR',
+      'LOGNAME',
+      'GIT_ASKPASS',
+      'SECURITYSESSIONID',
+      'COLORTERM',
+      'UNUSED_VARIABLE',
     ].includes(key),
 );
 

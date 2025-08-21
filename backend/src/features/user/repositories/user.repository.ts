@@ -43,7 +43,13 @@ export class UserRepository {
     });
   }
 
-  async createUser(data: { email: string; username: string; password: string; firstName: string; streamKey?: string }) {
+  async createUser(data: {
+    email: string;
+    username: string;
+    password: string;
+    firstName: string;
+    streamKey?: string;
+  }) {
     return this.prisma.user.create({
       data,
       include: {

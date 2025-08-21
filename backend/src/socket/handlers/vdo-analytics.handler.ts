@@ -1,14 +1,16 @@
 import { Socket } from 'socket.io';
 import { container } from 'tsyringe';
+
 import { AnalyticsService } from '@/features/analytics/services/analytics.service';
+
 import type {
-  VdoStreamEvent,
-  VdoStatsEvent,
-  VdoViewerEvent,
+  VDO_SOCKET_EVENTS,
   VdoMediaEvent,
   VdoQualityEvent,
   VdoRecordingEvent,
-  VDO_SOCKET_EVENTS
+  VdoStatsEvent,
+  VdoStreamEvent,
+  VdoViewerEvent,
 } from '../types/vdo-events.types';
 
 /**
@@ -28,37 +30,37 @@ export class VdoAnalyticsHandler {
   registerHandlers(socket: Socket) {
     // Stream events
     socket.on(VDO_SOCKET_EVENTS.STREAM_EVENT, (data: VdoStreamEvent) =>
-      this.handleStreamEvent(socket, data)
+      this.handleStreamEvent(socket, data),
     );
 
     // Stats updates
     socket.on(VDO_SOCKET_EVENTS.STATS_UPDATE, (data: VdoStatsEvent) =>
-      this.handleStatsUpdate(socket, data)
+      this.handleStatsUpdate(socket, data),
     );
 
     // Viewer events
     socket.on(VDO_SOCKET_EVENTS.VIEWER_EVENT, (data: VdoViewerEvent) =>
-      this.handleViewerEvent(socket, data)
+      this.handleViewerEvent(socket, data),
     );
 
     // Media events
     socket.on(VDO_SOCKET_EVENTS.MEDIA_EVENT, (data: VdoMediaEvent) =>
-      this.handleMediaEvent(socket, data)
+      this.handleMediaEvent(socket, data),
     );
 
     // Quality events
     socket.on(VDO_SOCKET_EVENTS.QUALITY_EVENT, (data: VdoQualityEvent) =>
-      this.handleQualityEvent(socket, data)
+      this.handleQualityEvent(socket, data),
     );
 
     // Recording events
     socket.on(VDO_SOCKET_EVENTS.RECORDING_EVENT, (data: VdoRecordingEvent) =>
-      this.handleRecordingEvent(socket, data)
+      this.handleRecordingEvent(socket, data),
     );
 
     // Analytics requests
     socket.on(VDO_SOCKET_EVENTS.GET_ANALYTICS, (data: any) =>
-      this.handleGetAnalytics(socket, data)
+      this.handleGetAnalytics(socket, data),
     );
   }
 
@@ -76,20 +78,20 @@ export class VdoAnalyticsHandler {
       socket.to(`stream:${streamId}`).emit(VDO_SOCKET_EVENTS.STREAM_LIVE, {
         streamId,
         action,
-        timestamp
+        timestamp,
       });
 
       // Send acknowledgment
       socket.emit(VDO_SOCKET_EVENTS.EVENT_ACK, {
         success: true,
         event: 'stream',
-        action
+        action,
       });
     } catch (error) {
       console.error('Error handling stream event:', error);
       socket.emit(VDO_SOCKET_EVENTS.EVENT_ACK, {
         success: false,
-        error: 'Failed to process stream event'
+        error: 'Failed to process stream event',
       });
     }
   }
@@ -104,7 +106,7 @@ export class VdoAnalyticsHandler {
       // Process and store statistics
       await this.analyticsService.processRealtimeStats(streamId, {
         ...stats,
-        viewerCount: stats.viewerCount || socket.adapter.rooms.get(`stream:${streamId}`)?.size || 0
+        viewerCount: stats.viewerCount || socket.adapter.rooms.get(`stream:${streamId}`)?.size || 0,
       });
 
       // Check for quality issues
@@ -113,20 +115,20 @@ export class VdoAnalyticsHandler {
         socket.emit(VDO_SOCKET_EVENTS.QUALITY_ISSUES, {
           streamId,
           issues,
-          timestamp
+          timestamp,
         });
       }
 
       // Send acknowledgment
       socket.emit(VDO_SOCKET_EVENTS.STATS_ACK, {
         success: true,
-        processed: true
+        processed: true,
       });
     } catch (error) {
       console.error('Error handling stats update:', error);
       socket.emit(VDO_SOCKET_EVENTS.STATS_ACK, {
         success: false,
-        error: 'Failed to process statistics'
+        error: 'Failed to process statistics',
       });
     }
   }
@@ -147,35 +149,36 @@ export class VdoAnalyticsHandler {
           userId: viewer.username ? viewer.id : undefined,
           deviceInfo: {
             // Extract from user agent if available
-            deviceType: this.detectDeviceType(socket.handshake.headers['user-agent'])
+            deviceType: this.detectDeviceType(socket.handshake.headers['user-agent']),
           },
-          location: socket.handshake.headers['x-forwarded-for'] as string || socket.handshake.address
-        }
+          location:
+            (socket.handshake.headers['x-forwarded-for'] as string) || socket.handshake.address,
+        },
       );
 
       // Broadcast viewer event to stream room
-      socket.to(`stream:${streamId}`).emit(
-        action === 'joined'
-          ? VDO_SOCKET_EVENTS.VIEWER_JOINED
-          : VDO_SOCKET_EVENTS.VIEWER_LEFT,
-        {
-          streamId,
-          viewer,
-          timestamp
-        }
-      );
+      socket
+        .to(`stream:${streamId}`)
+        .emit(
+          action === 'joined' ? VDO_SOCKET_EVENTS.VIEWER_JOINED : VDO_SOCKET_EVENTS.VIEWER_LEFT,
+          {
+            streamId,
+            viewer,
+            timestamp,
+          },
+        );
 
       // Send acknowledgment
       socket.emit(VDO_SOCKET_EVENTS.EVENT_ACK, {
         success: true,
         event: 'viewer',
-        action
+        action,
       });
     } catch (error) {
       console.error('Error handling viewer event:', error);
       socket.emit(VDO_SOCKET_EVENTS.EVENT_ACK, {
         success: false,
-        error: 'Failed to process viewer event'
+        error: 'Failed to process viewer event',
       });
     }
   }
@@ -191,20 +194,20 @@ export class VdoAnalyticsHandler {
       socket.to(`stream:${streamId}`).emit(VDO_SOCKET_EVENTS.MEDIA_CHANGED, {
         streamId,
         action,
-        timestamp
+        timestamp,
       });
 
       // Send acknowledgment
       socket.emit(VDO_SOCKET_EVENTS.EVENT_ACK, {
         success: true,
         event: 'media',
-        action
+        action,
       });
     } catch (error) {
       console.error('Error handling media event:', error);
       socket.emit(VDO_SOCKET_EVENTS.EVENT_ACK, {
         success: false,
-        error: 'Failed to process media event'
+        error: 'Failed to process media event',
       });
     }
   }
@@ -221,7 +224,7 @@ export class VdoAnalyticsHandler {
         streamId,
         action,
         quality,
-        timestamp
+        timestamp,
       });
 
       // Send quality warning if needed
@@ -230,7 +233,7 @@ export class VdoAnalyticsHandler {
           streamId,
           message: 'Low quality detected',
           quality,
-          timestamp
+          timestamp,
         });
       }
 
@@ -238,13 +241,13 @@ export class VdoAnalyticsHandler {
       socket.emit(VDO_SOCKET_EVENTS.EVENT_ACK, {
         success: true,
         event: 'quality',
-        action
+        action,
       });
     } catch (error) {
       console.error('Error handling quality event:', error);
       socket.emit(VDO_SOCKET_EVENTS.EVENT_ACK, {
         success: false,
-        error: 'Failed to process quality event'
+        error: 'Failed to process quality event',
       });
     }
   }
@@ -262,13 +265,13 @@ export class VdoAnalyticsHandler {
       socket.emit(VDO_SOCKET_EVENTS.EVENT_ACK, {
         success: true,
         event: 'recording',
-        action
+        action,
       });
     } catch (error) {
       console.error('Error handling recording event:', error);
       socket.emit(VDO_SOCKET_EVENTS.EVENT_ACK, {
         success: false,
-        error: 'Failed to process recording event'
+        error: 'Failed to process recording event',
       });
     }
   }
@@ -284,19 +287,19 @@ export class VdoAnalyticsHandler {
         intervalType: period,
         includeRealtime: true,
         includeQualityEvents: true,
-        includeViewerStats: true
+        includeViewerStats: true,
       });
 
       socket.emit(VDO_SOCKET_EVENTS.ANALYTICS_DATA, {
         streamId,
         period,
         analytics,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
     } catch (error) {
       console.error('Error fetching analytics:', error);
       socket.emit(VDO_SOCKET_EVENTS.ANALYTICS_DATA, {
-        error: 'Failed to fetch analytics'
+        error: 'Failed to fetch analytics',
       });
     }
   }
@@ -335,7 +338,7 @@ export class VdoAnalyticsHandler {
     if (/mobile/i.test(userAgent)) return 'mobile';
     if (/tablet/i.test(userAgent)) return 'tablet';
     if (/desktop/i.test(userAgent) || /windows|mac|linux/i.test(userAgent)) return 'desktop';
-    
+
     return 'unknown';
   }
 }

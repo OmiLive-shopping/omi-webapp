@@ -1,11 +1,12 @@
-import request from 'supertest';
-import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcrypt';
 import express from 'express';
+import request from 'supertest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+
 import { PrismaService } from '../../../config/prisma.config.js';
-import userRoutes from '../routes/user.routes.js';
 import { apiErrorMiddleware } from '../../../middleware/api-error.middleware.js';
+import userRoutes from '../routes/user.routes.js';
 
 // Skip integration tests in CI environment
 const skipInCI = process.env.CI ? it.skip : it;
@@ -343,12 +344,10 @@ describe('User Authentication Integration Tests', () => {
     it('should be rate limited after multiple failed attempts', async () => {
       // Make multiple failed login attempts
       for (let i = 0; i < 10; i++) {
-        await request(app)
-          .post('/v1/users/login')
-          .send({
-            email: testUser.email,
-            password: 'WrongPassword123!',
-          });
+        await request(app).post('/v1/users/login').send({
+          email: testUser.email,
+          password: 'WrongPassword123!',
+        });
       }
 
       // Next attempt should be rate limited

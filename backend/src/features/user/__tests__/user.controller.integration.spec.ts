@@ -1,5 +1,6 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { Request, Response } from 'express';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
 import { UserController } from '../controllers/user.controller.js';
 import { UserService } from '../services/user.service.js';
 
@@ -70,11 +71,7 @@ describe('UserController Integration Tests', () => {
       mockUserService.register.mockResolvedValue(mockRegisterResponse);
       mockRequest.body = validRegisterData;
 
-      await userController.register(
-        mockRequest as Request,
-        mockResponse as Response,
-        mockNext
-      );
+      await userController.register(mockRequest as Request, mockResponse as Response, mockNext);
 
       expect(mockUserService.register).toHaveBeenCalledWith(validRegisterData);
 
@@ -91,11 +88,7 @@ describe('UserController Integration Tests', () => {
       mockUserService.register.mockResolvedValue(mockErrorResponse);
       mockRequest.body = validRegisterData;
 
-      await userController.register(
-        mockRequest as Request,
-        mockResponse as Response,
-        mockNext
-      );
+      await userController.register(mockRequest as Request, mockResponse as Response, mockNext);
 
       expect(mockResponse.status).toHaveBeenCalledWith(400);
       expect(mockResponse.json).toHaveBeenCalledWith(mockErrorResponse);
@@ -106,11 +99,7 @@ describe('UserController Integration Tests', () => {
       mockUserService.register.mockRejectedValue(error);
       mockRequest.body = validRegisterData;
 
-      await userController.register(
-        mockRequest as Request,
-        mockResponse as Response,
-        mockNext
-      );
+      await userController.register(mockRequest as Request, mockResponse as Response, mockNext);
 
       expect(mockNext).toHaveBeenCalledWith(error);
     });
@@ -145,11 +134,7 @@ describe('UserController Integration Tests', () => {
       mockUserService.login.mockResolvedValue(mockLoginResponse);
       mockRequest.body = validLoginData;
 
-      await userController.login(
-        mockRequest as Request,
-        mockResponse as Response,
-        mockNext
-      );
+      await userController.login(mockRequest as Request, mockResponse as Response, mockNext);
 
       expect(mockUserService.login).toHaveBeenCalledWith(validLoginData);
       expect(mockResponse.status).toHaveBeenCalledWith(200);
@@ -165,11 +150,7 @@ describe('UserController Integration Tests', () => {
       mockUserService.login.mockResolvedValue(mockErrorResponse);
       mockRequest.body = validLoginData;
 
-      await userController.login(
-        mockRequest as Request,
-        mockResponse as Response,
-        mockNext
-      );
+      await userController.login(mockRequest as Request, mockResponse as Response, mockNext);
 
       expect(mockResponse.status).toHaveBeenCalledWith(400);
       expect(mockResponse.json).toHaveBeenCalledWith(mockErrorResponse);
@@ -184,11 +165,7 @@ describe('UserController Integration Tests', () => {
       mockUserService.login.mockResolvedValue(mockNotFoundResponse);
       mockRequest.body = validLoginData;
 
-      await userController.login(
-        mockRequest as Request,
-        mockResponse as Response,
-        mockNext
-      );
+      await userController.login(mockRequest as Request, mockResponse as Response, mockNext);
 
       expect(mockResponse.status).toHaveBeenCalledWith(400);
       expect(mockResponse.json).toHaveBeenCalledWith(mockNotFoundResponse);
@@ -213,11 +190,7 @@ describe('UserController Integration Tests', () => {
       mockUserService.getProfile.mockResolvedValue(mockProfileResponse);
       mockRequest.userId = 'user-id';
 
-      await userController.getProfile(
-        mockRequest as Request,
-        mockResponse as Response,
-        mockNext
-      );
+      await userController.getProfile(mockRequest as Request, mockResponse as Response, mockNext);
 
       expect(mockUserService.getProfile).toHaveBeenCalledWith('user-id');
       expect(mockResponse.status).toHaveBeenCalledWith(200);
@@ -233,11 +206,7 @@ describe('UserController Integration Tests', () => {
       mockUserService.getProfile.mockResolvedValue(mockNotFoundResponse);
       mockRequest.userId = 'nonexistent-id';
 
-      await userController.getProfile(
-        mockRequest as Request,
-        mockResponse as Response,
-        mockNext
-      );
+      await userController.getProfile(mockRequest as Request, mockResponse as Response, mockNext);
 
       expect(mockResponse.status).toHaveBeenCalledWith(404);
       expect(mockResponse.json).toHaveBeenCalledWith(mockNotFoundResponse);
@@ -250,11 +219,7 @@ describe('UserController Integration Tests', () => {
       mockUserService.login.mockRejectedValue(error);
       mockRequest.body = { email: 'test@example.com', password: 'password' };
 
-      await userController.login(
-        mockRequest as Request,
-        mockResponse as Response,
-        mockNext
-      );
+      await userController.login(mockRequest as Request, mockResponse as Response, mockNext);
 
       expect(mockNext).toHaveBeenCalledWith(error);
       expect(mockResponse.status).not.toHaveBeenCalled();
@@ -272,11 +237,7 @@ describe('UserController Integration Tests', () => {
         firstName: 'Test',
       };
 
-      await userController.register(
-        mockRequest as Request,
-        mockResponse as Response,
-        mockNext
-      );
+      await userController.register(mockRequest as Request, mockResponse as Response, mockNext);
 
       expect(mockNext).toHaveBeenCalledWith(error);
     });

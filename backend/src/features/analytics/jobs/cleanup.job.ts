@@ -1,4 +1,5 @@
 import { container } from 'tsyringe';
+
 import { AnalyticsService } from '../services/analytics.service';
 
 /**
@@ -22,10 +23,7 @@ export class AnalyticsCleanupJob {
     this.runCleanup();
 
     // Schedule periodic cleanup
-    this.intervalId = setInterval(
-      () => this.runCleanup(),
-      intervalHours * 60 * 60 * 1000
-    );
+    this.intervalId = setInterval(() => this.runCleanup(), intervalHours * 60 * 60 * 1000);
 
     console.log(`Analytics cleanup job started - runs every ${intervalHours} hours`);
   }
@@ -48,9 +46,9 @@ export class AnalyticsCleanupJob {
     try {
       console.log('Starting analytics cleanup...');
       const startTime = Date.now();
-      
+
       await this.analyticsService.runCleanup();
-      
+
       const duration = Date.now() - startTime;
       console.log(`Analytics cleanup completed in ${duration}ms`);
     } catch (error) {

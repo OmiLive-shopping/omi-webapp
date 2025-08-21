@@ -35,7 +35,7 @@ export function initializeSocketServer(httpServer: HTTPServer): void {
     socket.on('stream:get-analytics', data => streamHandler.handleGetAnalytics(socket, data));
     socket.on('stream:stats:update', data => streamHandler.handleStreamStats(socket, data));
     socket.on('stream:stats:get', data => streamHandler.handleGetStreamStats(socket, data));
-    
+
     // Register VDO.Ninja event handlers
     streamHandler.registerVdoHandlers(socket);
 

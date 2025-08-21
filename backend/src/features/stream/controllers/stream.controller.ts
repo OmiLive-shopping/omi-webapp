@@ -137,7 +137,7 @@ export class StreamController {
   getStreamComments = async (req: Request, res: Response) => {
     const { id } = req.params;
     const { before, after, limit, cursor, includeDeleted, orderBy } = req.query;
-    
+
     const options = {
       before: before as string,
       after: after as string,
@@ -146,12 +146,14 @@ export class StreamController {
       includeDeleted: includeDeleted === 'true',
       orderBy: orderBy as 'asc' | 'desc',
     };
-    
+
     // Remove undefined values
-    Object.keys(options).forEach(key => 
-      options[key as keyof typeof options] === undefined && delete options[key as keyof typeof options]
+    Object.keys(options).forEach(
+      key =>
+        options[key as keyof typeof options] === undefined &&
+        delete options[key as keyof typeof options],
     );
-    
+
     const result = await this.streamService.getStreamComments(id, options);
     res.status(result.success ? 200 : 404).json(result);
   };
@@ -175,7 +177,9 @@ export class StreamController {
     const userId = (req as any).user.id;
 
     const result = await this.streamService.getStreamingConfig(id, userId);
-    res.status(result.success ? 200 : result.message.includes('Unauthorized') ? 403 : 404).json(result);
+    res
+      .status(result.success ? 200 : result.message.includes('Unauthorized') ? 403 : 404)
+      .json(result);
   };
 
   getViewerUrl = async (req: Request, res: Response) => {

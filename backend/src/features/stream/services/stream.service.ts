@@ -239,14 +239,17 @@ export class StreamService {
     return unifiedResponse(true, 'Comment added successfully', comment);
   }
 
-  async getStreamComments(streamId: string, options?: {
-    before?: string;
-    after?: string;
-    limit?: number;
-    cursor?: string;
-    includeDeleted?: boolean;
-    orderBy?: 'asc' | 'desc';
-  }) {
+  async getStreamComments(
+    streamId: string,
+    options?: {
+      before?: string;
+      after?: string;
+      limit?: number;
+      cursor?: string;
+      includeDeleted?: boolean;
+      orderBy?: 'asc' | 'desc';
+    },
+  ) {
     // Check if stream exists
     const stream = await this.streamRepository.findStreamById(streamId);
     if (!stream) {
@@ -327,12 +330,12 @@ export class StreamService {
   }
 
   async getViewerUrl(
-    streamId: string, 
+    streamId: string,
     options?: {
       audioOnly?: boolean;
       lowLatency?: boolean;
       maxQuality?: '360p' | '720p' | '1080p';
-    }
+    },
   ) {
     const stream = await this.streamRepository.findStreamById(streamId);
 

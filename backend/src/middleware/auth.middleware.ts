@@ -1,7 +1,8 @@
+import type { Session, User } from 'better-auth';
 import { NextFunction, Request, Response } from 'express';
 import { unifiedResponse } from 'uni-response';
+
 import { auth as betterAuth } from '../auth.js';
-import type { Session, User } from 'better-auth';
 
 // Extend the Better Auth User type with our custom fields
 interface AuthUser extends User {
@@ -59,7 +60,7 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
     // Attach session and user to request
     req.session = session.session;
     req.user = session.user as AuthUser;
-    
+
     // Legacy compatibility
     req.userId = session.user.id;
     req.role = (session.user as AuthUser).role;

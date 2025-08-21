@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import usePageTitle from '@/hooks/usePageTitle';
 import ProductCard from '@/components/products/ProductCard';
+import { LivestreamCard } from '@/components/stream/LivestreamCard';
 import { ChevronLeft, ChevronRight, Play, Eye, Calendar } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -41,26 +42,41 @@ const liveStreams = [
   {
     id: '1',
     title: 'My Eco-Friendly Hair Care Faves this Spring',
-    streamer: 'Maria Salvidar',
-    image: 'https://images.unsplash.com/photo-1522337660859-02fbefca4702?w=400',
+    hostName: 'Maria Salvidar',
+    hostAvatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop',
+    thumbnail: 'https://images.unsplash.com/photo-1527799820374-dcf8d9d4a388?w=800&h=450&fit=crop',
     isLive: true,
-    scheduledDate: null
+    viewerCount: 1234,
+    category: 'Beauty'
   },
   {
     id: '2',
-    title: 'My Eco-Friendly Hair Care Faves this Spring',
-    streamer: 'Maria Salvidar',
-    image: 'https://images.unsplash.com/photo-1555529902-5261145633bf?w=400',
+    title: 'Summer Skincare Routine for Glowing Skin',
+    hostName: 'Emma Chen',
+    hostAvatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop',
+    thumbnail: 'https://images.unsplash.com/photo-1596755389378-c31d21fd1273?w=800&h=450&fit=crop',
     isLive: true,
-    scheduledDate: null
+    viewerCount: 856,
+    category: 'Skincare'
   },
   {
     id: '3',
-    title: 'My Eco-Friendly Hair Care Faves this Spring',
-    streamer: 'Maria Salvidar',
-    image: 'https://images.unsplash.com/photo-1560869713-da86a9ec0744?w=400',
+    title: 'Natural Makeup Tutorial: No-Makeup Look',
+    hostName: 'Sophie Anderson',
+    thumbnail: 'https://images.unsplash.com/photo-1512496015851-a90fb38ba796?w=800&h=450&fit=crop',
     isLive: false,
-    scheduledDate: 'May 25, 2025'
+    scheduledTime: new Date(Date.now() + 2 * 60 * 60 * 1000), // 2 hours from now
+    category: 'Makeup'
+  },
+  {
+    id: '4',
+    title: 'DIY Hair Masks with Kitchen Ingredients',
+    hostName: 'Zara Williams',
+    hostAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop',
+    thumbnail: 'https://images.unsplash.com/photo-1519699047748-de8e457a634e?w=800&h=450&fit=crop',
+    isLive: false,
+    scheduledTime: new Date(Date.now() + 24 * 60 * 60 * 1000), // Tomorrow
+    category: 'Hair Care'
   }
 ];
 
@@ -344,38 +360,12 @@ const HomePage: React.FC = () => {
           Live and Upcoming Streams
         </h2>
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {liveStreams.map((stream) => (
-            <Link
+            <LivestreamCard
               key={stream.id}
-              to={`/live-streams`}
-              className="group cursor-pointer"
-            >
-              <div className="relative aspect-video rounded-lg overflow-hidden mb-3">
-                <img
-                  src={stream.image}
-                  alt={stream.title}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                />
-                {stream.isLive ? (
-                  <div className="absolute top-3 left-3 inline-flex items-center gap-2 px-3 py-1 bg-red-600 text-white text-sm rounded-full">
-                    <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
-                    LIVE
-                  </div>
-                ) : (
-                  <div className="absolute top-3 right-3 inline-flex items-center gap-2 px-3 py-1 bg-black/50 backdrop-blur-sm text-white text-sm rounded-full">
-                    <Calendar className="w-4 h-4" />
-                    {stream.scheduledDate}
-                  </div>
-                )}
-              </div>
-              <h3 className="font-semibold text-gray-900 dark:text-white group-hover:text-primary-600 transition-colors">
-                {stream.title}
-              </h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                {stream.streamer}
-              </p>
-            </Link>
+              {...stream}
+            />
           ))}
         </div>
 

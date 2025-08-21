@@ -1,7 +1,9 @@
-import { injectable, inject } from 'tsyringe';
-import { AnalyticsRepository } from '../repositories/analytics.repository';
 import { Prisma } from '@prisma/client';
+import { inject, injectable } from 'tsyringe';
+
 import type { VdoStreamStats } from '@/socket/types/vdo-events.types';
+
+import { AnalyticsRepository } from '../repositories/analytics.repository';
 
 interface IntervalConfig {
   type: string;
@@ -16,12 +18,10 @@ export class AnalyticsService {
     { type: '5minutes', duration: 5 * 60 * 1000, retention: 30 },
     { type: '15minutes', duration: 15 * 60 * 1000, retention: 90 },
     { type: 'hour', duration: 60 * 60 * 1000, retention: 365 },
-    { type: 'day', duration: 24 * 60 * 60 * 1000, retention: 730 }
+    { type: 'day', duration: 24 * 60 * 60 * 1000, retention: 730 },
   ];
 
-  constructor(
-    @inject(AnalyticsRepository) private analyticsRepo: AnalyticsRepository
-  ) {}
+  constructor(@inject(AnalyticsRepository) private analyticsRepo: AnalyticsRepository) {}
 
   /**
    * Process and store real-time stats from VDO.Ninja
@@ -33,7 +33,9 @@ export class AnalyticsService {
         stream: { connect: { id: streamId } },
         viewerCount: stats.viewerCount || 0,
         fps: stats.fps?.current || 0,
-        resolution: stats.resolution ? `${stats.resolution.width}x${stats.resolution.height}` : null,
+        resolution: stats.resolution
+          ? `${stats.resolution.width}x${stats.resolution.height}`
+          : null,
         bitrate: stats.bitrate || 0,
         audioLevel: stats.audioLevel || 0,
         audioDropouts: stats.audioDropouts || 0,
@@ -47,7 +49,7 @@ export class AnalyticsService {
         isAudioMuted: stats.isAudioMuted || false,
         isVideoHidden: stats.isVideoHidden || false,
         isScreenSharing: stats.isScreenSharing || false,
-        isRecording: stats.isRecording || false
+        isRecording: stats.isRecording || false,
       });
 
       // Check for quality events
@@ -55,7 +57,6 @@ export class AnalyticsService {
 
       // Update aggregated analytics for different intervals
       await this.updateAggregatedAnalytics(streamId, stats);
-
     } catch (error) {
       console.error('Error processing realtime stats:', error);
       throw error;
@@ -82,7 +83,7 @@ export class AnalyticsService {
         packetLoss?: number;
         bufferingTime?: number;
       };
-    }
+    },
   ) {
     try {
       if (event === 'join') {
@@ -94,12 +95,12 @@ export class AnalyticsService {
           deviceType: data?.deviceInfo?.deviceType,
           browser: data?.deviceInfo?.browser,
           os: data?.deviceInfo?.os,
-          location: data?.location
+          location: data?.location,
         });
       } else if (event === 'leave') {
         const viewer = await this.analyticsRepo.getViewerAnalytics(streamId, {
           sessionId,
-          limit: 1
+          limit: 1,
         });
 
         if (viewer.length > 0) {
@@ -108,14 +109,14 @@ export class AnalyticsService {
 
           await this.analyticsRepo.updateViewerAnalytics(streamId, sessionId, {
             leftAt: new Date(),
-            totalWatchTime: watchTime
+            totalWatchTime: watchTime,
           });
         }
       } else if (event === 'update' && data?.metrics) {
         await this.analyticsRepo.updateViewerAnalytics(streamId, sessionId, {
           averageLatency: data.metrics.latency,
           averagePacketLoss: data.metrics.packetLoss,
-          bufferingTime: data.metrics.bufferingTime
+          bufferingTime: data.metrics.bufferingTime,
         });
       }
     } catch (error) {
@@ -140,7 +141,7 @@ export class AnalyticsService {
         currentValue: stats.fps.current,
         threshold: 20,
         message: `FPS dropped to ${stats.fps.current}`,
-        details: { fps: stats.fps }
+        details: { fps: stats.fps },
       });
     }
 
@@ -153,7 +154,7 @@ export class AnalyticsService {
         metric: 'packet_loss',
         currentValue: stats.packetLoss,
         threshold: 5,
-        message: `High packet loss: ${stats.packetLoss.toFixed(1)}%`
+        message: `High packet loss: ${stats.packetLoss.toFixed(1)}%`,
       });
     }
 
@@ -166,7 +167,7 @@ export class AnalyticsService {
         metric: 'latency',
         currentValue: stats.latency,
         threshold: 500,
-        message: `High latency: ${stats.latency}ms`
+        message: `High latency: ${stats.latency}ms`,
       });
     }
 
@@ -180,8 +181,8 @@ export class AnalyticsService {
         message: `Connection quality: ${stats.connectionQuality}`,
         details: {
           quality: stats.connectionQuality,
-          score: stats.connectionScore
-        }
+          score: stats.connectionScore,
+        },
       });
     }
 
@@ -194,7 +195,7 @@ export class AnalyticsService {
     if (stats.connectionQuality === 'excellent' || stats.connectionQuality === 'good') {
       const unresolvedEvents = await this.analyticsRepo.getQualityEvents(streamId, {
         resolved: false,
-        since: new Date(Date.now() - 5 * 60 * 1000) // Last 5 minutes
+        since: new Date(Date.now() - 5 * 60 * 1000), // Last 5 minutes
       });
 
       for (const event of unresolvedEvents) {
@@ -212,7 +213,8 @@ export class AnalyticsService {
             shouldResolve = stats.latency ? stats.latency < 200 : false;
             break;
           case 'connection':
-            shouldResolve = stats.connectionQuality === 'excellent' || stats.connectionQuality === 'good';
+            shouldResolve =
+              stats.connectionQuality === 'excellent' || stats.connectionQuality === 'good';
             break;
         }
 
@@ -238,7 +240,7 @@ export class AnalyticsService {
         streamId,
         config.type,
         intervalStart,
-        intervalStart
+        intervalStart,
       );
 
       const currentData = existing[0] || {
@@ -260,68 +262,62 @@ export class AnalyticsService {
         connectionScore: 100,
         reconnectCount: 0,
         totalBytesOut: BigInt(0),
-        totalBytesIn: BigInt(0)
+        totalBytesIn: BigInt(0),
       };
 
       // Update with new stats
       const updateData: Prisma.StreamAnalyticsUpdateInput = {
         intervalEnd,
         timestamp: now,
-        
+
         // Update viewer metrics
         peakViewers: Math.max(currentData.peakViewers, stats.viewerCount || 0),
-        
+
         // Update FPS metrics
-        averageFps: this.calculateRunningAverage(
-          currentData.averageFps,
-          stats.fps?.current || 0
-        ),
+        averageFps: this.calculateRunningAverage(currentData.averageFps, stats.fps?.current || 0),
         minFps: Math.min(currentData.minFps, stats.fps?.current || Number.MAX_VALUE),
         maxFps: Math.max(currentData.maxFps, stats.fps?.current || 0),
-        
+
         // Update bitrate metrics
         averageBitrate: this.calculateRunningAverage(
           currentData.averageBitrate,
-          stats.bitrate || 0
+          stats.bitrate || 0,
         ),
         minBitrate: Math.min(currentData.minBitrate, stats.bitrate || Number.MAX_VALUE),
         maxBitrate: Math.max(currentData.maxBitrate, stats.bitrate || 0),
-        
+
         // Update network metrics
         averageLatency: this.calculateRunningAverage(
           currentData.averageLatency,
-          stats.latency || 0
+          stats.latency || 0,
         ),
         maxLatency: Math.max(currentData.maxLatency, stats.latency || 0),
         averagePacketLoss: this.calculateRunningAverage(
           currentData.averagePacketLoss,
-          stats.packetLoss || 0
+          stats.packetLoss || 0,
         ),
         maxPacketLoss: Math.max(currentData.maxPacketLoss, stats.packetLoss || 0),
-        averageJitter: this.calculateRunningAverage(
-          currentData.averageJitter,
-          stats.jitter || 0
-        ),
-        
+        averageJitter: this.calculateRunningAverage(currentData.averageJitter, stats.jitter || 0),
+
         // Update connection metrics
         connectionScore: stats.connectionScore || currentData.connectionScore,
         qualityRating: stats.connectionQuality || 'good',
-        
+
         // Update data usage
         totalBytesOut: BigInt(currentData.totalBytesOut) + BigInt(stats.bytesSent || 0),
         totalBytesIn: BigInt(currentData.totalBytesIn) + BigInt(stats.bytesReceived || 0),
-        
+
         // Resolution
-        averageResolution: stats.resolution 
+        averageResolution: stats.resolution
           ? `${stats.resolution.width}x${stats.resolution.height}`
-          : currentData.averageResolution
+          : currentData.averageResolution,
       };
 
       await this.analyticsRepo.upsertStreamAnalytics(
         streamId,
         config.type,
         intervalStart,
-        updateData
+        updateData,
       );
     }
   }
@@ -335,7 +331,7 @@ export class AnalyticsService {
 
       // Cleanup realtime stats older than 24 hours
       await this.analyticsRepo.cleanupOldRealtimeStats(
-        new Date(now.getTime() - 24 * 60 * 60 * 1000)
+        new Date(now.getTime() - 24 * 60 * 60 * 1000),
       );
 
       // Cleanup aggregated analytics based on retention policy
@@ -346,7 +342,7 @@ export class AnalyticsService {
 
       // Cleanup resolved quality events older than 7 days
       await this.analyticsRepo.cleanupResolvedQualityEvents(
-        new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+        new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000),
       );
 
       console.log('Analytics cleanup completed successfully');
@@ -368,7 +364,7 @@ export class AnalyticsService {
       includeRealtime?: boolean;
       includeQualityEvents?: boolean;
       includeViewerStats?: boolean;
-    }
+    },
   ) {
     const {
       intervalType,
@@ -376,7 +372,7 @@ export class AnalyticsService {
       endDate,
       includeRealtime = false,
       includeQualityEvents = false,
-      includeViewerStats = false
+      includeViewerStats = false,
     } = options || {};
 
     const result: any = {
@@ -384,8 +380,8 @@ export class AnalyticsService {
         streamId,
         intervalType,
         startDate,
-        endDate
-      )
+        endDate,
+      ),
     };
 
     if (includeRealtime) {
@@ -395,7 +391,7 @@ export class AnalyticsService {
     if (includeQualityEvents) {
       result.qualityEvents = await this.analyticsRepo.getQualityEvents(streamId, {
         since: startDate,
-        limit: 50
+        limit: 50,
       });
     }
 
@@ -409,16 +405,13 @@ export class AnalyticsService {
   /**
    * Get analytics dashboard data
    */
-  async getDashboardAnalytics(
-    userId?: string,
-    dateRange?: { start: Date; end: Date }
-  ) {
+  async getDashboardAnalytics(userId?: string, dateRange?: { start: Date; end: Date }) {
     const startDate = dateRange?.start || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
     const endDate = dateRange?.end || new Date();
 
     const [summary, topStreams] = await Promise.all([
       this.analyticsRepo.getAnalyticsSummary(undefined, startDate, endDate),
-      this.analyticsRepo.getTopStreams(startDate, endDate, 10)
+      this.analyticsRepo.getTopStreams(startDate, endDate, 10),
     ]);
 
     return {
@@ -426,8 +419,8 @@ export class AnalyticsService {
       topStreams,
       dateRange: {
         start: startDate,
-        end: endDate
-      }
+        end: endDate,
+      },
     };
   }
 
@@ -439,15 +432,25 @@ export class AnalyticsService {
   }
 
   // Helper methods
-  private calculateRunningAverage(currentAvg: number, newValue: number, weight: number = 0.1): number {
+  private calculateRunningAverage(
+    currentAvg: number,
+    newValue: number,
+    weight: number = 0.1,
+  ): number {
     return currentAvg * (1 - weight) + newValue * weight;
   }
 
   private mapConnectionState(stats: VdoStreamStats): string {
-    if (stats.connectionQuality === 'critical' || stats.connectionScore && stats.connectionScore < 20) {
+    if (
+      stats.connectionQuality === 'critical' ||
+      (stats.connectionScore && stats.connectionScore < 20)
+    ) {
       return 'disconnected';
     }
-    if (stats.connectionQuality === 'poor' || stats.connectionScore && stats.connectionScore < 50) {
+    if (
+      stats.connectionQuality === 'poor' ||
+      (stats.connectionScore && stats.connectionScore < 50)
+    ) {
       return 'reconnecting';
     }
     return 'connected';

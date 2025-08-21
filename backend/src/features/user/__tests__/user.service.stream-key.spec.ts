@@ -1,6 +1,7 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { UserService } from '../services/user.service.js';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
 import { UserRepository } from '../repositories/user.repository.js';
+import { UserService } from '../services/user.service.js';
 
 // Mock the repository
 vi.mock('../repositories/user.repository');

@@ -1,8 +1,9 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { StreamRepository } from '../repositories/stream.repository.js';
-import { StreamService } from '../services/stream.service.js';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
 import { ProductRepository } from '../../product/repositories/product.repository.js';
 import { UserRepository } from '../../user/repositories/user.repository.js';
+import { StreamRepository } from '../repositories/stream.repository.js';
+import { StreamService } from '../services/stream.service.js';
 
 vi.mock('../repositories/stream.repository');
 vi.mock('../../product/repositories/product.repository');

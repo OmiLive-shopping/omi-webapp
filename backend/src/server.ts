@@ -1,4 +1,5 @@
 import 'reflect-metadata';
+
 import { createServer } from 'http';
 
 import { app } from './app.js';
@@ -34,7 +35,7 @@ class Server {
       if (env.NODE_ENV !== 'production') {
         console.log(`Socket.io Admin UI available at http://localhost:${this.port}/admin`);
       }
-      
+
       // Analytics cleanup job disabled for now
       // analyticsCleanupJob.start(24);
       // console.log('Analytics cleanup job started');
@@ -53,7 +54,7 @@ class Server {
     try {
       // Stop analytics cleanup job (disabled for now)
       // analyticsCleanupJob.stop();
-      
+
       // Stop accepting new connections
       this.httpServer.close(async () => {
         console.log('No new requests are being accepted.');

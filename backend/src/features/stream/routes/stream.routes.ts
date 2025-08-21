@@ -11,8 +11,8 @@ import { StreamController } from '../controllers/stream.controller.js';
 import { StreamRepository } from '../repositories/stream.repository.js';
 import {
   addStreamProductSchema,
-  commentSchema,
   commentHistorySchema,
+  commentSchema,
   createStreamSchema,
   endStreamSchema,
   goLiveSchema,
@@ -84,7 +84,11 @@ router.post(
 router.post('/:id/end', requirePermission('streams.update'), streamController.endStreamById);
 
 // VDO.ninja configuration
-router.get('/:id/streaming-config', requirePermission('streams.update'), streamController.getStreamingConfig);
+router.get(
+  '/:id/streaming-config',
+  requirePermission('streams.update'),
+  streamController.getStreamingConfig,
+);
 router.get('/:id/viewer-url', streamController.getViewerUrl);
 
 // Stream viewer count (could be used by stream software)

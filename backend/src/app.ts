@@ -1,16 +1,16 @@
+import { toNodeHandler } from 'better-auth/node';
 import express, { Application, Request, Response } from 'express';
 import helmet from 'helmet';
 
+import { auth } from './auth.js';
 import { corsMiddleware } from './config/cors.config.js';
 import { env } from './config/env-config.js';
+import analyticsRoutes from './features/analytics/routes/analytics.routes.js';
 import apiKeyRoutes from './features/api-key/routes/api-key.routes.js';
 import productRoutes from './features/product/routes/product.routes.js';
 import streamRoutes from './features/stream/routes/stream.routes.js';
 import userRoutes from './features/user/routes/user.routes.js';
-import analyticsRoutes from './features/analytics/routes/analytics.routes.js';
 import { apiErrorHandler, unmatchedRoutes } from './middleware/api-error.middleware.js';
-import { toNodeHandler } from 'better-auth/node';
-import { auth } from './auth.js';
 import { validateApiKey } from './middleware/api-key.middleware.js';
 import { logger, requestIdMiddleware } from './middleware/morgan-logger.middleware.js';
 import { loggerMiddleware, pinoLogger } from './middleware/pino-logger.js';

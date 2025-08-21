@@ -27,34 +27,34 @@ export interface VdoStreamStats {
     width: number;
     height: number;
   };
-  
+
   // Network stats
   bitrate?: number;
   latency?: number;
   packetLoss?: number;
   jitter?: number;
-  
+
   // Audio stats
   audioLevel?: number;
   audioDropouts?: number;
-  
+
   // Connection stats
   connectionQuality?: 'excellent' | 'good' | 'fair' | 'poor' | 'critical';
   connectionScore?: number;
-  
+
   // Data usage
   bytesSent?: number;
   bytesReceived?: number;
   uploadSpeed?: number;
   downloadSpeed?: number;
-  
+
   // Media states
   isAudioMuted?: boolean;
   isVideoHidden?: boolean;
   isScreenSharing?: boolean;
   isRecording?: boolean;
   isPaused?: boolean;
-  
+
   // Quality settings
   qualitySettings?: {
     preset?: 'low' | 'medium' | 'high' | 'ultra';
@@ -62,7 +62,7 @@ export interface VdoStreamStats {
     resolution?: string;
     framerate?: number;
   };
-  
+
   // Recording info
   recordingStartTime?: string;
   recordingEndTime?: string;
@@ -83,7 +83,13 @@ export interface VdoViewerEvent {
 
 export interface VdoMediaEvent {
   streamId: string;
-  action: 'audioMuted' | 'audioUnmuted' | 'videoHidden' | 'videoShown' | 'screenShareStarted' | 'screenShareEnded';
+  action:
+    | 'audioMuted'
+    | 'audioUnmuted'
+    | 'videoHidden'
+    | 'videoShown'
+    | 'screenShareStarted'
+    | 'screenShareEnded';
   timestamp: string;
 }
 
@@ -143,26 +149,26 @@ export const VDO_SOCKET_EVENTS = {
   QUALITY_EVENT: 'vdo:quality:event',
   RECORDING_EVENT: 'vdo:recording:event',
   GET_ANALYTICS: 'vdo:get:analytics',
-  
+
   // Outgoing events to frontend
   EVENT_ACK: 'vdo:event:ack',
   STATS_ACK: 'vdo:stats:ack',
   ANALYTICS_DATA: 'vdo:analytics',
   QUALITY_WARNING: 'vdo:quality:warning',
   QUALITY_ISSUES: 'vdo:quality:issues',
-  
+
   // Broadcast events
   STREAM_LIVE: 'vdo:stream:live',
   STREAM_ENDED: 'vdo:stream:ended',
   STREAM_PAUSED: 'vdo:stream:paused',
   STREAM_RESUMED: 'vdo:stream:resumed',
   STREAM_ERROR: 'vdo:stream:error',
-  
+
   VIEWER_JOINED: 'vdo:viewer:joined',
   VIEWER_LEFT: 'vdo:viewer:left',
-  
+
   MEDIA_CHANGED: 'vdo:media:changed',
   QUALITY_CHANGED: 'vdo:quality:changed',
-  
+
   ANALYTICS_AGGREGATE: 'vdo:analytics:aggregate',
 } as const;

@@ -1,5 +1,6 @@
-import { Router } from 'express';
 import { toNodeHandler } from 'better-auth/node';
+import { Router } from 'express';
+
 import { auth } from '../auth.js';
 
 const router = Router();
@@ -12,7 +13,7 @@ const router = Router();
  * - POST /v1/auth/sign-out
  * - GET /v1/auth/get-session
  * - And all other Better Auth endpoints
- * 
+ *
  * IMPORTANT: This must be mounted BEFORE express.json() middleware
  * in the main app to avoid body parsing conflicts
  */
@@ -26,11 +27,11 @@ router.all('/*', async (req, res, next) => {
   console.log('Better Auth route hit:', req.method, req.originalUrl, req.url);
   console.log('Request path:', req.path);
   console.log('Base URL:', req.baseUrl);
-  
+
   try {
     const result = await authHandler(req, res);
     console.log('Handler result:', result);
-    
+
     // If handler doesn't send response, pass to next middleware
     if (!res.headersSent) {
       console.log('Headers not sent, returning 404');

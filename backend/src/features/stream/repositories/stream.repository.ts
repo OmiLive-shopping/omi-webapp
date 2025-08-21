@@ -366,14 +366,7 @@ export class StreamRepository {
       orderBy?: 'asc' | 'desc';
     } = {},
   ) {
-    const {
-      before,
-      after,
-      limit = 50,
-      cursor,
-      includeDeleted = false,
-      orderBy = 'asc',
-    } = options;
+    const { before, after, limit = 50, cursor, includeDeleted = false, orderBy = 'asc' } = options;
 
     const where: any = {
       streamId,
@@ -393,7 +386,7 @@ export class StreamRepository {
         where: { id: cursor },
         select: { createdAt: true },
       });
-      
+
       if (cursorComment) {
         where.createdAt = where.createdAt || {};
         if (orderBy === 'asc') {
@@ -464,11 +457,13 @@ export class StreamRepository {
       type: 'message' as const,
       isPinned: msg.isPinned,
       isDeleted: msg.isDeleted,
-      replyTo: msg.replyTo ? {
-        id: msg.replyTo.id,
-        content: msg.replyTo.content,
-        username: msg.replyTo.user.username,
-      } : null,
+      replyTo: msg.replyTo
+        ? {
+            id: msg.replyTo.id,
+            content: msg.replyTo.content,
+            username: msg.replyTo.user.username,
+          }
+        : null,
       reactions: msg.reactions.map(r => ({
         emoji: r.emoji,
         userId: r.userId,

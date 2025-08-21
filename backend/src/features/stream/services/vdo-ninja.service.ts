@@ -17,14 +17,14 @@ export interface VdoStreamUrls {
 
 export class VdoNinjaService {
   private readonly baseUrl = 'https://vdo.ninja';
-  
+
   /**
    * Generate VDO.ninja URLs for a stream
    * The room name is generated from the stream key: omi-{streamKey}
    */
   generateStreamUrls(streamKey: string, config?: Partial<VdoRoomConfig>): VdoStreamUrls {
     const roomName = `omi-${streamKey}`;
-    
+
     // Default configuration
     const defaultConfig: VdoRoomConfig = {
       roomName,
@@ -89,7 +89,7 @@ export class VdoNinjaService {
    */
   generateObsConfig(streamKey: string): any {
     const urls = this.generateStreamUrls(streamKey);
-    
+
     return {
       browserSource: {
         url: urls.streamerUrl,
@@ -147,12 +147,12 @@ export class VdoNinjaService {
    * Generate viewer-specific URL with optional parameters
    */
   generateViewerUrl(
-    streamKey: string, 
+    streamKey: string,
     options?: {
       audioOnly?: boolean;
       lowLatency?: boolean;
       maxQuality?: '360p' | '720p' | '1080p';
-    }
+    },
   ): string {
     const roomName = `omi-${streamKey}`;
     const params = new URLSearchParams({

@@ -7,8 +7,36 @@ export default {
       colors: {
         dark: '#121212',
         light: '#fafafa',
-        // Brand colors
+        // Brand colors - Mint/Teal theme
+        mint: {
+          50: '#f0fdf9',
+          100: '#D1E7E7',  // Your specified color
+          200: '#a3d5d5',
+          300: '#76c3c3',
+          400: '#4fb1b1',
+          500: '#3a9999',
+          600: '#2d7a7a',
+          700: '#245c5c',
+          800: '#1b3d3d',
+          900: '#0f2222',
+          950: '#071111',
+        },
+        // Primary colors - matching the mint theme
         primary: {
+          50: '#f0fdf9',
+          100: '#D1E7E7',
+          200: '#a3d5d5',
+          300: '#76c3c3',
+          400: '#4fb1b1',
+          500: '#3a9999',
+          600: '#2d7a7a',
+          700: '#245c5c',
+          800: '#1b3d3d',
+          900: '#0f2222',
+          950: '#071111',
+        },
+        // Keep the existing blue as secondary
+        secondary: {
           50: '#eff6ff',
           100: '#dbeafe',
           200: '#bfdbfe',

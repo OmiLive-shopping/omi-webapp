@@ -1,12 +1,11 @@
-import { Request, Response, NextFunction } from 'express';
-import { injectable, inject } from 'tsyringe';
+import { NextFunction, Request, Response } from 'express';
+import { inject, injectable } from 'tsyringe';
+
 import { AnalyticsService } from '../services/analytics.service';
 
 @injectable()
 export class AnalyticsController {
-  constructor(
-    @inject(AnalyticsService) private analyticsService: AnalyticsService
-  ) {}
+  constructor(@inject(AnalyticsService) private analyticsService: AnalyticsService) {}
 
   /**
    * Get stream analytics
@@ -21,7 +20,7 @@ export class AnalyticsController {
         endDate,
         includeRealtime,
         includeQualityEvents,
-        includeViewerStats
+        includeViewerStats,
       } = req.query;
 
       const analytics = await this.analyticsService.getStreamAnalytics(streamId, {
@@ -30,12 +29,12 @@ export class AnalyticsController {
         endDate: endDate ? new Date(endDate as string) : undefined,
         includeRealtime: includeRealtime === 'true',
         includeQualityEvents: includeQualityEvents === 'true',
-        includeViewerStats: includeViewerStats === 'true'
+        includeViewerStats: includeViewerStats === 'true',
       });
 
       res.json({
         success: true,
-        data: analytics
+        data: analytics,
       });
     } catch (error) {
       next(error);
@@ -54,7 +53,7 @@ export class AnalyticsController {
 
       res.json({
         success: true,
-        data: report
+        data: report,
       });
     } catch (error) {
       next(error);
@@ -75,14 +74,14 @@ export class AnalyticsController {
         startDate && endDate
           ? {
               start: new Date(startDate as string),
-              end: new Date(endDate as string)
+              end: new Date(endDate as string),
             }
-          : undefined
+          : undefined,
       );
 
       res.json({
         success: true,
-        data: dashboard
+        data: dashboard,
       });
     } catch (error) {
       next(error);
@@ -100,7 +99,7 @@ export class AnalyticsController {
       if (!streamId || !stats) {
         res.status(400).json({
           success: false,
-          message: 'Stream ID and stats are required'
+          message: 'Stream ID and stats are required',
         });
         return;
       }
@@ -109,7 +108,7 @@ export class AnalyticsController {
 
       res.json({
         success: true,
-        message: 'Stats processed successfully'
+        message: 'Stats processed successfully',
       });
     } catch (error) {
       next(error);
@@ -127,21 +126,16 @@ export class AnalyticsController {
       if (!streamId || !sessionId || !event) {
         res.status(400).json({
           success: false,
-          message: 'Stream ID, session ID, and event are required'
+          message: 'Stream ID, session ID, and event are required',
         });
         return;
       }
 
-      await this.analyticsService.updateViewerAnalytics(
-        streamId,
-        sessionId,
-        event,
-        data
-      );
+      await this.analyticsService.updateViewerAnalytics(streamId, sessionId, event, data);
 
       res.json({
         success: true,
-        message: 'Viewer analytics updated'
+        message: 'Viewer analytics updated',
       });
     } catch (error) {
       next(error);
@@ -158,7 +152,7 @@ export class AnalyticsController {
       if (!req.user?.isAdmin) {
         res.status(403).json({
           success: false,
-          message: 'Admin access required'
+          message: 'Admin access required',
         });
         return;
       }
@@ -167,7 +161,7 @@ export class AnalyticsController {
 
       res.json({
         success: true,
-        message: 'Analytics cleanup completed'
+        message: 'Analytics cleanup completed',
       });
     } catch (error) {
       next(error);

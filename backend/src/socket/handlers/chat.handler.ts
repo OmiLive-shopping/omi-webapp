@@ -4,8 +4,8 @@ import { PrismaService } from '../../config/prisma.config.js';
 import { SocketWithAuth } from '../../config/socket/socket.config.js';
 import { ChatRateLimiter, SlowModeManager } from '../managers/rate-limiter.js';
 import { RoomManager } from '../managers/room.manager.js';
+import type { VdoQualityEvent, VdoStreamEvent, VdoViewerEvent } from '../types/vdo-events.types.js';
 import { ChatCommandHandler } from './chat-commands.js';
-import type { VdoStreamEvent, VdoViewerEvent, VdoQualityEvent } from '../types/vdo-events.types.js';
 
 // Message schemas
 const sendMessageSchema = z.object({
@@ -598,7 +598,7 @@ export class ChatHandler {
   // Handle VDO.Ninja stream events
   handleVdoStreamEvent = async (data: VdoStreamEvent) => {
     const { streamId, action } = data;
-    
+
     const messages: Record<string, string> = {
       'stream-started': '🎬 Stream has started',
       'stream-stopped': '🛑 Stream has ended',
@@ -617,7 +617,7 @@ export class ChatHandler {
   // Handle VDO.Ninja viewer events
   handleVdoViewerEvent = async (data: VdoViewerEvent) => {
     const { streamId, action, viewer } = data;
-    
+
     if (action === 'joined') {
       await this.sendVdoSystemMessage(
         streamId,
@@ -638,7 +638,7 @@ export class ChatHandler {
   // Handle VDO.Ninja quality events
   handleVdoQualityEvent = async (data: VdoQualityEvent) => {
     const { streamId, quality } = data;
-    
+
     // Check quality preset levels
     if (quality.preset === 'low' || (quality.bitrate && quality.bitrate < 1000000)) {
       await this.sendVdoSystemMessage(
@@ -648,20 +648,29 @@ export class ChatHandler {
         { quality },
       );
     } else if (quality.preset === 'high' || quality.preset === 'ultra') {
-      await this.sendVdoSystemMessage(
-        streamId,
-        'quality',
-        '✅ Stream quality has improved',
-        { quality },
-      );
+      await this.sendVdoSystemMessage(streamId, 'quality', '✅ Stream quality has improved', {
+        quality,
+      });
     }
   };
 
   // Handle VDO.Ninja stream commands in chat
-  handleVdoCommand = async (socket: SocketWithAuth, streamId: string, command: string): Promise<boolean> => {
+  handleVdoCommand = async (
+    socket: SocketWithAuth,
+    streamId: string,
+    command: string,
+  ): Promise<boolean> => {
     const vdoCommands = [
-      '/mute', '/unmute', '/hide', '/show', '/quality', '/stats',
-      '/viewers', '/record', '/stoprecord', '/screenshot',
+      '/mute',
+      '/unmute',
+      '/hide',
+      '/show',
+      '/quality',
+      '/stats',
+      '/viewers',
+      '/record',
+      '/stoprecord',
+      '/screenshot',
     ];
 
     const cmd = command.split(' ')[0].toLowerCase();
@@ -692,12 +701,10 @@ export class ChatHandler {
     });
 
     // Send feedback message
-    await this.sendVdoSystemMessage(
-      streamId,
-      'stream',
-      `🎮 Executing command: ${cmd}`,
-      { command: cmd, executor: socket.username },
-    );
+    await this.sendVdoSystemMessage(streamId, 'stream', `🎮 Executing command: ${cmd}`, {
+      command: cmd,
+      executor: socket.username,
+    });
 
     return true;
   };

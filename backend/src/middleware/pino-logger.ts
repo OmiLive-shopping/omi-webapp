@@ -2,11 +2,11 @@
 import { randomUUID } from 'crypto';
 import { NextFunction, Request, Response } from 'express';
 import { ensureDir } from 'fs-extra'; // Optional: to ensure log directory exists
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
-import pino from 'pino';
+import { dirname, join } from 'path';
 import type { Logger } from 'pino';
+import pino from 'pino';
 import pinoHttp from 'pino-http';
+import { fileURLToPath } from 'url';
 
 // Extend Express Request interface to include logger
 declare global {

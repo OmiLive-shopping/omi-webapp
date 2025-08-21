@@ -61,3 +61,17 @@ coverage/
 .claude/
 .mcp.json
 backend/.env.example
+
+logs
+dev-debug.log
+# Dependency directories
+# Environment variables
+# Editor directories and files
+.idea
+.vscode
+# OS specific
+
+# Task files
+# tasks.json
+# tasks/ 
+.cursor/

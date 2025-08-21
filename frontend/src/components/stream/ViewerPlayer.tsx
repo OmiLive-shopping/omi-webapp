@@ -41,6 +41,8 @@ import { StreamStatusIndicator } from './StreamStatusIndicator';
 
 // Socket.IO
 import { useSocket } from '@/hooks/useSocket';
+import { useAuthenticatedSocket } from '@/hooks/useAuthenticatedSocket';
+import { socketManager } from '@/lib/socket';
 
 interface ViewerPlayerProps {
   streamId: string;
@@ -95,8 +97,9 @@ export const ViewerPlayer: React.FC<ViewerPlayerProps> = ({
   const controlsTimeoutRef = useRef<NodeJS.Timeout>();
   const eventManagerRef = useRef<VdoEventManager | null>(null);
   
-  // Socket.IO
-  const { socket, isConnected } = useSocket();
+  // Socket.IO - Initialize authenticated connection for viewers
+  useAuthenticatedSocket(); // This will connect with or without auth token
+  const { isConnected } = useSocket();
   
   // VDO Stream Store
   const { streamState, isStreaming: isVdoStreaming, viewerCount, connectionQuality } = useVdoStream();
@@ -183,56 +186,29 @@ export const ViewerPlayer: React.FC<ViewerPlayerProps> = ({
   
   // Socket.IO viewer tracking
   useEffect(() => {
+    const socket = socketManager.getSocket();
     if (socket && isConnected && streamId) {
       // Join stream room
-      socket.emit('stream:join', { streamId });
+      socketManager.emit('stream:join', streamId);
       
       // Listen for stream events
-      socket.on('stream:ended', () => {
-        onStreamEnd?.();
-      });
-      
-      socket.on('stream:updated', (data) => {
-        console.log('Stream updated:', data);
-      });
-      
-      socket.on('stream:product:featured', (data) => {
-        console.log('Featured product:', data);
+      socketManager.on('stream:error', (error: string) => {
+        console.error('Stream error:', error);
+        onError?.(new Error(error));
       });
       
       // Send viewer events to VDO.Ninja handler
-      if (eventManagerRef.current) {
-        socket.emit('vdo:viewer:event', {
-          streamId,
-          action: 'joined',
-          viewer: {
-            id: socket.id,
-            connectionQuality: connectionQuality
-          },
-          timestamp: new Date().toISOString()
-        });
+      if (eventManagerRef.current && socket.id) {
+        // Note: We don't emit vdo:viewer:event here anymore as it's handled by the backend
+        // when the viewer joins the stream room
       }
       
       return () => {
-        socket.emit('stream:leave', { streamId });
-        
-        if (eventManagerRef.current) {
-          socket.emit('vdo:viewer:event', {
-            streamId,
-            action: 'left',
-            viewer: {
-              id: socket.id
-            },
-            timestamp: new Date().toISOString()
-          });
-        }
-        
-        socket.off('stream:ended');
-        socket.off('stream:updated');
-        socket.off('stream:product:featured');
+        socketManager.emit('stream:leave', streamId);
+        socketManager.off('stream:error');
       };
     }
-  }, [socket, isConnected, streamId]);
+  }, [isConnected, streamId, onError]);
   
   // Removed - no longer needed since we're using store's connectionQuality directly
   

@@ -31,6 +31,7 @@ import clsx from 'clsx';
 import { SimpleStreamControls } from './SimpleStreamControls';
 import { useAuthState, isStreamer } from '@/lib/auth-client';
 import { useNavigate } from 'react-router-dom';
+import { useStreamSocket } from '@/hooks/useAuthenticatedSocket';
 
 // VDO.Ninja Integration
 import { VdoEventManager } from '@/lib/vdo-ninja/event-manager';
@@ -68,6 +69,9 @@ export const StreamerStudio: React.FC<StreamerStudioProps> = ({
   const { user, isAuthenticated, isLoading: authLoading } = useAuthState();
   const navigate = useNavigate();
   const canStream = isStreamer(user);
+  
+  // Initialize authenticated WebSocket connection
+  const { isConnected: isSocketConnected, connectWithAuth } = useStreamSocket();
 
   // VDO Stream Store
   const { streamState, isStreaming: isVdoStreaming, viewerCount, connectionQuality } = useVdoStream();
@@ -131,6 +135,16 @@ export const StreamerStudio: React.FC<StreamerStudioProps> = ({
 
   // Enhanced stream start handler - transition from preview to live
   const handleStreamStart = useCallback(async () => {
+    // Ensure WebSocket is connected with authentication
+    if (!isSocketConnected) {
+      const connected = await connectWithAuth();
+      if (!connected) {
+        console.error('Failed to establish authenticated WebSocket connection');
+        // Could show an error toast here
+        return;
+      }
+    }
+    
     // Exit preview mode and enter live mode
     setIsPreviewMode(false);
     
@@ -162,7 +176,7 @@ export const StreamerStudio: React.FC<StreamerStudioProps> = ({
       timestamp: Date.now(),
       user: user?.email
     });
-  }, [streamKey, currentStreamId, onStreamStart, initializeStream, updateStreamInfo, storeStartStream, user]);
+  }, [streamKey, currentStreamId, onStreamStart, initializeStream, updateStreamInfo, storeStartStream, user, isSocketConnected, connectWithAuth]);
 
   // Enhanced stream end handler
   const handleStreamEnd = useCallback(async () => {

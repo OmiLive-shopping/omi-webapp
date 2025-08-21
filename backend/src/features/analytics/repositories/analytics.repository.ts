@@ -1,5 +1,6 @@
-import { PrismaClient, Prisma } from '@prisma/client';
+import { Prisma, PrismaClient } from '@prisma/client';
 import { injectable } from 'tsyringe';
+
 import { PrismaService } from '@/config/prisma.config';
 
 @injectable()
@@ -19,23 +20,23 @@ export class AnalyticsRepository {
     streamId: string,
     intervalType: string,
     intervalStart: Date,
-    data: Prisma.StreamAnalyticsUpdateInput
+    data: Prisma.StreamAnalyticsUpdateInput,
   ) {
     return this.prisma.streamAnalytics.upsert({
       where: {
         streamId_intervalType_intervalStart: {
           streamId,
           intervalType,
-          intervalStart
-        }
+          intervalStart,
+        },
       },
       update: data,
       create: {
         ...data,
         stream: { connect: { id: streamId } },
         intervalType,
-        intervalStart
-      } as Prisma.StreamAnalyticsCreateInput
+        intervalStart,
+      } as Prisma.StreamAnalyticsCreateInput,
     });
   }
 
@@ -43,37 +44,34 @@ export class AnalyticsRepository {
     streamId: string,
     intervalType?: string,
     startDate?: Date,
-    endDate?: Date
+    endDate?: Date,
   ) {
     const where: Prisma.StreamAnalyticsWhereInput = {
       streamId,
       ...(intervalType && { intervalType }),
-      ...(startDate && endDate && {
-        intervalStart: {
-          gte: startDate,
-          lte: endDate
-        }
-      })
+      ...(startDate &&
+        endDate && {
+          intervalStart: {
+            gte: startDate,
+            lte: endDate,
+          },
+        }),
     };
 
     return this.prisma.streamAnalytics.findMany({
       where,
-      orderBy: { intervalStart: 'desc' }
+      orderBy: { intervalStart: 'desc' },
     });
   }
 
-  async aggregateStreamAnalytics(
-    streamId: string,
-    startDate: Date,
-    endDate: Date
-  ) {
+  async aggregateStreamAnalytics(streamId: string, startDate: Date, endDate: Date) {
     const result = await this.prisma.streamAnalytics.aggregate({
       where: {
         streamId,
         intervalStart: {
           gte: startDate,
-          lte: endDate
-        }
+          lte: endDate,
+        },
       },
       _avg: {
         averageViewers: true,
@@ -81,24 +79,24 @@ export class AnalyticsRepository {
         averageBitrate: true,
         averageLatency: true,
         averagePacketLoss: true,
-        connectionScore: true
+        connectionScore: true,
       },
       _max: {
         peakViewers: true,
         maxFps: true,
         maxBitrate: true,
         maxLatency: true,
-        maxPacketLoss: true
+        maxPacketLoss: true,
       },
       _min: {
         minFps: true,
-        minBitrate: true
+        minBitrate: true,
       },
       _sum: {
         totalViewTime: true,
         uniqueViewers: true,
-        reconnectCount: true
-      }
+        reconnectCount: true,
+      },
     });
 
     return result;
@@ -112,31 +110,25 @@ export class AnalyticsRepository {
   async getLatestRealtimeStats(streamId: string) {
     return this.prisma.streamRealtimeStats.findFirst({
       where: { streamId },
-      orderBy: { timestamp: 'desc' }
+      orderBy: { timestamp: 'desc' },
     });
   }
 
-  async getRealtimeStatsHistory(
-    streamId: string,
-    limit: number = 100,
-    since?: Date
-  ) {
+  async getRealtimeStatsHistory(streamId: string, limit: number = 100, since?: Date) {
     return this.prisma.streamRealtimeStats.findMany({
       where: {
         streamId,
-        ...(since && { timestamp: { gte: since } })
+        ...(since && { timestamp: { gte: since } }),
       },
       orderBy: { timestamp: 'desc' },
-      take: limit
+      take: limit,
     });
   }
 
-  async bulkCreateRealtimeStats(
-    data: Prisma.StreamRealtimeStatsCreateManyInput[]
-  ) {
+  async bulkCreateRealtimeStats(data: Prisma.StreamRealtimeStatsCreateManyInput[]) {
     return this.prisma.streamRealtimeStats.createMany({
       data,
-      skipDuplicates: true
+      skipDuplicates: true,
     });
   }
 
@@ -153,7 +145,7 @@ export class AnalyticsRepository {
       resolved?: boolean;
       since?: Date;
       limit?: number;
-    }
+    },
   ) {
     const { eventType, severity, resolved, since, limit = 100 } = options || {};
 
@@ -163,16 +155,16 @@ export class AnalyticsRepository {
         ...(eventType && { eventType }),
         ...(severity && { severity }),
         ...(resolved !== undefined && { resolved }),
-        ...(since && { timestamp: { gte: since } })
+        ...(since && { timestamp: { gte: since } }),
       },
       orderBy: { timestamp: 'desc' },
-      take: limit
+      take: limit,
     });
   }
 
   async resolveQualityEvent(eventId: string) {
     const event = await this.prisma.streamQualityEvent.findUnique({
-      where: { id: eventId }
+      where: { id: eventId },
     });
 
     if (!event) {
@@ -188,8 +180,8 @@ export class AnalyticsRepository {
       data: {
         resolved: true,
         resolvedAt: new Date(),
-        resolutionTime
-      }
+        resolutionTime,
+      },
     });
   }
 
@@ -201,16 +193,16 @@ export class AnalyticsRepository {
   async updateViewerAnalytics(
     streamId: string,
     sessionId: string,
-    data: Prisma.ViewerAnalyticsUpdateInput
+    data: Prisma.ViewerAnalyticsUpdateInput,
   ) {
     return this.prisma.viewerAnalytics.update({
       where: {
         streamId_sessionId: {
           streamId,
-          sessionId
-        }
+          sessionId,
+        },
       },
-      data
+      data,
     });
   }
 
@@ -221,7 +213,7 @@ export class AnalyticsRepository {
       sessionId?: string;
       since?: Date;
       limit?: number;
-    }
+    },
   ) {
     const { userId, sessionId, since, limit = 100 } = options || {};
 
@@ -230,7 +222,7 @@ export class AnalyticsRepository {
         streamId,
         ...(userId && { userId }),
         ...(sessionId && { sessionId }),
-        ...(since && { joinedAt: { gte: since } })
+        ...(since && { joinedAt: { gte: since } }),
       },
       orderBy: { joinedAt: 'desc' },
       take: limit,
@@ -239,10 +231,10 @@ export class AnalyticsRepository {
           select: {
             id: true,
             username: true,
-            avatarUrl: true
-          }
-        }
-      }
+            avatarUrl: true,
+          },
+        },
+      },
     });
   }
 
@@ -254,16 +246,16 @@ export class AnalyticsRepository {
         chatMessageCount: true,
         reactionCount: true,
         bufferingTime: true,
-        reconnectCount: true
+        reconnectCount: true,
       },
       _sum: {
         totalWatchTime: true,
         chatMessageCount: true,
-        reactionCount: true
+        reactionCount: true,
       },
       _count: {
-        _all: true
-      }
+        _all: true,
+      },
     });
 
     return result;
@@ -274,9 +266,9 @@ export class AnalyticsRepository {
     return this.prisma.streamRealtimeStats.deleteMany({
       where: {
         timestamp: {
-          lt: olderThan
-        }
-      }
+          lt: olderThan,
+        },
+      },
     });
   }
 
@@ -285,9 +277,9 @@ export class AnalyticsRepository {
       where: {
         intervalType,
         intervalStart: {
-          lt: olderThan
-        }
-      }
+          lt: olderThan,
+        },
+      },
     });
   }
 
@@ -296,9 +288,9 @@ export class AnalyticsRepository {
       where: {
         resolved: true,
         resolvedAt: {
-          lt: olderThan
-        }
-      }
+          lt: olderThan,
+        },
+      },
     });
   }
 
@@ -308,59 +300,55 @@ export class AnalyticsRepository {
       this.aggregateStreamAnalytics(
         streamId,
         new Date(Date.now() - 24 * 60 * 60 * 1000), // Last 24 hours
-        new Date()
+        new Date(),
       ),
       this.prisma.streamQualityEvent.groupBy({
         by: ['severity'],
         where: {
           streamId,
           timestamp: {
-            gte: new Date(Date.now() - 24 * 60 * 60 * 1000)
-          }
+            gte: new Date(Date.now() - 24 * 60 * 60 * 1000),
+          },
         },
         _count: {
-          _all: true
-        }
+          _all: true,
+        },
       }),
-      this.getViewerEngagementStats(streamId)
+      this.getViewerEngagementStats(streamId),
     ]);
 
     return {
       analytics,
       qualityEvents,
-      viewerStats
+      viewerStats,
     };
   }
 
-  async getTopStreams(
-    startDate: Date,
-    endDate: Date,
-    limit: number = 10
-  ) {
+  async getTopStreams(startDate: Date, endDate: Date, limit: number = 10) {
     const topStreams = await this.prisma.streamAnalytics.groupBy({
       by: ['streamId'],
       where: {
         intervalStart: {
           gte: startDate,
-          lte: endDate
-        }
+          lte: endDate,
+        },
       },
       _sum: {
         uniqueViewers: true,
-        totalViewTime: true
+        totalViewTime: true,
       },
       _max: {
-        peakViewers: true
+        peakViewers: true,
       },
       _avg: {
-        connectionScore: true
+        connectionScore: true,
       },
       orderBy: {
         _sum: {
-          uniqueViewers: 'desc'
-        }
+          uniqueViewers: 'desc',
+        },
       },
-      take: limit
+      take: limit,
     });
 
     // Get stream details
@@ -368,8 +356,8 @@ export class AnalyticsRepository {
     const streams = await this.prisma.stream.findMany({
       where: {
         id: {
-          in: streamIds
-        }
+          in: streamIds,
+        },
       },
       select: {
         id: true,
@@ -377,10 +365,10 @@ export class AnalyticsRepository {
         user: {
           select: {
             username: true,
-            avatarUrl: true
-          }
-        }
-      }
+            avatarUrl: true,
+          },
+        },
+      },
     });
 
     // Combine data
@@ -388,25 +376,22 @@ export class AnalyticsRepository {
       const stream = streams.find(s => s.id === stat.streamId);
       return {
         ...stat,
-        stream
+        stream,
       };
     });
   }
 
   // Get analytics summary for dashboard
-  async getAnalyticsSummary(
-    streamId?: string,
-    startDate?: Date,
-    endDate?: Date
-  ) {
+  async getAnalyticsSummary(streamId?: string, startDate?: Date, endDate?: Date) {
     const where: Prisma.StreamAnalyticsWhereInput = {
       ...(streamId && { streamId }),
-      ...(startDate && endDate && {
-        intervalStart: {
-          gte: startDate,
-          lte: endDate
-        }
-      })
+      ...(startDate &&
+        endDate && {
+          intervalStart: {
+            gte: startDate,
+            lte: endDate,
+          },
+        }),
     };
 
     const [totalStreams, totalViewTime, uniqueViewers, avgQuality] = await Promise.all([
@@ -414,29 +399,29 @@ export class AnalyticsRepository {
         by: ['streamId'],
         where,
         _count: {
-          _all: true
-        }
+          _all: true,
+        },
       }),
       this.prisma.streamAnalytics.aggregate({
         where,
         _sum: {
-          totalViewTime: true
-        }
+          totalViewTime: true,
+        },
       }),
       this.prisma.streamAnalytics.aggregate({
         where,
         _sum: {
-          uniqueViewers: true
-        }
+          uniqueViewers: true,
+        },
       }),
       this.prisma.streamAnalytics.aggregate({
         where,
         _avg: {
           connectionScore: true,
           averageFps: true,
-          averageBitrate: true
-        }
-      })
+          averageBitrate: true,
+        },
+      }),
     ]);
 
     return {
@@ -446,8 +431,8 @@ export class AnalyticsRepository {
       averageQuality: {
         connectionScore: avgQuality._avg.connectionScore || 0,
         fps: avgQuality._avg.averageFps || 0,
-        bitrate: avgQuality._avg.averageBitrate || 0
-      }
+        bitrate: avgQuality._avg.averageBitrate || 0,
+      },
     };
   }
 }

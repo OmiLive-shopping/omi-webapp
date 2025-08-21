@@ -23,11 +23,11 @@ describe('UserService', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    
+
     // Setup bcrypt mocks
     vi.mocked(bcrypt.hash).mockResolvedValue('hashedpassword' as never);
     vi.mocked(bcrypt.compare).mockResolvedValue(true as never);
-    
+
     userRepository = {
       findUserByEmail: vi.fn(),
       findUserById: vi.fn(),
