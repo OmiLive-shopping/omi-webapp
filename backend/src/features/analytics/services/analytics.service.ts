@@ -1,9 +1,9 @@
 import { Prisma } from '@prisma/client';
 import { inject, injectable } from 'tsyringe';
 
-import type { VdoStreamStats } from '@/socket/types/vdo-events.types';
+import type { VdoStreamStats } from '../../../socket/types/vdo-events.types.js';
 
-import { AnalyticsRepository } from '../repositories/analytics.repository';
+import { AnalyticsRepository } from '../repositories/analytics.repository.js';
 
 interface IntervalConfig {
   type: string;

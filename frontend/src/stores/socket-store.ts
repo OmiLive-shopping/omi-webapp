@@ -94,6 +94,28 @@ export const useSocketStore = create<SocketState>((set, get) => ({
     socketManager.on('stream:error', (error) => {
       set({ connectionError: error });
     });
+    
+    // Stream lifecycle events
+    socketManager.on('stream:started', (data) => {
+      console.log('Stream started:', data);
+      get().setStreamStatus({ isLive: true, streamId: data.streamId, startedAt: data.timestamp });
+    });
+    
+    socketManager.on('stream:live', (data) => {
+      console.log('Stream went live:', data);
+      // Could show a notification that a stream is now live
+    });
+    
+    socketManager.on('stream:ended', (data) => {
+      console.log('Stream ended:', data);
+      if (get().streamStatus.streamId === data.streamId) {
+        get().setStreamStatus({ isLive: false });
+      }
+    });
+    
+    socketManager.on('stream:offline', (data) => {
+      console.log('Stream went offline:', data);
+    });
 
     // Internal connection events
     socketManager.onInternal('connection:established', () => {

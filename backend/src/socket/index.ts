@@ -3,6 +3,7 @@ import { Server as HTTPServer } from 'http';
 import { SocketServer, SocketWithAuth } from '../config/socket/socket.config.js';
 import { ChatHandler } from './handlers/chat.handler.js';
 import { StreamHandler } from './handlers/stream.handler.js';
+import { vdoAnalyticsHandler } from './handlers/vdo-analytics.handler.js';
 import { RoomManager } from './managers/room.manager.js';
 import { socketAuthMiddleware } from './middleware/auth.middleware.js';
 
@@ -39,6 +40,9 @@ export function initializeSocketServer(httpServer: HTTPServer): void {
     // Register VDO.Ninja event handlers
     streamHandler.registerVdoHandlers(socket);
 
+    // Register VDO.Ninja analytics handlers
+    vdoAnalyticsHandler.registerHandlers(socket);
+
     // Chat events
     socket.on('chat:send-message', data => chatHandler.handleSendMessage(socket, data));
     socket.on('chat:delete-message', data => chatHandler.handleDeleteMessage(socket, data));
@@ -53,6 +57,7 @@ export function initializeSocketServer(httpServer: HTTPServer): void {
     socket.on('disconnect', async () => {
       console.log(`User disconnected: ${socket.id} (${socket.username || 'anonymous'})`);
       streamHandler.unregisterVdoHandlers(socket);
+      await vdoAnalyticsHandler.unregisterHandlers(socket);
       await roomManager.handleDisconnect(socket);
     });
 
@@ -163,5 +168,11 @@ export const socketEmitters = {
     const socketServer = SocketServer.getInstance();
     const io = socketServer.getIO();
     io.of('/analytics').to(`analytics:${streamId}`).emit('analytics:update', analytics);
+  },
+
+  // Emit to all connected clients
+  emitToAll: (event: string, data: any) => {
+    const socketServer = SocketServer.getInstance();
+    socketServer.getIO().emit(event, data);
   },
 };

@@ -279,4 +279,21 @@ export class RoomManager {
     this.rooms.clear();
     this.userSockets.clear();
   }
+
+  // Clean up a stream room when stream ends
+  async cleanupStreamRoom(streamId: string): Promise<void> {
+    const room = this.rooms.get(streamId);
+    if (!room) {
+      return; // Room doesn't exist
+    }
+
+    // Remove all viewers from the room
+    room.viewers.clear();
+    room.moderators.clear();
+
+    // Remove the room
+    this.rooms.delete(streamId);
+
+    console.log(`Cleaned up room for stream ${streamId}`);
+  }
 }

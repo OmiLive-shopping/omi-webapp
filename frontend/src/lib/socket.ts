@@ -6,6 +6,11 @@ export interface ServerToClientEvents {
   'stream:viewer-count': (count: number) => void;
   'stream:status': (status: StreamStatus) => void;
   'stream:error': (error: string) => void;
+  // Stream lifecycle events
+  'stream:started': (data: { streamId: string; title: string; vdoRoomId?: string; timestamp: string }) => void;
+  'stream:live': (data: { streamId: string; title: string; streamer: any; isLive: boolean; startedAt?: string }) => void;
+  'stream:ended': (data: { streamId: string; endedAt?: string; message: string }) => void;
+  'stream:offline': (data: { streamId: string }) => void;
   // VDO.Ninja events
   'vdo:stream:live': (data: any) => void;
   'vdo:viewer:joined': (data: { viewerCount?: number; viewer?: any }) => void;

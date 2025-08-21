@@ -1,7 +1,7 @@
 import { Prisma, PrismaClient } from '@prisma/client';
 import { injectable } from 'tsyringe';
 
-import { PrismaService } from '@/config/prisma.config';
+import { PrismaService } from '../../../config/prisma.config.js';
 
 @injectable()
 export class AnalyticsRepository {

@@ -19,6 +19,10 @@ import type {
  */
 export class VdoAnalyticsHandler {
   private analyticsService: AnalyticsService;
+  private statsBuffer: Map<string, VdoStatsEvent> = new Map();
+  private lastSaveTime: Map<string, number> = new Map();
+  private readonly SAVE_INTERVAL = 60000; // Save every 60 seconds to prevent DB overload
+  private saveTimers: Map<string, NodeJS.Timeout> = new Map();
 
   constructor() {
     this.analyticsService = container.resolve(AnalyticsService);
@@ -65,6 +69,26 @@ export class VdoAnalyticsHandler {
   }
 
   /**
+   * Unregister handlers and cleanup when socket disconnects
+   */
+  async unregisterHandlers(socket: Socket): Promise<void> {
+    // Save any pending analytics data for all streams
+    // This is important if the streamer disconnects unexpectedly
+    for (const [streamId, _] of this.statsBuffer) {
+      await this.cleanupStreamAnalytics(streamId);
+    }
+
+    // Remove all event listeners
+    socket.removeAllListeners(VDO_SOCKET_EVENTS.STREAM_EVENT);
+    socket.removeAllListeners(VDO_SOCKET_EVENTS.STATS_UPDATE);
+    socket.removeAllListeners(VDO_SOCKET_EVENTS.VIEWER_EVENT);
+    socket.removeAllListeners(VDO_SOCKET_EVENTS.MEDIA_EVENT);
+    socket.removeAllListeners(VDO_SOCKET_EVENTS.QUALITY_EVENT);
+    socket.removeAllListeners(VDO_SOCKET_EVENTS.RECORDING_EVENT);
+    socket.removeAllListeners(VDO_SOCKET_EVENTS.GET_ANALYTICS);
+  }
+
+  /**
    * Handle stream lifecycle events
    */
   private async handleStreamEvent(socket: Socket, data: VdoStreamEvent) {
@@ -73,6 +97,11 @@ export class VdoAnalyticsHandler {
 
       // Log the event
       console.log(`Stream event: ${action} for stream ${streamId}`);
+
+      // Handle stream end - cleanup analytics buffers
+      if (action === 'stopped' || action === 'ended') {
+        await this.cleanupStreamAnalytics(streamId);
+      }
 
       // Broadcast event to room
       socket.to(`stream:${streamId}`).emit(VDO_SOCKET_EVENTS.STREAM_LIVE, {
@@ -97,19 +126,71 @@ export class VdoAnalyticsHandler {
   }
 
   /**
-   * Handle real-time statistics updates
+   * Cleanup analytics buffers and timers when stream ends
+   */
+  private async cleanupStreamAnalytics(streamId: string): Promise<void> {
+    try {
+      // Save any remaining buffered data
+      const bufferedData = this.statsBuffer.get(streamId);
+      if (bufferedData) {
+        await this.saveStatsToDatabase(streamId);
+      }
+
+      // Clear the timer if exists
+      const timer = this.saveTimers.get(streamId);
+      if (timer) {
+        clearTimeout(timer);
+        this.saveTimers.delete(streamId);
+      }
+
+      // Clear buffers
+      this.statsBuffer.delete(streamId);
+      this.lastSaveTime.delete(streamId);
+
+      console.log(`Cleaned up analytics for stream ${streamId}`);
+    } catch (error) {
+      console.error(`Error cleaning up analytics for stream ${streamId}:`, error);
+    }
+  }
+
+  /**
+   * Handle real-time statistics updates with interval-based persistence
    */
   private async handleStatsUpdate(socket: Socket, data: VdoStatsEvent) {
     try {
       const { streamId, stats, timestamp } = data;
 
-      // Process and store statistics
-      await this.analyticsService.processRealtimeStats(streamId, {
-        ...stats,
-        viewerCount: stats.viewerCount || socket.adapter.rooms.get(`stream:${streamId}`)?.size || 0,
+      // Buffer the latest stats for this stream
+      this.statsBuffer.set(streamId, {
+        ...data,
+        stats: {
+          ...stats,
+          viewerCount:
+            stats.viewerCount || socket.adapter.rooms.get(`stream:${streamId}`)?.size || 0,
+        },
       });
 
-      // Check for quality issues
+      // Check if we should save to database
+      const lastSave = this.lastSaveTime.get(streamId) || 0;
+      const now = Date.now();
+      const shouldSave = now - lastSave >= this.SAVE_INTERVAL;
+
+      if (shouldSave) {
+        // Save to database
+        await this.saveStatsToDatabase(streamId);
+      } else {
+        // Schedule a save if not already scheduled
+        if (!this.saveTimers.has(streamId)) {
+          const timeUntilSave = this.SAVE_INTERVAL - (now - lastSave);
+          const timer = setTimeout(() => {
+            this.saveStatsToDatabase(streamId);
+            this.saveTimers.delete(streamId);
+          }, timeUntilSave);
+          this.saveTimers.set(streamId, timer);
+        }
+      }
+
+      // Check for quality issues (always check, not just on save)
       const issues = this.detectQualityIssues(stats);
       if (issues.length > 0) {
         socket.emit(VDO_SOCKET_EVENTS.QUALITY_ISSUES, {
@@ -123,6 +204,7 @@ export class VdoAnalyticsHandler {
       socket.emit(VDO_SOCKET_EVENTS.STATS_ACK, {
         success: true,
         processed: true,
+        buffered: !shouldSave, // Let client know if data was buffered
       });
     } catch (error) {
       console.error('Error handling stats update:', error);
@@ -130,6 +212,48 @@ export class VdoAnalyticsHandler {
         success: false,
         error: 'Failed to process statistics',
       });
+    }
+  }
+
+  /**
+   * Save buffered stats to database with retry logic
+   */
+  private async saveStatsToDatabase(streamId: string, retryCount = 0): Promise<void> {
+    const MAX_RETRIES = 3;
+    const RETRY_DELAY = 1000; // 1 second
+
+    try {
+      const bufferedData = this.statsBuffer.get(streamId);
+      if (!bufferedData) return;
+
+      const { stats } = bufferedData;
+
+      // Process and store statistics
+      await this.analyticsService.processRealtimeStats(streamId, stats);
+
+      // Update last save time
+      this.lastSaveTime.set(streamId, Date.now());
+
+      console.log(`Analytics saved for stream ${streamId}`);
+    } catch (error) {
+      console.error(`Error saving analytics for stream ${streamId}:`, error);
+
+      // Retry logic
+      if (retryCount < MAX_RETRIES) {
+        console.log(
+          `Retrying save for stream ${streamId} (attempt ${retryCount + 1}/${MAX_RETRIES})`,
+        );
+        setTimeout(
+          () => {
+            this.saveStatsToDatabase(streamId, retryCount + 1);
+          },
+          RETRY_DELAY * Math.pow(2, retryCount),
+        ); // Exponential backoff
+      } else {
+        console.error(
+          `Failed to save analytics for stream ${streamId} after ${MAX_RETRIES} retries`,
+        );
+      }
     }
   }
 

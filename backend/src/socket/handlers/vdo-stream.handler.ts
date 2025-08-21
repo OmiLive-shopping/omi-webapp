@@ -1,8 +1,10 @@
+import { container } from 'tsyringe';
 import { z } from 'zod';
 
 import { PrismaService } from '../../config/prisma.config.js';
 import { SocketWithAuth } from '../../config/socket/socket.config.js';
 import { SocketServer } from '../../config/socket/socket.config.js';
+import { AnalyticsService } from '../../features/analytics/services/analytics.service.js';
 import { RoomManager } from '../managers/room.manager.js';
 import type { VdoQualityEvent, VdoStreamEvent, VdoViewerEvent } from '../types/vdo-events.types.js';
 import { ChatHandler } from './chat.handler.js';
@@ -136,11 +138,22 @@ export class VdoStreamHandler {
   private socketServer = SocketServer.getInstance();
   private prisma = PrismaService.getInstance().client;
   private chatHandler = new ChatHandler();
+  private analyticsService: AnalyticsService;
 
   // In-memory storage for real-time stats
   private streamStats: Map<string, any> = new Map();
   private streamAnalytics: Map<string, any[]> = new Map();
   private lastAnalyticsUpdate: Map<string, number> = new Map();
+
+  // Analytics persistence management
+  private statsBuffer: Map<string, any> = new Map();
+  private lastSaveTime: Map<string, number> = new Map();
+  private readonly SAVE_INTERVAL = 60000; // Save every 60 seconds
+  private saveTimers: Map<string, NodeJS.Timeout> = new Map();
+
+  constructor() {
+    this.analyticsService = container.resolve(AnalyticsService);
+  }
 
   /**
    * Handle VDO.Ninja stream events
@@ -219,16 +232,41 @@ export class VdoStreamHandler {
         return;
       }
 
-      // Store stats in memory
+      // Store stats in memory for immediate access
       this.streamStats.set(validated.streamId, {
         ...validated.stats,
         lastUpdated: new Date(validated.timestamp),
       });
 
+      // Buffer stats for database persistence
+      this.statsBuffer.set(validated.streamId, validated.stats);
+
+      // Check if we should save to database
+      const lastSave = this.lastSaveTime.get(validated.streamId) || 0;
+      const now = Date.now();
+      const shouldSave = now - lastSave >= this.SAVE_INTERVAL;
+
+      if (shouldSave) {
+        // Save immediately
+        await this.saveStatsToDatabase(validated.streamId);
+      } else {
+        // Schedule a save if not already scheduled
+        if (!this.saveTimers.has(validated.streamId)) {
+          const timeUntilSave = this.SAVE_INTERVAL - (now - lastSave);
+          const timer = setTimeout(() => {
+            this.saveStatsToDatabase(validated.streamId);
+            this.saveTimers.delete(validated.streamId);
+          }, timeUntilSave);
+          this.saveTimers.set(validated.streamId, timer);
+        }
+      }
+
       // Update room manager stats
       const roomInfo = this.roomManager.getRoomInfo(validated.streamId);
       if (roomInfo) {
         roomInfo.streamStats = validated.stats;
+        // Update last database save time in room info
+        roomInfo.lastStatsDbUpdate = this.lastSaveTime.get(validated.streamId) || 0;
       }
 
       // Broadcast stats to moderators and analytics viewers
@@ -574,6 +612,9 @@ export class VdoStreamHandler {
   private async handleStreamEnded(socket: SocketWithAuth, event: any) {
     const { streamId } = event;
 
+    // Clean up buffered analytics data before saving final stats
+    await this.cleanupStreamAnalytics(streamId);
+
     // Save final analytics
     const stats = this.streamStats.get(streamId);
     if (stats) {
@@ -868,6 +909,83 @@ export class VdoStreamHandler {
       // });
     } catch (error) {
       console.error('Error storing recording info:', error);
+    }
+  }
+
+  /**
+   * Save buffered stats to database with retry logic
+   */
+  private async saveStatsToDatabase(streamId: string, retryCount = 0): Promise<void> {
+    const MAX_RETRIES = 3;
+    const RETRY_DELAY = 1000; // 1 second
+
+    try {
+      const bufferedStats = this.statsBuffer.get(streamId);
+      if (!bufferedStats) return;
+
+      // Get viewer count from room manager
+      const viewerCount = this.roomManager.getViewerCount(streamId);
+
+      // Save to database using analytics service
+      await this.analyticsService.processRealtimeStats(streamId, {
+        ...bufferedStats,
+        viewerCount,
+      });
+
+      // Update last save time
+      this.lastSaveTime.set(streamId, Date.now());
+
+      console.log(`Analytics saved for stream ${streamId}`);
+    } catch (error) {
+      console.error(`Error saving analytics for stream ${streamId}:`, error);
+
+      // Retry logic with exponential backoff
+      if (retryCount < MAX_RETRIES) {
+        console.log(
+          `Retrying save for stream ${streamId} (attempt ${retryCount + 1}/${MAX_RETRIES})`,
+        );
+        setTimeout(
+          () => {
+            this.saveStatsToDatabase(streamId, retryCount + 1);
+          },
+          RETRY_DELAY * Math.pow(2, retryCount),
+        );
+      } else {
+        console.error(
+          `Failed to save analytics for stream ${streamId} after ${MAX_RETRIES} retries`,
+        );
+      }
+    }
+  }
+
+  /**
+   * Cleanup analytics buffers when stream ends
+   */
+  async cleanupStreamAnalytics(streamId: string): Promise<void> {
+    try {
+      // Save any remaining buffered data
+      const bufferedStats = this.statsBuffer.get(streamId);
+      if (bufferedStats) {
+        await this.saveStatsToDatabase(streamId);
+      }
+
+      // Clear the timer if exists
+      const timer = this.saveTimers.get(streamId);
+      if (timer) {
+        clearTimeout(timer);
+        this.saveTimers.delete(streamId);
+      }
+
+      // Clear all buffers for this stream
+      this.statsBuffer.delete(streamId);
+      this.lastSaveTime.delete(streamId);
+      this.streamStats.delete(streamId);
+      this.streamAnalytics.delete(streamId);
+      this.lastAnalyticsUpdate.delete(streamId);
+
+      console.log(`Cleaned up analytics for stream ${streamId}`);
+    } catch (error) {
+      console.error(`Error cleaning up analytics for stream ${streamId}:`, error);
     }
   }
 }

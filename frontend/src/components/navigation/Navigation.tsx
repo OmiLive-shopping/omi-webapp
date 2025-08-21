@@ -57,19 +57,19 @@ export const Navigation: React.FC<NavigationProps> = ({
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-20">
             {/* Left side - Logo and Links */}
-            <div className="flex items-center">
+            <div className="flex items-center h-full">
               {/* Logo */}
               <NavigationLogo />
 
               {/* Desktop Navigation Links */}
-              <div className="hidden md:flex items-center ml-10 space-x-8">
+              <div className="hidden md:flex items-center h-full ml-10">
                 <Link
                   to="/products"
                   className={clsx(
-                    "text-base font-medium transition-colors py-2",
+                    "flex items-center h-full px-4 text-base font-medium transition-colors border-b-2",
                     isActiveLink('/products')
-                      ? "text-primary-600 dark:text-primary-400"
-                      : "text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+                      ? "text-primary-600 dark:text-primary-400 border-primary-600 dark:border-primary-400"
+                      : "text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white border-transparent hover:border-gray-300"
                   )}
                 >
                   Shop
@@ -77,10 +77,10 @@ export const Navigation: React.FC<NavigationProps> = ({
                 <Link
                   to="/live-streams"
                   className={clsx(
-                    "text-base font-medium transition-colors py-2",
+                    "flex items-center h-full px-4 text-base font-medium transition-colors border-b-2",
                     isActiveLink('/live-streams')
-                      ? "text-primary-600 dark:text-primary-400"
-                      : "text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+                      ? "text-primary-600 dark:text-primary-400 border-primary-600 dark:border-primary-400"
+                      : "text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white border-transparent hover:border-gray-300"
                   )}
                 >
                   Livestreams
@@ -88,10 +88,10 @@ export const Navigation: React.FC<NavigationProps> = ({
                 <Link
                   to="/about"
                   className={clsx(
-                    "text-base font-medium transition-colors py-2",
+                    "flex items-center h-full px-4 text-base font-medium transition-colors border-b-2",
                     isActiveLink('/about')
-                      ? "text-primary-600 dark:text-primary-400"
-                      : "text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+                      ? "text-primary-600 dark:text-primary-400 border-primary-600 dark:border-primary-400"
+                      : "text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white border-transparent hover:border-gray-300"
                   )}
                 >
                   About

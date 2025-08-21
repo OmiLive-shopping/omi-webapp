@@ -1,5 +1,7 @@
 import { unifiedResponse } from 'uni-response';
 
+import { socketEmitters } from '../../../socket/index.js';
+import { RoomManager } from '../../../socket/managers/room.manager.js';
 import { ProductRepository } from '../../product/repositories/product.repository.js';
 import { UserRepository } from '../../user/repositories/user.repository.js';
 import { StreamRepository } from '../repositories/stream.repository.js';
@@ -97,6 +99,37 @@ export class StreamService {
     }
 
     const liveStream = await this.streamRepository.goLive(stream.id);
+
+    // Initialize WebSocket room for the stream
+    try {
+      const roomManager = RoomManager.getInstance();
+      // Room creation happens automatically when first user joins
+      // But we can pre-initialize it
+
+      // Notify the streamer that their stream is ready
+      socketEmitters.emitToUser(userId, 'stream:started', {
+        streamId: liveStream.id,
+        title: liveStream.title,
+        vdoRoomId: liveStream.vdoRoomId,
+        timestamp: new Date().toISOString(),
+      });
+
+      // Notify all connected users that a new stream is live
+      socketEmitters.emitToAll('stream:live', {
+        streamId: liveStream.id,
+        title: liveStream.title,
+        streamer: {
+          id: liveStream.userId,
+          username: liveStream.user?.username,
+        },
+        isLive: true,
+        startedAt: liveStream.startedAt,
+      });
+    } catch (error) {
+      console.error('Failed to initialize WebSocket for stream:', error);
+      // Don't fail the stream start if WebSocket fails
+    }
+
     return unifiedResponse(true, 'Stream is now live', liveStream);
   }
 
@@ -116,6 +149,33 @@ export class StreamService {
     }
 
     const liveStream = await this.streamRepository.goLive(stream.id);
+
+    // Initialize WebSocket room for the stream
+    try {
+      // Notify the streamer that their stream is ready
+      socketEmitters.emitToUser(userId, 'stream:started', {
+        streamId: liveStream.id,
+        title: liveStream.title,
+        vdoRoomId: liveStream.vdoRoomId,
+        timestamp: new Date().toISOString(),
+      });
+
+      // Notify all connected users that a new stream is live
+      socketEmitters.emitToAll('stream:live', {
+        streamId: liveStream.id,
+        title: liveStream.title,
+        streamer: {
+          id: liveStream.userId,
+          username: liveStream.user?.username,
+        },
+        isLive: true,
+        startedAt: liveStream.startedAt,
+      });
+    } catch (error) {
+      console.error('Failed to initialize WebSocket for stream:', error);
+      // Don't fail the stream start if WebSocket fails
+    }
+
     return unifiedResponse(true, 'Stream started successfully', liveStream);
   }
 
@@ -136,6 +196,28 @@ export class StreamService {
     }
 
     const endedStream = await this.streamRepository.endStream(stream[0].id);
+
+    // Notify all users in the stream room that stream has ended
+    try {
+      socketEmitters.emitToStream(stream[0].id, 'stream:ended', {
+        streamId: stream[0].id,
+        endedAt: endedStream.endedAt,
+        message: 'Stream has ended',
+      });
+
+      // Notify globally that stream is no longer live
+      socketEmitters.emitToAll('stream:offline', {
+        streamId: stream[0].id,
+      });
+
+      // Room cleanup happens automatically when all users leave
+      // But we can force cleanup if needed
+      const roomManager = RoomManager.getInstance();
+      await roomManager.cleanupStreamRoom(stream[0].id);
+    } catch (error) {
+      console.error('Failed to cleanup WebSocket for stream:', error);
+    }
+
     return unifiedResponse(true, 'Stream ended successfully', endedStream);
   }
 
@@ -155,6 +237,28 @@ export class StreamService {
     }
 
     const endedStream = await this.streamRepository.endStream(stream.id);
+
+    // Notify all users in the stream room that stream has ended
+    try {
+      socketEmitters.emitToStream(streamId, 'stream:ended', {
+        streamId: streamId,
+        endedAt: endedStream.endedAt,
+        message: 'Stream has ended',
+      });
+
+      // Notify globally that stream is no longer live
+      socketEmitters.emitToAll('stream:offline', {
+        streamId: streamId,
+      });
+
+      // Room cleanup happens automatically when all users leave
+      // But we can force cleanup if needed
+      const roomManager = RoomManager.getInstance();
+      await roomManager.cleanupStreamRoom(streamId);
+    } catch (error) {
+      console.error('Failed to cleanup WebSocket for stream:', error);
+    }
+
     return unifiedResponse(true, 'Stream ended successfully', endedStream);
   }
 
