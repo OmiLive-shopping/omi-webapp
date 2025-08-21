@@ -30,7 +30,7 @@ export interface Product {
 
 interface ProductCardProps {
   product: Product;
-  variant?: 'carousel' | 'grid' | 'list';
+  variant?: 'carousel' | 'grid' | 'list' | 'compact';
   onAddToCart: (productId: string) => void;
   onToggleWishlist: (productId: string) => void;
   onQuickView?: (productId: string) => void;
@@ -202,6 +202,95 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                 </button>
               </div>
             )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Compact variant (like the reference image)
+  if (variant === 'compact') {
+    return (
+      <div className="rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-200" style={{ backgroundColor: '#EAE7E2' }}>
+        {/* Product Image */}
+        <div className="relative aspect-square overflow-hidden bg-gray-50 dark:bg-gray-700">
+          {imageError ? (
+            <div className="w-full h-full flex items-center justify-center">
+              <ImageOff className="w-8 h-8 text-gray-300" />
+            </div>
+          ) : (
+            <img 
+              src={product.image} 
+              alt={product.name}
+              onError={() => setImageError(true)}
+              className="w-full h-full object-cover"
+            />
+          )}
+          
+          {/* Small stock indicator in top left */}
+          {product.stock > 0 && product.stock <= 10 && (
+            <div className="absolute top-2 left-2 px-2 py-0.5 bg-black/60 text-white text-xs rounded-full">
+              {product.stock} left
+            </div>
+          )}
+          
+          {/* Wishlist button in top right */}
+          <div className="absolute top-2 right-2">
+            <WishlistButton
+              productId={product.id}
+              isInWishlist={isInWishlist}
+              size="sm"
+              onToggleWishlist={onToggleWishlist}
+              className="bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm hover:bg-white dark:hover:bg-gray-900 shadow-sm"
+            />
+          </div>
+
+          {/* Small viewer count indicator like in reference */}
+          <div className="absolute bottom-2 left-2 flex items-center gap-1 px-2 py-0.5 bg-black/60 text-white rounded-full">
+            <Eye className="w-3 h-3" />
+            <span className="text-xs">{Math.floor(Math.random() * 50 + 10)}</span>
+          </div>
+        </div>
+        
+        {/* Compact Product Info */}
+        <div className="p-3">
+          <p className="text-xs text-gray-600 mb-1">
+            {product.description}
+          </p>
+          
+          <h3 className="font-medium text-sm text-gray-800 line-clamp-2 mb-2">
+            {product.name}
+          </h3>
+          
+          {/* Compact footer with price and cart icon */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-baseline gap-1">
+              <span className="text-base font-semibold text-gray-800">
+                {formatPrice(calculateDiscountedPrice(), product.currency)}
+              </span>
+              {(product.originalPrice || product.couponDiscount) && (
+                <span className="text-xs text-gray-500 line-through">
+                  {formatPrice(product.originalPrice || product.price, product.currency)}
+                </span>
+              )}
+            </div>
+            
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onAddToCart(product.id);
+              }}
+              disabled={product.stock === 0}
+              className={clsx(
+                "p-1.5 rounded-full transition-colors",
+                product.stock === 0
+                  ? "bg-white/50 text-gray-400 cursor-not-allowed"
+                  : "bg-white/70 text-gray-700 hover:bg-white/90"
+              )}
+              aria-label="Add to cart"
+            >
+              <ShoppingCart className="w-4 h-4" />
+            </button>
           </div>
         </div>
       </div>

@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import usePageTitle from '@/hooks/usePageTitle';
 import ProductCard from '@/components/products/ProductCard';
 import { LivestreamCard } from '@/components/stream/LivestreamCard';
 import { CategoryCard } from '@/components/categories/CategoryCard';
 import { HomePageCarousel } from '@/components/carousel/HomePageCarousel';
+import { ExpandableSection } from '@/components/common/ExpandableSection';
 
 // Live and upcoming streams data
 const liveStreams = [
@@ -185,7 +186,7 @@ const HomePage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-900">
+    <div className="min-h-screen" style={{ backgroundColor: '#FFFFFF' }}>
       {/* Hero Carousel */}
       <HomePageCarousel />
 
@@ -195,27 +196,24 @@ const HomePage: React.FC = () => {
           Live and Upcoming Streams
         </h2>
         
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <ExpandableSection
+          initialCount={4}
+          gridClassName="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+          expandText="Show More Streams"
+          collapseText="Show Less"
+          showItemCount={true}
+        >
           {liveStreams.map((stream) => (
             <LivestreamCard
               key={stream.id}
               {...stream}
             />
           ))}
-        </div>
-
-        <div className="text-center mt-8">
-          <Link
-            to="/live-streams"
-            className="text-primary-600 hover:text-primary-700 font-semibold"
-          >
-            Show More →
-          </Link>
-        </div>
+        </ExpandableSection>
       </section>
 
       {/* Streams and Products by Category */}
-      <section className="py-12 bg-gray-50 dark:bg-gray-800">
+      <section className="py-12" style={{ backgroundColor: '#FFFFFF' }}>
         <div className="container mx-auto px-4">
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-8">
             Streams and Products by Category
@@ -233,54 +231,45 @@ const HomePage: React.FC = () => {
       </section>
 
       {/* Popular Products */}
-      <section className="py-12 container mx-auto px-4">
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
-          Popular Products
-        </h2>
-        
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {popularProducts.map((product) => (
-            <div key={product.id} className="relative">
-              {product.isHot && (
-                <div className="absolute -top-2 -right-2 z-10 px-2 py-1 bg-orange-500 text-white text-xs rounded-full">
-                  HOT!
-                </div>
-              )}
-              <ProductCard
-                product={{
-                  id: product.id,
-                  name: product.name,
-                  price: product.price,
-                  currency: product.currency,
-                  image: product.image,
-                  description: product.brand,
-                  stock: product.stock
-                }}
-                onAddToCart={handleAddToCart}
-                onQuickView={() => navigate(`/product/${product.id}`)}
-                isInWishlist={wishlistItems.includes(product.id)}
-                onToggleWishlist={handleToggleWishlist}
-              />
-              
-              {/* Product Meta Info */}
-              <div className="mt-2 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-                <span className="flex items-center gap-1">
-                  <div className="w-4 h-4 bg-gray-200 dark:bg-gray-700 rounded-full" />
-                  {product.viewers}
-                </span>
-                <span>{product.timeLeft}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <div className="text-center mt-8">
-          <Link
-            to="/products"
-            className="text-primary-600 hover:text-primary-700 font-semibold"
+      <section className="py-12" style={{ backgroundColor: '#FFFFFF' }}>
+        <div className="container mx-auto px-4">
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">
+            Popular Products
+          </h2>
+          
+          <ExpandableSection
+            initialCount={6}
+            gridClassName="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3"
+            expandText="Show More Products"
+            collapseText="Show Less"
+            showItemCount={true}
           >
-            Show More →
-          </Link>
+            {popularProducts.map((product) => (
+              <div key={product.id} className="relative">
+                {product.isHot && (
+                  <div className="absolute -top-2 -right-2 z-10 px-2 py-1 bg-orange-500 text-white text-xs rounded-full">
+                    HOT!
+                  </div>
+                )}
+                <ProductCard
+                  variant="compact"
+                  product={{
+                    id: product.id,
+                    name: product.name,
+                    price: product.price,
+                    currency: product.currency,
+                    image: product.image,
+                    description: product.brand,
+                    stock: product.stock
+                  }}
+                  onAddToCart={handleAddToCart}
+                  onQuickView={() => navigate(`/product/${product.id}`)}
+                  isInWishlist={wishlistItems.includes(product.id)}
+                  onToggleWishlist={handleToggleWishlist}
+                />
+              </div>
+            ))}
+          </ExpandableSection>
         </div>
       </section>
     </div>
