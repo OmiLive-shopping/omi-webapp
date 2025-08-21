@@ -1,6 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { ChevronDown, ChevronUp } from 'lucide-react';
-import clsx from 'clsx';
+import React, { useState } from 'react';
+import { ChevronDown, ChevronUp, Check } from 'lucide-react';
 
 interface ExpandableSectionProps {
   children: React.ReactNode[];
@@ -9,8 +8,6 @@ interface ExpandableSectionProps {
   containerClassName?: string;
   expandText?: string;
   collapseText?: string;
-  showItemCount?: boolean;
-  animationDuration?: number;
 }
 
 export const ExpandableSection: React.FC<ExpandableSectionProps> = ({
@@ -19,130 +16,65 @@ export const ExpandableSection: React.FC<ExpandableSectionProps> = ({
   gridClassName = 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3',
   containerClassName = '',
   expandText = 'Show More',
-  collapseText = 'Show Less',
-  showItemCount = true,
-  animationDuration = 300
+  collapseText = 'Show Less'
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [height, setHeight] = useState<number | 'auto'>('auto');
-  const contentRef = useRef<HTMLDivElement>(null);
-  const [isAnimating, setIsAnimating] = useState(false);
 
   const totalItems = React.Children.count(children);
   const hasMore = totalItems > initialCount;
-  const visibleChildren = isExpanded ? children : children.slice(0, initialCount);
   const remainingCount = totalItems - initialCount;
-
-  useEffect(() => {
-    if (!contentRef.current) return;
-
-    const updateHeight = () => {
-      if (!contentRef.current) return;
-      
-      if (isAnimating) {
-        const currentHeight = contentRef.current.scrollHeight;
-        setHeight(currentHeight);
-      } else {
-        setHeight('auto');
-      }
-    };
-
-    updateHeight();
-  }, [visibleChildren, isAnimating]);
-
-  const handleToggle = () => {
-    if (!contentRef.current) return;
-
-    setIsAnimating(true);
-    
-    if (isExpanded) {
-      // Collapsing
-      const currentHeight = contentRef.current.scrollHeight;
-      setHeight(currentHeight);
-      
-      requestAnimationFrame(() => {
-        setIsExpanded(false);
-        requestAnimationFrame(() => {
-          if (contentRef.current) {
-            const newHeight = contentRef.current.scrollHeight;
-            setHeight(newHeight);
-            setTimeout(() => {
-              setIsAnimating(false);
-              setHeight('auto');
-            }, animationDuration);
-          }
-        });
-      });
-    } else {
-      // Expanding
-      const currentHeight = contentRef.current.scrollHeight;
-      setHeight(currentHeight);
-      
-      requestAnimationFrame(() => {
-        setIsExpanded(true);
-        requestAnimationFrame(() => {
-          if (contentRef.current) {
-            const newHeight = contentRef.current.scrollHeight;
-            setHeight(newHeight);
-            setTimeout(() => {
-              setIsAnimating(false);
-              setHeight('auto');
-            }, animationDuration);
-          }
-        });
-      });
-    }
-  };
-
-  if (!hasMore) {
-    return (
-      <div className={containerClassName}>
-        <div className={gridClassName}>
-          {children}
-        </div>
-      </div>
-    );
-  }
+  const initialChildren = hasMore ? children.slice(0, initialCount) : children;
+  const extraChildren = hasMore ? children.slice(initialCount) : [];
 
   return (
     <div className={containerClassName}>
-      <div 
-        ref={contentRef}
-        className="overflow-hidden transition-all duration-300 ease-in-out"
-        style={{ 
-          height: isAnimating ? height : 'auto',
-          transition: isAnimating ? `height ${animationDuration}ms ease-in-out` : 'none'
-        }}
-      >
-        <div className={gridClassName}>
-          {visibleChildren}
-        </div>
+      {/* Always visible items */}
+      <div className={gridClassName}>
+        {initialChildren}
       </div>
 
-      {/* Separator with button */}
+      {/* Expandable items with pure CSS grid animation - only render if there are extras */}
+      {hasMore && (
+        <div 
+          className="grid transition-[grid-template-rows] duration-300 ease-in-out"
+          style={{ 
+            gridTemplateRows: isExpanded ? '1fr' : '0fr'
+          }}
+        >
+          <div className="overflow-hidden">
+            <div className={`${gridClassName} mt-3`}>
+              {extraChildren}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Always show separator with pill button */}
       <div className="relative mt-8 mb-4">
         <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-gray-300"></div>
+          <div className="w-full border-t border-gray-200"></div>
         </div>
         <div className="relative flex justify-center">
-          <button
-            onClick={handleToggle}
-            className="bg-white px-6 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors duration-200 flex items-center gap-2"
-          >
-            <span>
-              {isExpanded ? collapseText : expandText}
-              {!isExpanded && showItemCount && remainingCount > 0 && (
-                <span className="ml-1 text-gray-500">
-                  ({remainingCount} more)
-                </span>
+          {hasMore ? (
+            <button
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="bg-white border border-gray-300 rounded-full px-6 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-all duration-200 flex items-center gap-2 shadow-sm"
+            >
+              <span>
+                {isExpanded ? collapseText : expandText}
+              </span>
+              {isExpanded ? (
+                <ChevronUp className="w-4 h-4" />
+              ) : (
+                <ChevronDown className="w-4 h-4" />
               )}
-            </span>
-            {isExpanded ? (
-              <ChevronUp className="w-4 h-4" />
-            ) : (
-              <ChevronDown className="w-4 h-4" />
-            )}
-          </button>
+            </button>
+          ) : (
+            <div className="bg-white border border-gray-200 rounded-full px-6 py-2 text-sm font-medium text-gray-500 flex items-center gap-2 shadow-sm">
+              <span>Showing All</span>
+              <Check className="w-4 h-4" />
+            </div>
+          )}
         </div>
       </div>
     </div>

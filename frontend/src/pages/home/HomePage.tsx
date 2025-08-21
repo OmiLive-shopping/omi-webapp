@@ -201,7 +201,6 @@ const HomePage: React.FC = () => {
           gridClassName="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
           expandText="Show More Streams"
           collapseText="Show Less"
-          showItemCount={true}
         >
           {liveStreams.map((stream) => (
             <LivestreamCard
@@ -242,7 +241,6 @@ const HomePage: React.FC = () => {
             gridClassName="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3"
             expandText="Show More Products"
             collapseText="Show Less"
-            showItemCount={true}
           >
             {popularProducts.map((product) => (
               <div key={product.id} className="relative">
