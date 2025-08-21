@@ -118,9 +118,9 @@ export const PromoBanner: React.FC<PromoBannerProps> = ({
             type="button"
             onClick={handleDismiss}
             className={clsx(
-              'absolute right-2 sm:right-4 lg:right-6 p-1.5 rounded-lg',
-              'hover:bg-black/5 dark:hover:bg-white/5',
-              'transition-colors duration-200',
+              'absolute right-0 top-1/2 -translate-y-1/2 pr-4 sm:pr-6 lg:pr-8 p-2',
+              'hover:opacity-70',
+              'transition-opacity duration-200',
               'focus:outline-none focus:ring-2 focus:ring-offset-2',
               variant === 'default' && 'focus:ring-mint-500',
               variant === 'success' && 'focus:ring-green-500',

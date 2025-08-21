@@ -55,7 +55,7 @@ export const Navigation: React.FC<NavigationProps> = ({
       {/* Main Navigation */}
       <nav className="bg-white dark:bg-gray-900 shadow-sm sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-20">
+          <div className="flex items-center justify-between h-28">
             {/* Left side - Logo and Links */}
             <div className="flex items-center h-full">
               {/* Logo */}
@@ -66,7 +66,7 @@ export const Navigation: React.FC<NavigationProps> = ({
                 <Link
                   to="/products"
                   className={clsx(
-                    "flex items-center h-full px-4 text-base font-medium transition-colors border-b-2",
+                    "flex items-center h-full px-5 text-lg font-medium transition-colors border-b-3",
                     isActiveLink('/products')
                       ? "text-primary-600 dark:text-primary-400 border-primary-600 dark:border-primary-400"
                       : "text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white border-transparent hover:border-gray-300"
@@ -77,7 +77,7 @@ export const Navigation: React.FC<NavigationProps> = ({
                 <Link
                   to="/live-streams"
                   className={clsx(
-                    "flex items-center h-full px-4 text-base font-medium transition-colors border-b-2",
+                    "flex items-center h-full px-5 text-lg font-medium transition-colors border-b-3",
                     isActiveLink('/live-streams')
                       ? "text-primary-600 dark:text-primary-400 border-primary-600 dark:border-primary-400"
                       : "text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white border-transparent hover:border-gray-300"
@@ -88,7 +88,7 @@ export const Navigation: React.FC<NavigationProps> = ({
                 <Link
                   to="/about"
                   className={clsx(
-                    "flex items-center h-full px-4 text-base font-medium transition-colors border-b-2",
+                    "flex items-center h-full px-5 text-lg font-medium transition-colors border-b-3",
                     isActiveLink('/about')
                       ? "text-primary-600 dark:text-primary-400 border-primary-600 dark:border-primary-400"
                       : "text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white border-transparent hover:border-gray-300"

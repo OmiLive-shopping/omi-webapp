@@ -1,48 +1,28 @@
-import { z } from 'zod';
-
 import { PrismaService } from '../../config/prisma.config.js';
 import { SocketWithAuth } from '../../config/socket/socket.config.js';
 import { ChatRateLimiter, SlowModeManager } from '../managers/rate-limiter.js';
 import { RoomManager } from '../managers/room.manager.js';
 import type { VdoQualityEvent, VdoStreamEvent, VdoViewerEvent } from '../types/vdo-events.types.js';
 import { ChatCommandHandler } from './chat-commands.js';
-
-// Message schemas
-const sendMessageSchema = z.object({
-  streamId: z.string().uuid(),
-  content: z.string().min(1).max(500),
-  replyTo: z.string().uuid().optional(),
-});
-
-const deleteMessageSchema = z.object({
-  streamId: z.string().uuid(),
-  messageId: z.string().uuid(),
-});
-
-const moderateUserSchema = z.object({
-  streamId: z.string().uuid(),
-  userId: z.string().uuid(),
-  action: z.enum(['timeout', 'ban', 'unban']),
-  reason: z.string().optional(),
-  duration: z.number().optional(), // For timeout in seconds
-});
-
-const reactToMessageSchema = z.object({
-  messageId: z.string().uuid(),
-  emoji: z.string().emoji().max(2), // Single emoji
-});
-
-const pinMessageSchema = z.object({
-  streamId: z.string().uuid(),
-  messageId: z.string().uuid(),
-  pin: z.boolean(),
-});
-
-const slowModeSchema = z.object({
-  streamId: z.string().uuid(),
-  enabled: z.boolean(),
-  delay: z.number().min(0).max(300).optional(), // Max 5 minutes
-});
+import {
+  chatSendMessageSchema,
+  chatDeleteMessageSchema,
+  chatModerateUserSchema,
+  chatReactSchema,
+  chatPinMessageSchema,
+  chatSlowModeSchema,
+  chatTypingSchema,
+  chatGetHistorySchema,
+  type ChatSendMessageEvent,
+  type ChatDeleteMessageEvent,
+  type ChatModerateUserEvent,
+  type ChatReactEvent,
+  type ChatPinMessageEvent,
+  type ChatSlowModeEvent,
+  type ChatTypingEvent,
+  type ChatGetHistoryEvent,
+} from '../schemas/index.js';
+import { createValidatedHandler, createRateLimitedHandler, createPermissionValidatedHandler } from '../middleware/validation.middleware.js';
 
 export class ChatHandler {
   private roomManager = RoomManager.getInstance();

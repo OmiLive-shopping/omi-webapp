@@ -15,7 +15,7 @@ export const NavigationLogo: React.FC<NavigationLogoProps> = ({ className }) => 
         className
       )}
     >
-      <span className="text-3xl font-bold text-gray-900 dark:text-white">
+      <span className="text-4xl font-bold text-gray-900 dark:text-white">
         OMI
       </span>
     </Link>

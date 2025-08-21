@@ -1,51 +1,21 @@
-import { z } from 'zod';
-
 import { PrismaService } from '../../config/prisma.config.js';
 import { SocketWithAuth } from '../../config/socket/socket.config.js';
 import { SocketServer } from '../../config/socket/socket.config.js';
 import { RoomManager } from '../managers/room.manager.js';
 import { VdoStreamHandler } from './vdo-stream.handler.js';
-
-const joinStreamSchema = z.object({
-  streamId: z.string().uuid(),
-});
-
-const streamUpdateSchema = z.object({
-  streamId: z.string().uuid(),
-  title: z.string().optional(),
-  description: z.string().optional(),
-  thumbnailUrl: z.string().url().optional(),
-});
-
-const featureProductSchema = z.object({
-  streamId: z.string().uuid(),
-  productId: z.string().uuid(),
-  duration: z.number().min(5).max(300).optional(), // Duration in seconds
-});
-
-const streamStatsSchema = z.object({
-  streamId: z.string().uuid(),
-  stats: z.object({
-    bitrate: z.number().optional(),
-    fps: z.number().optional(),
-    resolution: z
-      .object({
-        width: z.number(),
-        height: z.number(),
-      })
-      .optional(),
-    audioLevel: z.number().optional(),
-    packetLoss: z.number().optional(),
-    latency: z.number().optional(),
-    bandwidth: z
-      .object({
-        upload: z.number(),
-        download: z.number(),
-      })
-      .optional(),
-  }),
-  timestamp: z.string().datetime(),
-});
+import {
+  streamJoinSchema,
+  streamUpdateSchema,
+  streamFeatureProductSchema,
+  streamStatsUpdateSchema,
+  streamGetAnalyticsSchema,
+  type StreamJoinEvent,
+  type StreamUpdateEvent,
+  type StreamFeatureProductEvent,
+  type StreamStatsUpdateEvent,
+  type StreamGetAnalyticsEvent,
+} from '../schemas/index.js';
+import { createValidatedHandler, createPermissionValidatedHandler } from '../middleware/validation.middleware.js';
 
 export class StreamHandler {
   private roomManager = RoomManager.getInstance();
@@ -53,13 +23,12 @@ export class StreamHandler {
   private prisma = PrismaService.getInstance().client;
   private vdoHandler = new VdoStreamHandler();
 
-  handleJoinStream = async (socket: SocketWithAuth, data: any) => {
-    try {
-      const validated = joinStreamSchema.parse(data);
-
+  handleJoinStream = createValidatedHandler(
+    streamJoinSchema,
+    async (socket: SocketWithAuth, data: StreamJoinEvent) => {
       // Check if stream exists and is live
       const stream = await this.prisma.stream.findUnique({
-        where: { id: validated.streamId },
+        where: { id: data.streamId },
         select: {
           id: true,
           isLive: true,
@@ -79,7 +48,7 @@ export class StreamHandler {
       }
 
       // Join the room
-      await this.roomManager.joinRoom(socket, validated.streamId);
+      await this.roomManager.joinRoom(socket, data.streamId);
 
       // Send stream info to the user
       socket.emit('stream:joined', {
@@ -87,12 +56,12 @@ export class StreamHandler {
         title: stream.title,
         isLive: stream.isLive,
         streamer: stream.user,
-        viewerCount: this.roomManager.getViewerCount(validated.streamId),
+        viewerCount: this.roomManager.getViewerCount(data.streamId),
       });
 
       // Notify others of new viewer
-      socket.to(`stream:${validated.streamId}`).emit('stream:viewer:joined', {
-        viewerCount: this.roomManager.getViewerCount(validated.streamId),
+      socket.to(`stream:${data.streamId}`).emit('stream:viewer:joined', {
+        viewerCount: this.roomManager.getViewerCount(data.streamId),
         viewer: socket.userId
           ? {
               id: socket.userId,
@@ -100,26 +69,18 @@ export class StreamHandler {
             }
           : null,
       });
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        socket.emit('error', { message: 'Invalid stream data', errors: error.errors });
-      } else {
-        console.error('Error joining stream:', error);
-        socket.emit('error', { message: 'Failed to join stream' });
-      }
-    }
-  };
+    },
+  );
 
-  handleLeaveStream = async (socket: SocketWithAuth, data: any) => {
-    try {
-      const validated = joinStreamSchema.parse(data);
-
+  handleLeaveStream = createValidatedHandler(
+    streamJoinSchema,
+    async (socket: SocketWithAuth, data: StreamJoinEvent) => {
       // Leave the room
-      await this.roomManager.leaveRoom(socket, validated.streamId);
+      await this.roomManager.leaveRoom(socket, data.streamId);
 
       // Notify others
-      socket.to(`stream:${validated.streamId}`).emit('stream:viewer:left', {
-        viewerCount: this.roomManager.getViewerCount(validated.streamId),
+      socket.to(`stream:${data.streamId}`).emit('stream:viewer:left', {
+        viewerCount: this.roomManager.getViewerCount(data.streamId),
         viewer: socket.userId
           ? {
               id: socket.userId,
@@ -128,19 +89,16 @@ export class StreamHandler {
           : null,
       });
 
-      socket.emit('stream:left', { streamId: validated.streamId });
-    } catch (error) {
-      console.error('Error leaving stream:', error);
-    }
-  };
+      socket.emit('stream:left', { streamId: data.streamId });
+    },
+  );
 
-  handleStreamUpdate = async (socket: SocketWithAuth, data: any) => {
-    try {
-      const validated = streamUpdateSchema.parse(data);
-
+  handleStreamUpdate = createPermissionValidatedHandler(
+    streamUpdateSchema,
+    async (socket: SocketWithAuth, data: StreamUpdateEvent) => {
       // Check if user owns the stream
       const stream = await this.prisma.stream.findUnique({
-        where: { id: validated.streamId },
+        where: { id: data.streamId },
         select: { userId: true },
       });
 
@@ -151,38 +109,31 @@ export class StreamHandler {
 
       // Update stream
       const updatedStream = await this.prisma.stream.update({
-        where: { id: validated.streamId },
+        where: { id: data.streamId },
         data: {
-          ...(validated.title && { title: validated.title }),
-          ...(validated.description && { description: validated.description }),
-          ...(validated.thumbnailUrl && { thumbnailUrl: validated.thumbnailUrl }),
+          ...(data.title && { title: data.title }),
+          ...(data.description && { description: data.description }),
+          ...(data.thumbnailUrl && { thumbnailUrl: data.thumbnailUrl }),
         },
       });
 
       // Broadcast update to all viewers
-      this.socketServer.emitToRoom(`stream:${validated.streamId}`, 'stream:updated', {
+      this.socketServer.emitToRoom(`stream:${data.streamId}`, 'stream:updated', {
         streamId: updatedStream.id,
         title: updatedStream.title,
         description: updatedStream.description,
         thumbnailUrl: updatedStream.thumbnailUrl,
       });
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        socket.emit('error', { message: 'Invalid update data', errors: error.errors });
-      } else {
-        console.error('Error updating stream:', error);
-        socket.emit('error', { message: 'Failed to update stream' });
-      }
-    }
-  };
+    },
+    { authenticated: true },
+  );
 
-  handleFeatureProduct = async (socket: SocketWithAuth, data: any) => {
-    try {
-      const validated = featureProductSchema.parse(data);
-
+  handleFeatureProduct = createPermissionValidatedHandler(
+    streamFeatureProductSchema,
+    async (socket: SocketWithAuth, data: StreamFeatureProductEvent) => {
       // Check if user owns the stream
       const stream = await this.prisma.stream.findUnique({
-        where: { id: validated.streamId },
+        where: { id: data.streamId },
         select: { userId: true },
       });
 
@@ -193,7 +144,7 @@ export class StreamHandler {
 
       // Get product details
       const product = await this.prisma.product.findUnique({
-        where: { id: validated.productId },
+        where: { id: data.productId },
         select: {
           id: true,
           name: true,
@@ -209,23 +160,17 @@ export class StreamHandler {
       }
 
       // Broadcast featured product to all viewers
-      this.socketServer.emitToRoom(`stream:${validated.streamId}`, 'stream:product:featured', {
+      this.socketServer.emitToRoom(`stream:${data.streamId}`, 'stream:product:featured', {
         product,
-        duration: validated.duration || 30,
+        duration: data.duration || 30,
         featuredBy: {
           id: socket.userId,
           username: socket.username,
         },
       });
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        socket.emit('error', { message: 'Invalid product data', errors: error.errors });
-      } else {
-        console.error('Error featuring product:', error);
-        socket.emit('error', { message: 'Failed to feature product' });
-      }
-    }
-  };
+    },
+    { authenticated: true, roles: ['streamer', 'admin'] },
+  );
 
   // Handle stream going live
   handleStreamGoLive = async (streamId: string, streamerId: string) => {
@@ -256,8 +201,9 @@ export class StreamHandler {
   };
 
   // Get stream analytics
-  handleGetAnalytics = async (socket: SocketWithAuth, data: { streamId: string }) => {
-    try {
+  handleGetAnalytics = createPermissionValidatedHandler(
+    streamGetAnalyticsSchema,
+    async (socket: SocketWithAuth, data: StreamGetAnalyticsEvent) => {
       // Check if user owns the stream
       const stream = await this.prisma.stream.findUnique({
         where: { id: data.streamId },
@@ -290,20 +236,18 @@ export class StreamHandler {
             joinedAt: v.joinedAt,
           })),
       });
-    } catch (error) {
-      console.error('Error getting analytics:', error);
-      socket.emit('error', { message: 'Failed to get analytics' });
-    }
-  };
+    },
+    { authenticated: true, roles: ['streamer', 'admin'] },
+  );
 
   // Handle VDO.ninja stream stats update
-  handleStreamStats = async (socket: SocketWithAuth, data: any) => {
-    try {
-      const validated = streamStatsSchema.parse(data);
+  handleStreamStats = createPermissionValidatedHandler(
+    streamStatsUpdateSchema,
+    async (socket: SocketWithAuth, data: StreamStatsUpdateEvent) => {
 
       // Check if user owns the stream
       const stream = await this.prisma.stream.findUnique({
-        where: { id: validated.streamId },
+        where: { id: data.streamId },
         select: { userId: true, isLive: true },
       });
 
@@ -318,31 +262,31 @@ export class StreamHandler {
       }
 
       // Store stats in room manager (in-memory for now)
-      const roomInfo = this.roomManager.getRoomInfo(validated.streamId);
+      const roomInfo = this.roomManager.getRoomInfo(data.streamId);
       if (roomInfo) {
         roomInfo.streamStats = {
-          ...validated.stats,
-          lastUpdated: new Date(validated.timestamp),
+          ...data.stats,
+          lastUpdated: new Date(data.timestamp),
         };
       }
 
       // Broadcast stats to moderators and analytics viewers
-      socket.to(`stream:${validated.streamId}:moderators`).emit('stream:stats:update', {
-        streamId: validated.streamId,
-        stats: validated.stats,
-        timestamp: validated.timestamp,
+      socket.to(`stream:${data.streamId}:moderators`).emit('stream:stats:update', {
+        streamId: data.streamId,
+        stats: data.stats,
+        timestamp: data.timestamp,
       });
 
       // Log important stats changes
-      if (validated.stats.packetLoss && validated.stats.packetLoss > 5) {
+      if (data.stats.packetLoss && data.stats.packetLoss > 5) {
         console.warn(
-          `High packet loss detected for stream ${validated.streamId}: ${validated.stats.packetLoss}%`,
+          `High packet loss detected for stream ${data.streamId}: ${data.stats.packetLoss}%`,
         );
       }
 
       // Acknowledge receipt
       socket.emit('stream:stats:received', {
-        streamId: validated.streamId,
+        streamId: data.streamId,
         timestamp: new Date().toISOString(),
       });
 
@@ -350,20 +294,14 @@ export class StreamHandler {
       const lastDbUpdate = roomInfo?.lastStatsDbUpdate || 0;
       const now = Date.now();
       if (now - lastDbUpdate > 30000) {
-        await this.updateStreamQualityMetrics(validated.streamId, validated.stats);
+        await this.updateStreamQualityMetrics(data.streamId, data.stats);
         if (roomInfo) {
           roomInfo.lastStatsDbUpdate = now;
         }
       }
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        socket.emit('error', { message: 'Invalid stats data', errors: error.errors });
-      } else {
-        console.error('Error handling stream stats:', error);
-        socket.emit('error', { message: 'Failed to process stream stats' });
-      }
-    }
-  };
+    },
+    { authenticated: true },
+  );
 
   // Helper method to update stream quality metrics in database
   private async updateStreamQualityMetrics(streamId: string, stats: any) {
@@ -394,8 +332,9 @@ export class StreamHandler {
   }
 
   // Get real-time stream stats
-  handleGetStreamStats = async (socket: SocketWithAuth, data: { streamId: string }) => {
-    try {
+  handleGetStreamStats = createValidatedHandler(
+    streamGetAnalyticsSchema,
+    async (socket: SocketWithAuth, data: StreamGetAnalyticsEvent) => {
       const roomInfo = this.roomManager.getRoomInfo(data.streamId);
 
       if (!roomInfo || !roomInfo.streamStats) {
@@ -412,11 +351,8 @@ export class StreamHandler {
         stats: roomInfo.streamStats,
         viewerCount: this.roomManager.getViewerCount(data.streamId),
       });
-    } catch (error) {
-      console.error('Error getting stream stats:', error);
-      socket.emit('error', { message: 'Failed to get stream stats' });
-    }
-  };
+    },
+  );
 
   /**
    * Register all VDO.Ninja event handlers for a socket
