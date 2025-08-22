@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import { PrismaService } from '../../config/prisma.config.js';
 import { SocketWithAuth } from '../../config/socket/socket.config.js';
 import { ChatRateLimiter, SlowModeManager } from '../managers/rate-limiter.js';
@@ -34,7 +35,7 @@ export class ChatHandler {
   handleSendMessage = async (socket: SocketWithAuth, data: any) => {
     try {
       // Validate input
-      const validated = sendMessageSchema.parse(data);
+      const validated = chatSendMessageSchema.parse(data);
 
       // Check if user is authenticated
       if (!socket.userId) {
@@ -170,7 +171,7 @@ export class ChatHandler {
 
   handleDeleteMessage = async (socket: SocketWithAuth, data: any) => {
     try {
-      const validated = deleteMessageSchema.parse(data);
+      const validated = chatDeleteMessageSchema.parse(data);
 
       // Get message to check ownership
       const message = await this.prisma.comment.findUnique({

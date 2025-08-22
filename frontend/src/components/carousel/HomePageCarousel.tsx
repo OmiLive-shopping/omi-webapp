@@ -1,19 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Play, Eye, Calendar } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import clsx from 'clsx';
+import { HeroSlide, HeroSlideData } from './HeroSlide';
 
-interface HeroSlide {
-  id: number;
-  title: string;
-  streamer: string;
-  viewers: number;
-  products: string[];
-  image: string;
-  isLive: boolean;
-}
-
-const heroSlides: HeroSlide[] = [
+const heroSlides: HeroSlideData[] = [
   {
     id: 1,
     title: 'My Eco-Friendly Hair Care Faves this Spring',
@@ -44,7 +34,6 @@ const heroSlides: HeroSlide[] = [
 ];
 
 export const HomePageCarousel: React.FC = () => {
-  const navigate = useNavigate();
   const [currentSlide, setCurrentSlide] = useState(0);
 
   // Auto-advance carousel
@@ -71,84 +60,11 @@ export const HomePageCarousel: React.FC = () => {
     <section className="relative h-[500px] overflow-hidden">
       <div className="relative h-full">
         {heroSlides.map((slide, index) => (
-          <div
+          <HeroSlide
             key={slide.id}
-            className={clsx(
-              "absolute inset-0 transition-opacity duration-1000",
-              index === currentSlide ? "opacity-100" : "opacity-0"
-            )}
-          >
-            <div className="relative h-full">
-              <img
-                src={slide.image}
-                alt={slide.title}
-                className="w-full h-full object-cover"
-              />
-              <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/30 to-transparent" />
-              
-              <div className="absolute inset-0 flex items-center">
-                <div className="container mx-auto px-4">
-                  <div className="max-w-2xl">
-                    {slide.isLive && (
-                      <div className="inline-flex items-center gap-2 px-3 py-1 bg-red-600 text-white text-sm rounded-full mb-4">
-                        <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
-                        LIVE
-                      </div>
-                    )}
-                    
-                    <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
-                      {slide.title}
-                    </h1>
-                    
-                    <div className="flex items-center gap-4 text-white mb-6">
-                      <span className="flex items-center gap-2">
-                        <img
-                          src={`https://ui-avatars.com/api/?name=${slide.streamer}&background=random`}
-                          alt={slide.streamer}
-                          className="w-8 h-8 rounded-full"
-                        />
-                        hosted by {slide.streamer}
-                      </span>
-                      {slide.isLive && (
-                        <span className="flex items-center gap-1">
-                          <Eye className="w-4 h-4" />
-                          {slide.viewers.toLocaleString()} watching
-                        </span>
-                      )}
-                    </div>
-                    
-                    <div className="flex flex-wrap gap-2 mb-8">
-                      {slide.products.map((tag) => (
-                        <span
-                          key={tag}
-                          className="px-3 py-1 bg-white/20 backdrop-blur-sm text-white text-sm rounded-full"
-                        >
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                    
-                    <button
-                      onClick={() => navigate('/live-streams')}
-                      className="inline-flex items-center gap-2 px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
-                    >
-                      {slide.isLive ? (
-                        <>
-                          Tune In
-                          <Play className="w-4 h-4" />
-                        </>
-                      ) : (
-                        <>
-                          View Schedule
-                          <Calendar className="w-4 h-4" />
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+            slide={slide}
+            isActive={index === currentSlide}
+          />
         ))}
       </div>
 

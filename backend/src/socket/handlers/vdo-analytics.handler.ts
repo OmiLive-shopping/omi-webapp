@@ -3,8 +3,8 @@ import { container } from 'tsyringe';
 
 import { AnalyticsService } from '@/features/analytics/services/analytics.service';
 
+import { VDO_SOCKET_EVENTS } from '../types/vdo-events.types';
 import type {
-  VDO_SOCKET_EVENTS,
   VdoMediaEvent,
   VdoQualityEvent,
   VdoRecordingEvent,

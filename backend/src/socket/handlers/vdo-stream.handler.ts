@@ -283,7 +283,6 @@ export class VdoStreamHandler {
       this.checkQualityIssues(socket, validated.streamId, validated.stats);
 
       // Store in database periodically (every 30 seconds)
-      const now = Date.now();
       const lastUpdate = this.lastAnalyticsUpdate.get(validated.streamId) || 0;
       if (now - lastUpdate > 30000) {
         await this.storeAnalytics(validated.streamId, validated.stats);

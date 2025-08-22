@@ -53,6 +53,53 @@ export function initializeSocketServer(httpServer: HTTPServer): void {
     socket.on('chat:pin-message', data => chatHandler.handlePinMessage(socket, data));
     socket.on('chat:slowmode', data => chatHandler.handleSlowMode(socket, data));
 
+    // TEST EVENTS - For debugging WebSocket connectivity
+    socket.on('test:echo', (data) => {
+      console.log(`Test echo from ${socket.id}:`, data);
+      // Echo back to sender
+      socket.emit('test:echo:reply', { 
+        ...data, 
+        timestamp: new Date().toISOString(),
+        socketId: socket.id 
+      });
+    });
+
+    socket.on('test:broadcast', (data) => {
+      console.log(`Test broadcast from ${socket.id} to room ${data.room}:`, data);
+      if (data.room) {
+        // Broadcast to everyone in the room (including sender)
+        io.to(`test:${data.room}`).emit('test:broadcast:message', {
+          ...data,
+          from: socket.id,
+          timestamp: new Date().toISOString()
+        });
+      }
+    });
+
+    socket.on('test:join-room', (data) => {
+      const roomId = data.room || data.roomId;
+      console.log(`${socket.id} joining test room: test:${roomId}`);
+      socket.join(`test:${roomId}`);
+      socket.emit('test:joined', { room: roomId });
+      // Notify others in room
+      socket.to(`test:${roomId}`).emit('test:user-joined', { 
+        userId: socket.id,
+        room: roomId 
+      });
+    });
+
+    socket.on('test:leave-room', (data) => {
+      const roomId = data.room || data.roomId;
+      console.log(`${socket.id} leaving test room: test:${roomId}`);
+      socket.leave(`test:${roomId}`);
+      socket.emit('test:left', { room: roomId });
+      // Notify others in room
+      socket.to(`test:${roomId}`).emit('test:user-left', { 
+        userId: socket.id,
+        room: roomId 
+      });
+    });
+
     // Handle disconnect
     socket.on('disconnect', async () => {
       console.log(`User disconnected: ${socket.id} (${socket.username || 'anonymous'})`);
