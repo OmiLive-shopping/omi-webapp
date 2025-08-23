@@ -76,6 +76,7 @@ interface ChatState {
   addMessage: (message: Omit<ChatMessage, 'id' | 'timestamp'>) => void;
   addSystemMessage: (content: string, subType?: ChatMessage['subType'], metadata?: any) => void;
   addVdoSystemMessage: (message: any) => void;
+  addStreamSystemMessage: (message: any) => void;
   deleteMessage: (messageId: string) => void;
   pinMessage: (messageId: string) => void;
   unpinMessage: () => void;
@@ -216,6 +217,44 @@ export const useChatStore = create<ChatState>()(
         role: message.role || 'system',
         avatarUrl: message.avatarUrl,
       });
+    },
+    
+    addStreamSystemMessage: (message) => {
+      // Handle stream integration system messages
+      const systemMessage: ChatMessage = {
+        id: message.id || `system_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        userId: 'system',
+        username: 'Stream',
+        content: message.content,
+        timestamp: new Date(message.timestamp || Date.now()),
+        type: 'system',
+        subType: message.subType || 'stream',
+        isPinned: false,
+        isDeleted: false,
+        metadata: {
+          systemType: message.metadata?.systemType,
+          priority: message.metadata?.priority || 'medium',
+          ...message.metadata
+        },
+        role: 'system',
+      };
+      
+      // Add to messages
+      set((state) => {
+        const messages = [...state.messages, systemMessage];
+        
+        // Keep only last maxMessages
+        if (messages.length > state.maxMessages) {
+          return {
+            messages: messages.slice(-state.maxMessages),
+          };
+        }
+        
+        return { messages };
+      });
+      
+      // Update stats
+      get().updateStats();
     },
     
     // Users

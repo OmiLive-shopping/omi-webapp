@@ -2,7 +2,9 @@ import { PrismaService } from '../../config/prisma.config.js';
 import { SocketWithAuth } from '../../config/socket/socket.config.js';
 import { SocketServer } from '../../config/socket/socket.config.js';
 import { RoomManager } from '../managers/room.manager.js';
+import { EnhancedRateLimiter, createRateLimitedHandler as createEnhancedRateLimitedHandler } from '../managers/enhanced-rate-limiter.js';
 import { VdoStreamHandler } from './vdo-stream.handler.js';
+import { streamEventEmitter } from '../../features/stream/events/stream-event-emitter.js';
 import {
   streamJoinSchema,
   streamUpdateSchema,
@@ -19,6 +21,7 @@ import { createValidatedHandler, createPermissionValidatedHandler } from '../mid
 
 export class StreamHandler {
   private roomManager = RoomManager.getInstance();
+  private enhancedRateLimiter = EnhancedRateLimiter.getInstance();
   private socketServer = SocketServer.getInstance();
   private prisma = PrismaService.getInstance().client;
   private vdoHandler = new VdoStreamHandler();
@@ -49,6 +52,16 @@ export class StreamHandler {
 
       // Join the room
       await this.roomManager.joinRoom(socket, data.streamId);
+      const viewerCount = this.roomManager.getViewerCount(data.streamId);
+
+      // Emit viewer joined event
+      await streamEventEmitter.emitViewerJoined(data.streamId, {
+        id: socket.userId,
+        username: socket.username,
+        avatarUrl: socket.avatarUrl,
+        isAnonymous: !socket.userId,
+        socketId: socket.id,
+      }, viewerCount);
 
       // Send stream info to the user
       socket.emit('stream:joined', {
@@ -56,12 +69,12 @@ export class StreamHandler {
         title: stream.title,
         isLive: stream.isLive,
         streamer: stream.user,
-        viewerCount: this.roomManager.getViewerCount(data.streamId),
+        viewerCount,
       });
 
-      // Notify others of new viewer
+      // Notify others of new viewer (legacy - will be replaced by event system)
       socket.to(`stream:${data.streamId}`).emit('stream:viewer:joined', {
-        viewerCount: this.roomManager.getViewerCount(data.streamId),
+        viewerCount,
         viewer: socket.userId
           ? {
               id: socket.userId,
@@ -75,12 +88,28 @@ export class StreamHandler {
   handleLeaveStream = createValidatedHandler(
     streamJoinSchema,
     async (socket: SocketWithAuth, data: StreamJoinEvent) => {
+      // Calculate session duration if available
+      const roomInfo = this.roomManager.getRoomInfo(data.streamId);
+      const viewer = roomInfo?.viewers.get(socket.id);
+      const duration = viewer?.joinedAt 
+        ? Math.floor((Date.now() - viewer.joinedAt.getTime()) / 1000)
+        : undefined;
+
       // Leave the room
       await this.roomManager.leaveRoom(socket, data.streamId);
+      const viewerCount = this.roomManager.getViewerCount(data.streamId);
 
-      // Notify others
+      // Emit viewer left event
+      await streamEventEmitter.emitViewerLeft(data.streamId, {
+        id: socket.userId,
+        username: socket.username,
+        socketId: socket.id,
+        duration,
+      }, viewerCount, 'manual');
+
+      // Notify others (legacy - will be replaced by event system)
       socket.to(`stream:${data.streamId}`).emit('stream:viewer:left', {
-        viewerCount: this.roomManager.getViewerCount(data.streamId),
+        viewerCount,
         viewer: socket.userId
           ? {
               id: socket.userId,
@@ -358,26 +387,26 @@ export class StreamHandler {
    * Register all VDO.Ninja event handlers for a socket
    */
   registerVdoHandlers(socket: SocketWithAuth) {
-    // VDO.Ninja stream events
-    socket.on('vdo:stream:event', data => this.vdoHandler.handleVdoStreamEvent(socket, data));
+    // VDO.Ninja stream events with enhanced rate limiting
+    socket.on('vdo:stream:event', data => this.vdoHandler.handleVdoStreamEventEnhanced(socket, data));
 
     // VDO.Ninja statistics
-    socket.on('vdo:stats:update', data => this.vdoHandler.handleVdoStatsUpdate(socket, data));
+    socket.on('vdo:stats:update', data => this.vdoHandler.handleVdoStatsUpdateEnhanced(socket, data));
 
     // VDO.Ninja viewer events
-    socket.on('vdo:viewer:event', data => this.vdoHandler.handleVdoViewerEvent(socket, data));
+    socket.on('vdo:viewer:event', data => this.vdoHandler.handleVdoViewerEventEnhanced(socket, data));
 
     // VDO.Ninja media control events
-    socket.on('vdo:media:event', data => this.vdoHandler.handleVdoMediaEvent(socket, data));
+    socket.on('vdo:media:event', data => this.vdoHandler.handleVdoMediaEventEnhanced(socket, data));
 
     // VDO.Ninja quality events
-    socket.on('vdo:quality:event', data => this.vdoHandler.handleVdoQualityEvent(socket, data));
+    socket.on('vdo:quality:event', data => this.vdoHandler.handleVdoQualityEventEnhanced(socket, data));
 
     // VDO.Ninja recording events
-    socket.on('vdo:recording:event', data => this.vdoHandler.handleVdoRecordingEvent(socket, data));
+    socket.on('vdo:recording:event', data => this.vdoHandler.handleVdoRecordingEventEnhanced(socket, data));
 
     // Get VDO.Ninja analytics
-    socket.on('vdo:get:analytics', data => this.vdoHandler.handleGetVdoAnalytics(socket, data));
+    socket.on('vdo:get:analytics', data => this.vdoHandler.handleGetVdoAnalyticsEnhanced(socket, data));
   }
 
   /**
@@ -392,4 +421,26 @@ export class StreamHandler {
     socket.removeAllListeners('vdo:recording:event');
     socket.removeAllListeners('vdo:get:analytics');
   }
+
+  // Enhanced rate-limited stream handlers
+  handleJoinStreamEnhanced = createEnhancedRateLimitedHandler(
+    'stream:join',
+    async (socket: SocketWithAuth, data: any) => {
+      await this.handleJoinStream(socket, data);
+    }
+  );
+
+  handleLeaveStreamEnhanced = createEnhancedRateLimitedHandler(
+    'stream:leave',
+    async (socket: SocketWithAuth, data: any) => {
+      await this.handleLeaveStream(socket, data);
+    }
+  );
+
+  handleGetStreamStatsEnhanced = createEnhancedRateLimitedHandler(
+    'stream:get:stats',
+    async (socket: SocketWithAuth, data: any) => {
+      await this.handleGetStreamStats(socket, data);
+    }
+  );
 }

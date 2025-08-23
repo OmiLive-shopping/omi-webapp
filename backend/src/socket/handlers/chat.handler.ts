@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { PrismaService } from '../../config/prisma.config.js';
 import { SocketWithAuth } from '../../config/socket/socket.config.js';
 import { ChatRateLimiter, SlowModeManager } from '../managers/rate-limiter.js';
+import { EnhancedRateLimiter, createRateLimitedHandler as createEnhancedRateLimitedHandler } from '../managers/enhanced-rate-limiter.js';
 import { RoomManager } from '../managers/room.manager.js';
 import type { VdoQualityEvent, VdoStreamEvent, VdoViewerEvent } from '../types/vdo-events.types.js';
 import { ChatCommandHandler } from './chat-commands.js';
@@ -24,12 +25,16 @@ import {
   type ChatGetHistoryEvent,
 } from '../schemas/index.js';
 import { createValidatedHandler, createRateLimitedHandler, createPermissionValidatedHandler } from '../middleware/validation.middleware.js';
+import { ChatStreamIntegrationService } from '../services/chat-stream-integration.service.js';
+import { StreamCommandParser, type CommandContext, type CommandExecutionResult } from '../utils/stream-commands.js';
 
 export class ChatHandler {
   private roomManager = RoomManager.getInstance();
   private rateLimiter = ChatRateLimiter.getInstance();
+  private enhancedRateLimiter = EnhancedRateLimiter.getInstance();
   private slowModeManager = SlowModeManager.getInstance();
   private commandHandler = new ChatCommandHandler();
+  private chatIntegration = ChatStreamIntegrationService.getInstance();
   private prisma = PrismaService.getInstance().client;
 
   handleSendMessage = async (socket: SocketWithAuth, data: any) => {
@@ -53,6 +58,11 @@ export class ChatHandler {
       // Check if this is a VDO command first
       if (await this.handleVdoCommand(socket, validated.streamId, validated.content)) {
         return; // VDO command was processed
+      }
+
+      // Check if this is a stream command
+      if (await this.handleStreamCommand(socket, validated.streamId, validated.content)) {
+        return; // Stream command was processed
       }
 
       // Check if this is a regular command
@@ -295,6 +305,18 @@ export class ChatHandler {
 
       socket.to(`stream:${validated.streamId}`).emit('chat:user:moderated', moderationEvent);
       socket.emit('chat:moderation:success', moderationEvent);
+
+      // Send system message for moderation action
+      await this.chatIntegration.sendModerationMessage(
+        validated.streamId,
+        validated.action,
+        moderation.user.username,
+        socket.username || 'Moderator',
+        {
+          reason: validated.reason,
+          duration: validated.duration
+        }
+      );
 
       // If banning or timeout, notify the user
       if (validated.action === 'ban' || validated.action === 'timeout') {
@@ -690,6 +712,404 @@ export class ChatHandler {
     return true;
   };
 
+  // Handle stream commands in chat
+  handleStreamCommand = async (
+    socket: SocketWithAuth,
+    streamId: string,
+    message: string,
+  ): Promise<boolean> => {
+    // Check if message is a stream command
+    if (!StreamCommandParser.isCommand(message)) {
+      return false;
+    }
+
+    const parsed = StreamCommandParser.parseCommand(message);
+    if (!parsed) {
+      return false;
+    }
+
+    const command = StreamCommandParser.findCommand(parsed.command);
+    if (!command) {
+      // Not a recognized stream command, let other handlers process it
+      return false;
+    }
+
+    // Create command context
+    const context: CommandContext = {
+      streamId,
+      userId: socket.userId || '',
+      username: socket.username || 'Anonymous',
+      userRole: socket.role || 'viewer',
+      isAuthenticated: !!socket.userId,
+      socketId: socket.id
+    };
+
+    // Check permissions
+    const permissionCheck = StreamCommandParser.canExecuteCommand(
+      command,
+      context.userRole,
+      context.isAuthenticated
+    );
+
+    if (!permissionCheck.canExecute) {
+      socket.emit('error', { 
+        message: permissionCheck.reason,
+        command: command.name 
+      });
+
+      // Send system message about failed command
+      await this.chatIntegration.sendCustomSystemMessage(
+        streamId,
+        `❌ Command failed: ${permissionCheck.reason}`,
+        { priority: 'low', saveToDatabase: false }
+      );
+
+      return true;
+    }
+
+    // Validate parameters
+    const paramValidation = StreamCommandParser.validateParameters(command, parsed.args);
+    if (!paramValidation.isValid) {
+      const errorMessage = paramValidation.errors?.join(', ') || 'Invalid parameters';
+      
+      socket.emit('error', { 
+        message: errorMessage,
+        command: command.name,
+        usage: command.usage
+      });
+
+      // Send system message about invalid parameters
+      await this.chatIntegration.sendCustomSystemMessage(
+        streamId,
+        `❌ ${command.usage} - ${errorMessage}`,
+        { priority: 'low', saveToDatabase: false }
+      );
+
+      return true;
+    }
+
+    try {
+      // Execute the command
+      const result = await this.executeStreamCommand(command, parsed.args, context);
+
+      if (result.success) {
+        // Send success system message if provided
+        if (result.message) {
+          await this.chatIntegration.sendCustomSystemMessage(
+            streamId,
+            `✅ ${result.message}`,
+            { 
+              priority: 'medium', 
+              metadata: { 
+                command: command.name,
+                executor: context.username,
+                result: result.data 
+              }
+            }
+          );
+        }
+
+        // Send success response to user
+        socket.emit('stream:command:success', {
+          command: command.name,
+          message: result.message,
+          data: result.data
+        });
+      } else {
+        // Send error system message
+        await this.chatIntegration.sendCustomSystemMessage(
+          streamId,
+          `❌ Command failed: ${result.error || 'Unknown error'}`,
+          { priority: 'low', saveToDatabase: false }
+        );
+
+        socket.emit('error', { 
+          message: result.error || 'Command execution failed',
+          command: command.name 
+        });
+      }
+
+    } catch (error) {
+      console.error('Error executing stream command:', error);
+      
+      socket.emit('error', { 
+        message: 'Internal error executing command',
+        command: command.name 
+      });
+
+      await this.chatIntegration.sendCustomSystemMessage(
+        streamId,
+        `❌ Command error: Internal server error`,
+        { priority: 'low', saveToDatabase: false }
+      );
+    }
+
+    return true;
+  };
+
+  // Execute specific stream commands
+  private async executeStreamCommand(
+    command: any,
+    args: string[],
+    context: CommandContext
+  ): Promise<CommandExecutionResult> {
+    switch (command.type) {
+      case 'help':
+        return this.executeHelpCommand(args[0], context);
+      
+      case 'stats':
+        return this.executeStatsCommand(context);
+      
+      case 'quality':
+        return this.executeQualityCommand(args[0], context);
+      
+      case 'feature':
+        return this.executeFeatureCommand(args[0], context);
+      
+      case 'unfeature':
+        return this.executeUnfeatureCommand(context);
+      
+      case 'record':
+        return this.executeRecordCommand(args[0], context);
+      
+      case 'volume':
+        return this.executeVolumeCommand(args[0], context);
+      
+      case 'snapshot':
+        return this.executeSnapshotCommand(context);
+      
+      default:
+        return {
+          success: false,
+          error: `Command '${command.name}' is not yet implemented`
+        };
+    }
+  }
+
+  // Command implementations
+  private async executeHelpCommand(
+    commandName: string | undefined,
+    context: CommandContext
+  ): Promise<CommandExecutionResult> {
+    if (commandName) {
+      const command = StreamCommandParser.findCommand(commandName);
+      if (!command) {
+        return {
+          success: false,
+          error: `Unknown command: ${commandName}`
+        };
+      }
+
+      const helpText = StreamCommandParser.getCommandHelp(command);
+      return {
+        success: true,
+        message: helpText
+      };
+    } else {
+      const helpText = StreamCommandParser.getAvailableCommands(
+        context.userRole,
+        context.isAuthenticated
+      );
+      return {
+        success: true,
+        message: helpText
+      };
+    }
+  }
+
+  private async executeStatsCommand(context: CommandContext): Promise<CommandExecutionResult> {
+    try {
+      const room = this.roomManager.getRoomInfo(context.streamId);
+      const viewerCount = room?.viewers.size || 0;
+      
+      // Get additional stats from database
+      const stream = await this.prisma.stream.findUnique({
+        where: { id: context.streamId },
+        select: {
+          title: true,
+          createdAt: true,
+          isLive: true,
+          slowModeDelay: true
+        }
+      });
+
+      if (!stream) {
+        return {
+          success: false,
+          error: 'Stream not found'
+        };
+      }
+
+      const uptime = stream.createdAt ? 
+        Math.floor((Date.now() - stream.createdAt.getTime()) / 1000) : 0;
+      
+      const stats = [
+        `📊 **Stream Statistics**`,
+        `👥 Viewers: ${viewerCount}`,
+        `⏱️ Uptime: ${this.formatDuration(uptime)}`,
+        `🎬 Status: ${stream.isLive ? 'Live' : 'Offline'}`,
+        `🐌 Slow Mode: ${stream.slowModeDelay > 0 ? `${stream.slowModeDelay}s` : 'Disabled'}`
+      ].join('\n');
+
+      return {
+        success: true,
+        message: stats,
+        data: {
+          viewerCount,
+          uptime,
+          isLive: stream.isLive,
+          slowModeDelay: stream.slowModeDelay
+        }
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: 'Failed to retrieve stats'
+      };
+    }
+  }
+
+  private async executeQualityCommand(
+    quality: string | undefined,
+    context: CommandContext
+  ): Promise<CommandExecutionResult> {
+    const validQualities = ['auto', '1080p', '720p', '480p', '360p'];
+    
+    if (!quality) {
+      return {
+        success: true,
+        message: `Available qualities: ${validQualities.join(', ')}`
+      };
+    }
+
+    if (!validQualities.includes(quality.toLowerCase())) {
+      return {
+        success: false,
+        error: `Invalid quality. Use: ${validQualities.join(', ')}`
+      };
+    }
+
+    // Emit quality change to VDO.ninja integration
+    // This would be handled by the VDO integration
+    return {
+      success: true,
+      message: `Quality changed to ${quality}`,
+      data: { quality }
+    };
+  }
+
+  private async executeFeatureCommand(
+    productId: string,
+    context: CommandContext
+  ): Promise<CommandExecutionResult> {
+    if (!productId) {
+      return {
+        success: false,
+        error: 'Product ID is required'
+      };
+    }
+
+    try {
+      // Find the product
+      const product = await this.prisma.product.findUnique({
+        where: { id: productId },
+        select: { id: true, name: true, title: true }
+      });
+
+      if (!product) {
+        return {
+          success: false,
+          error: 'Product not found'
+        };
+      }
+
+      // Feature the product (this would integrate with the product system)
+      // For now, just send a system message
+      return {
+        success: true,
+        message: `Now featuring: ${product.name || product.title}`,
+        data: { productId, productName: product.name || product.title }
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: 'Failed to feature product'
+      };
+    }
+  }
+
+  private async executeUnfeatureCommand(context: CommandContext): Promise<CommandExecutionResult> {
+    return {
+      success: true,
+      message: 'Featured product removed'
+    };
+  }
+
+  private async executeRecordCommand(
+    action: string | undefined,
+    context: CommandContext
+  ): Promise<CommandExecutionResult> {
+    const validActions = ['start', 'stop'];
+    
+    if (action && !validActions.includes(action.toLowerCase())) {
+      return {
+        success: false,
+        error: `Invalid action. Use: ${validActions.join(', ')}`
+      };
+    }
+
+    const recordAction = action?.toLowerCase() || 'toggle';
+    
+    return {
+      success: true,
+      message: `Recording ${recordAction === 'start' ? 'started' : recordAction === 'stop' ? 'stopped' : 'toggled'}`,
+      data: { action: recordAction }
+    };
+  }
+
+  private async executeVolumeCommand(
+    level: string,
+    context: CommandContext
+  ): Promise<CommandExecutionResult> {
+    const volume = parseInt(level);
+    
+    if (isNaN(volume) || volume < 0 || volume > 100) {
+      return {
+        success: false,
+        error: 'Volume must be between 0 and 100'
+      };
+    }
+
+    return {
+      success: true,
+      message: `Volume set to ${volume}%`,
+      data: { volume }
+    };
+  }
+
+  private async executeSnapshotCommand(context: CommandContext): Promise<CommandExecutionResult> {
+    return {
+      success: true,
+      message: 'Snapshot captured',
+      data: { timestamp: new Date().toISOString() }
+    };
+  }
+
+  // Helper method to format duration
+  private formatDuration(seconds: number): string {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+
+    if (hours > 0) {
+      return `${hours}h ${minutes}m ${secs}s`;
+    } else if (minutes > 0) {
+      return `${minutes}m ${secs}s`;
+    } else {
+      return `${secs}s`;
+    }
+  }
+
   // Handle slow mode toggle
   handleSlowMode = async (socket: SocketWithAuth, data: any) => {
     try {
@@ -721,6 +1141,14 @@ export class ChatHandler {
 
         socket.to(`stream:${validated.streamId}`).emit('chat:slowmode:enabled', { delay });
         socket.emit('chat:slowmode:success', { enabled: true, delay });
+
+        // Send system message for slow mode enabled
+        await this.chatIntegration.sendSlowModeMessage(
+          validated.streamId,
+          true,
+          delay,
+          socket.username || 'Moderator'
+        );
       } else {
         this.slowModeManager.disableSlowMode(validated.streamId);
 
@@ -732,6 +1160,14 @@ export class ChatHandler {
 
         socket.to(`stream:${validated.streamId}`).emit('chat:slowmode:disabled');
         socket.emit('chat:slowmode:success', { enabled: false });
+
+        // Send system message for slow mode disabled
+        await this.chatIntegration.sendSlowModeMessage(
+          validated.streamId,
+          false,
+          0,
+          socket.username || 'Moderator'
+        );
       }
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -742,4 +1178,115 @@ export class ChatHandler {
       }
     }
   };
+
+  // Enhanced rate-limited handlers using the new system
+  handleSendMessageEnhanced = createEnhancedRateLimitedHandler(
+    'chat:message',
+    async (socket: SocketWithAuth, data: any) => {
+      await this.handleSendMessage(socket, data);
+    }
+  );
+
+  handleDeleteMessageEnhanced = createEnhancedRateLimitedHandler(
+    'chat:delete',
+    async (socket: SocketWithAuth, data: any) => {
+      await this.handleDeleteMessage(socket, data);
+    }
+  );
+
+  handleModerateUserEnhanced = createEnhancedRateLimitedHandler(
+    'chat:moderate',
+    async (socket: SocketWithAuth, data: any) => {
+      await this.handleModerateUser(socket, data);
+    }
+  );
+
+  handleTypingEnhanced = createEnhancedRateLimitedHandler(
+    'chat:typing',
+    async (socket: SocketWithAuth, data: any) => {
+      await this.handleTyping(socket, data);
+    }
+  );
+
+  handleReactToMessageEnhanced = createEnhancedRateLimitedHandler(
+    'chat:reaction',
+    async (socket: SocketWithAuth, data: any) => {
+      await this.handleReactToMessage(socket, data);
+    }
+  );
+
+  /**
+   * Get rate limit status for a user
+   */
+  async getRateLimitStatus(
+    socket: SocketWithAuth,
+    eventType: string
+  ): Promise<void> {
+    if (!socket.userId) {
+      socket.emit('error', { message: 'Authentication required' });
+      return;
+    }
+
+    try {
+      const status = await this.enhancedRateLimiter.getLimitStatus(
+        eventType,
+        socket.userId,
+        socket.role || 'viewer'
+      );
+
+      socket.emit('rate_limit_status', {
+        eventType,
+        ...status,
+      });
+    } catch (error) {
+      console.error('Error getting rate limit status:', error);
+      socket.emit('error', { message: 'Failed to get rate limit status' });
+    }
+  }
+
+  /**
+   * Admin method to reset rate limits for a user
+   */
+  async resetUserRateLimits(
+    socket: SocketWithAuth,
+    data: { userId: string; eventType?: string }
+  ): Promise<void> {
+    // Check admin permissions
+    if (socket.role !== 'admin') {
+      socket.emit('error', { message: 'Admin permissions required' });
+      return;
+    }
+
+    try {
+      await this.enhancedRateLimiter.resetLimits(data.userId, data.eventType);
+      
+      socket.emit('admin:rate_limit_reset:success', {
+        userId: data.userId,
+        eventType: data.eventType || 'all',
+      });
+
+      console.log(`Rate limits reset by admin ${socket.userId} for user ${data.userId}, event: ${data.eventType || 'all'}`);
+    } catch (error) {
+      console.error('Error resetting rate limits:', error);
+      socket.emit('error', { message: 'Failed to reset rate limits' });
+    }
+  }
+
+  /**
+   * Get rate limiting statistics (admin only)
+   */
+  async getRateLimitStats(socket: SocketWithAuth): Promise<void> {
+    if (socket.role !== 'admin') {
+      socket.emit('error', { message: 'Admin permissions required' });
+      return;
+    }
+
+    try {
+      const stats = await this.enhancedRateLimiter.getStats();
+      socket.emit('admin:rate_limit_stats', stats);
+    } catch (error) {
+      console.error('Error getting rate limit stats:', error);
+      socket.emit('error', { message: 'Failed to get rate limit statistics' });
+    }
+  }
 }

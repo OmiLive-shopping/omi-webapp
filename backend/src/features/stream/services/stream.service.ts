@@ -5,6 +5,7 @@ import { RoomManager } from '../../../socket/managers/room.manager.js';
 import { ProductRepository } from '../../product/repositories/product.repository.js';
 import { UserRepository } from '../../user/repositories/user.repository.js';
 import { StreamRepository } from '../repositories/stream.repository.js';
+import { streamEventEmitter } from '../events/stream-event-emitter.js';
 import {
   AddStreamProductInput,
   CommentInput,
@@ -27,6 +28,28 @@ export class StreamService {
 
   async createStream(userId: string, input: CreateStreamInput) {
     const stream = await this.streamRepository.createStream(userId, input);
+    
+    // Get user info for event
+    const user = await this.userRepository.findUserById(userId);
+    
+    // Emit stream created event
+    if (user) {
+      await streamEventEmitter.emitStreamCreated({
+        id: stream.id,
+        title: stream.title,
+        description: stream.description,
+        thumbnailUrl: stream.thumbnailUrl,
+        userId: stream.userId,
+        user: {
+          id: user.id,
+          username: user.username,
+          avatarUrl: user.avatarUrl,
+        },
+        scheduledFor: stream.scheduledFor?.toISOString(),
+        tags: stream.tags,
+      });
+    }
+    
     return unifiedResponse(true, 'Stream created successfully', stream);
   }
 
@@ -60,7 +83,41 @@ export class StreamService {
       return unifiedResponse(false, 'Cannot update a live stream');
     }
 
+    // Store previous values for event
+    const previousValues = {
+      title: stream.title,
+      description: stream.description,
+      thumbnailUrl: stream.thumbnailUrl,
+      scheduledFor: stream.scheduledFor?.toISOString(),
+      tags: stream.tags,
+    };
+
     const updatedStream = await this.streamRepository.updateStream(streamId, input);
+    
+    // Get user info for event
+    const user = await this.userRepository.findUserById(userId);
+    
+    // Emit stream updated event
+    if (user) {
+      await streamEventEmitter.emitStreamEvent({
+        type: 'stream:updated',
+        streamId,
+        timestamp: new Date().toISOString(),
+        changes: {
+          ...(input.title && { title: input.title }),
+          ...(input.description && { description: input.description }),
+          ...(input.thumbnailUrl && { thumbnailUrl: input.thumbnailUrl }),
+          ...(input.scheduledFor && { scheduledFor: input.scheduledFor.toISOString() }),
+          ...(input.tags && { tags: input.tags }),
+        },
+        previousValues,
+        updatedBy: {
+          id: user.id,
+          username: user.username,
+        },
+      });
+    }
+    
     return unifiedResponse(true, 'Stream updated successfully', updatedStream);
   }
 
@@ -100,12 +157,29 @@ export class StreamService {
 
     const liveStream = await this.streamRepository.goLive(stream.id);
 
-    // Initialize WebSocket room for the stream
+    // Get user info for event
+    const user = await this.userRepository.findUserById(userId);
+
+    // Emit stream started event (this will handle all WebSocket notifications)
+    if (user) {
+      await streamEventEmitter.emitStreamStarted({
+        id: liveStream.id,
+        title: liveStream.title,
+        userId: liveStream.userId,
+        user: {
+          id: user.id,
+          username: user.username,
+          avatarUrl: user.avatarUrl,
+        },
+        vdoRoomId: liveStream.vdoRoomId,
+        startedAt: liveStream.startedAt?.toISOString() || new Date().toISOString(),
+      });
+    }
+
+    // Legacy socket emissions (to be removed once event system is fully integrated)
     try {
       const roomManager = RoomManager.getInstance();
-      // Room creation happens automatically when first user joins
-      // But we can pre-initialize it
-
+      
       // Notify the streamer that their stream is ready
       socketEmitters.emitToUser(userId, 'stream:started', {
         streamId: liveStream.id,
@@ -197,7 +271,23 @@ export class StreamService {
 
     const endedStream = await this.streamRepository.endStream(stream[0].id);
 
-    // Notify all users in the stream room that stream has ended
+    // Calculate stream duration
+    const duration = stream[0].startedAt 
+      ? Math.floor((new Date().getTime() - new Date(stream[0].startedAt).getTime()) / 1000)
+      : undefined;
+
+    // Emit stream ended event (this will handle all WebSocket notifications)
+    await streamEventEmitter.emitStreamEnded(stream[0].id, {
+      title: stream[0].title,
+      userId: stream[0].userId,
+      duration,
+      endedAt: endedStream.endedAt?.toISOString() || new Date().toISOString(),
+      // TODO: Get actual viewer counts from room manager
+      finalViewerCount: 0,
+      maxViewerCount: 0,
+    }, 'manual');
+
+    // Legacy socket emissions (to be removed once event system is fully integrated)
     try {
       socketEmitters.emitToStream(stream[0].id, 'stream:ended', {
         streamId: stream[0].id,

@@ -60,6 +60,12 @@ export const useSocketStore = create<SocketState>((set, get) => ({
       useChatStore.getState().addVdoSystemMessage(message);
     });
 
+    // Stream integration system messages
+    socketManager.on('chat:system-message', (message) => {
+      // Add to chat store as stream system message
+      useChatStore.getState().addStreamSystemMessage(message);
+    });
+
     // VDO.Ninja stream events
     socketManager.on('vdo:stream:live', (data) => {
       console.log('VDO stream event:', data);

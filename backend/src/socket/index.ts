@@ -1,4 +1,5 @@
 import { Server as HTTPServer } from 'http';
+import { container } from 'tsyringe';
 
 import { SocketServer, SocketWithAuth } from '../config/socket/socket.config.js';
 import { ChatHandler } from './handlers/chat.handler.js';
@@ -6,16 +7,39 @@ import { StreamHandler } from './handlers/stream.handler.js';
 import { vdoAnalyticsHandler } from './handlers/vdo-analytics.handler.js';
 import { RoomManager } from './managers/room.manager.js';
 import { socketAuthMiddleware } from './middleware/auth.middleware.js';
+import { streamSocketIntegration } from '../features/stream/events/socket-integration.js';
+import RealtimeAnalyticsService from '../features/analytics/services/realtime-analytics.service.js';
+import { SecurityManager, createSecurityMiddleware, createEventValidationWrapper } from './managers/security.manager.js';
 
-export function initializeSocketServer(httpServer: HTTPServer): void {
+export async function initializeSocketServer(httpServer: HTTPServer): Promise<void> {
   const socketServer = SocketServer.getInstance(httpServer);
   const io = socketServer.getIO();
   const roomManager = RoomManager.getInstance();
+
+  // Initialize security manager
+  const securityManager = SecurityManager.getInstance();
+  const securityMiddleware = createSecurityMiddleware(securityManager);
+  const validateEvent = createEventValidationWrapper(securityManager);
+
+  // Initialize stream event socket integration
+  streamSocketIntegration.initialize();
+  
+  // Initialize analytics socket integration
+  const { analyticsSocketIntegration } = await import('../features/analytics/events/analytics-socket-integration.js');
+  analyticsSocketIntegration.initialize();
+
+  // Initialize chat-stream integration
+  const { ChatStreamIntegrationService } = await import('./services/chat-stream-integration.service.js');
+  const chatIntegration = ChatStreamIntegrationService.getInstance();
+  await chatIntegration.initialize();
 
   // Initialize handlers
   const chatHandler = new ChatHandler();
   const streamHandler = new StreamHandler();
 
+  // Apply security middleware first
+  io.use(securityMiddleware);
+  
   // Apply authentication middleware
   io.use(socketAuthMiddleware);
 
@@ -28,14 +52,14 @@ export function initializeSocketServer(httpServer: HTTPServer): void {
       socket.join(`user:${socket.userId}`);
     }
 
-    // Stream events
-    socket.on('stream:join', data => streamHandler.handleJoinStream(socket, data));
-    socket.on('stream:leave', data => streamHandler.handleLeaveStream(socket, data));
-    socket.on('stream:update', data => streamHandler.handleStreamUpdate(socket, data));
-    socket.on('stream:feature-product', data => streamHandler.handleFeatureProduct(socket, data));
-    socket.on('stream:get-analytics', data => streamHandler.handleGetAnalytics(socket, data));
-    socket.on('stream:stats:update', data => streamHandler.handleStreamStats(socket, data));
-    socket.on('stream:stats:get', data => streamHandler.handleGetStreamStats(socket, data));
+    // Stream events with enhanced security validation
+    socket.on('stream:join', validateEvent('stream:join', data => streamHandler.handleJoinStreamEnhanced(socket, data)));
+    socket.on('stream:leave', validateEvent('stream:leave', data => streamHandler.handleLeaveStreamEnhanced(socket, data)));
+    socket.on('stream:update', validateEvent('stream:update', data => streamHandler.handleStreamUpdate(socket, data)));
+    socket.on('stream:feature-product', validateEvent('stream:feature-product', data => streamHandler.handleFeatureProduct(socket, data)));
+    socket.on('stream:get-analytics', validateEvent('stream:get-analytics', data => streamHandler.handleGetAnalytics(socket, data)));
+    socket.on('stream:stats:update', validateEvent('stream:stats:update', data => streamHandler.handleStreamStats(socket, data)));
+    socket.on('stream:stats:get', validateEvent('stream:stats:get', data => streamHandler.handleGetStreamStatsEnhanced(socket, data)));
 
     // Register VDO.Ninja event handlers
     streamHandler.registerVdoHandlers(socket);
@@ -43,15 +67,33 @@ export function initializeSocketServer(httpServer: HTTPServer): void {
     // Register VDO.Ninja analytics handlers
     vdoAnalyticsHandler.registerHandlers(socket);
 
-    // Chat events
-    socket.on('chat:send-message', data => chatHandler.handleSendMessage(socket, data));
-    socket.on('chat:delete-message', data => chatHandler.handleDeleteMessage(socket, data));
-    socket.on('chat:moderate-user', data => chatHandler.handleModerateUser(socket, data));
-    socket.on('chat:typing', data => chatHandler.handleTyping(socket, data));
-    socket.on('chat:get-history', data => chatHandler.handleGetHistory(socket, data));
-    socket.on('chat:react', data => chatHandler.handleReactToMessage(socket, data));
-    socket.on('chat:pin-message', data => chatHandler.handlePinMessage(socket, data));
-    socket.on('chat:slowmode', data => chatHandler.handleSlowMode(socket, data));
+    // Chat events with enhanced security validation
+    socket.on('chat:send-message', validateEvent('chat:send-message', data => chatHandler.handleSendMessageEnhanced(socket, data)));
+    socket.on('chat:delete-message', validateEvent('chat:delete-message', data => chatHandler.handleDeleteMessageEnhanced(socket, data)));
+    socket.on('chat:moderate-user', validateEvent('chat:moderate-user', data => chatHandler.handleModerateUserEnhanced(socket, data)));
+    socket.on('chat:typing', validateEvent('chat:typing', data => chatHandler.handleTypingEnhanced(socket, data)));
+    socket.on('chat:get-history', validateEvent('chat:get-history', data => chatHandler.handleGetHistory(socket, data)));
+    socket.on('chat:react', validateEvent('chat:react', data => chatHandler.handleReactToMessageEnhanced(socket, data)));
+    socket.on('chat:pin-message', validateEvent('chat:pin-message', data => chatHandler.handlePinMessage(socket, data)));
+    socket.on('chat:slowmode', validateEvent('chat:slowmode', data => chatHandler.handleSlowMode(socket, data)));
+
+    // Rate limit management events
+    socket.on('rate_limit:get_status', data => chatHandler.getRateLimitStatus(socket, data.eventType));
+    socket.on('admin:rate_limit:reset', data => chatHandler.resetUserRateLimits(socket, data));
+    socket.on('admin:rate_limit:stats', () => chatHandler.getRateLimitStats(socket));
+
+    // Connection health monitoring
+    socket.on('ping', (timestamp: number) => {
+      socket.emit('pong', timestamp);
+    });
+
+    socket.on('connection:ping', (timestamp: number) => {
+      socket.emit('connection:pong', {
+        timestamp,
+        serverTime: Date.now(),
+        connectedClients: io.engine.clientsCount,
+      });
+    });
 
     // TEST EVENTS - For debugging WebSocket connectivity
     socket.on('test:echo', (data) => {
@@ -167,24 +209,132 @@ function createAnalyticsNamespace(io: any): void {
   analyticsNamespace.on('connection', (socket: SocketWithAuth) => {
     console.log(`Analytics namespace connected: ${socket.id}`);
 
-    // Only streamers can connect to analytics
+    // Only streamers and admins can connect to analytics
     if (socket.role !== 'streamer' && socket.role !== 'admin') {
       socket.emit('error', { message: 'Unauthorized' });
       socket.disconnect();
       return;
     }
 
-    // Handle real-time analytics requests
-    socket.on('analytics:subscribe', async (streamId: string) => {
-      // TODO: Verify user owns the stream
-      socket.join(`analytics:${streamId}`);
+    // Handle real-time analytics subscription
+    socket.on('analytics:subscribe', async (data: {
+      streamId: string;
+      filters?: {
+        eventTypes?: string[];
+        minPriority?: 'low' | 'medium' | 'high' | 'critical';
+        updateInterval?: number;
+      };
+    }) => {
+      try {
+        const realtimeAnalytics = container.resolve(RealtimeAnalyticsService);
+        
+        const subscribed = await realtimeAnalytics.subscribe(
+          data.streamId,
+          socket.userId!,
+          socket.id,
+          socket.role as 'streamer' | 'admin',
+          data.filters
+        );
 
-      // Send initial analytics data
-      // Start sending periodic updates
+        if (subscribed) {
+          socket.join(`analytics:${data.streamId}`);
+          
+          // Send current analytics data
+          const currentAnalytics = await realtimeAnalytics.getCurrentAnalytics(data.streamId);
+          socket.emit('analytics:initial', {
+            streamId: data.streamId,
+            metrics: currentAnalytics,
+            timestamp: new Date().toISOString(),
+          });
+
+          socket.emit('analytics:subscribed', {
+            streamId: data.streamId,
+            success: true,
+          });
+        } else {
+          socket.emit('analytics:error', {
+            message: 'Failed to subscribe to analytics',
+          });
+        }
+      } catch (error) {
+        console.error('Analytics subscription error:', error);
+        socket.emit('analytics:error', {
+          message: 'Internal error during subscription',
+        });
+      }
     });
 
     socket.on('analytics:unsubscribe', (streamId: string) => {
       socket.leave(`analytics:${streamId}`);
+      
+      const realtimeAnalytics = container.resolve(RealtimeAnalyticsService);
+      realtimeAnalytics.unsubscribe(socket.id);
+      
+      socket.emit('analytics:unsubscribed', { streamId });
+    });
+
+    // Configure milestones
+    socket.on('analytics:configure:milestones', (data: {
+      streamId: string;
+      milestones: any;
+    }) => {
+      const realtimeAnalytics = container.resolve(RealtimeAnalyticsService);
+      realtimeAnalytics.configureMilestones(data.streamId, data.milestones);
+      
+      socket.emit('analytics:milestones:configured', {
+        streamId: data.streamId,
+        success: true,
+      });
+    });
+
+    // Configure alert thresholds
+    socket.on('analytics:configure:alerts', (data: {
+      streamId: string;
+      thresholds: any;
+    }) => {
+      const realtimeAnalytics = container.resolve(RealtimeAnalyticsService);
+      realtimeAnalytics.configureAlertThresholds(data.streamId, data.thresholds);
+      
+      socket.emit('analytics:alerts:configured', {
+        streamId: data.streamId,
+        success: true,
+      });
+    });
+
+    // Update throttle configuration
+    socket.on('analytics:configure:throttle', (config: any) => {
+      if (socket.role === 'admin') {
+        const realtimeAnalytics = container.resolve(RealtimeAnalyticsService);
+        realtimeAnalytics.updateThrottleConfig(config);
+        
+        socket.emit('analytics:throttle:configured', {
+          success: true,
+        });
+      } else {
+        socket.emit('analytics:error', {
+          message: 'Insufficient permissions',
+        });
+      }
+    });
+
+    // Get subscription statistics (admin only)
+    socket.on('analytics:stats:subscriptions', () => {
+      if (socket.role === 'admin') {
+        const realtimeAnalytics = container.resolve(RealtimeAnalyticsService);
+        const stats = realtimeAnalytics.getSubscriptionStats();
+        
+        socket.emit('analytics:stats:subscriptions:data', stats);
+      } else {
+        socket.emit('analytics:error', {
+          message: 'Insufficient permissions',
+        });
+      }
+    });
+
+    // Handle disconnect
+    socket.on('disconnect', () => {
+      const realtimeAnalytics = container.resolve(RealtimeAnalyticsService);
+      realtimeAnalytics.unsubscribe(socket.id);
     });
   });
 }

@@ -1,0 +1,315 @@
+name: WebSocket Integration Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'frontend/**'
+      - 'backend/**'
+      - '.github/workflows/websocket-tests.yml'
+
+env:
+  NODE_VERSION: '18'
+  PNPM_VERSION: '8'
+
+jobs:
+  websocket-tests:
+    name: WebSocket Integration & E2E Tests
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: omi_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    strategy:
+      matrix:
+        test-type: 
+          - unit
+          - integration
+          - performance
+          - e2e
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Install backend dependencies
+        run: |
+          cd backend
+          npm ci
+
+      - name: Install frontend dependencies
+        run: |
+          cd frontend
+          pnpm install --frozen-lockfile
+
+      - name: Setup test environment
+        run: |
+          # Copy test environment files
+          cp backend/.env.example backend/.env.test
+          cp frontend/.env.example frontend/.env.test
+          
+          # Set test database URL
+          echo "DATABASE_URL=postgresql://postgres:postgres@localhost:5432/omi_test" >> backend/.env.test
+          echo "REDIS_URL=redis://localhost:6379" >> backend/.env.test
+
+      - name: Run database migrations
+        run: |
+          cd backend
+          npm run db:migrate:test
+
+      - name: Lint code
+        run: |
+          npm run lint
+
+      - name: Run WebSocket Unit Tests
+        if: matrix.test-type == 'unit'
+        run: |
+          cd frontend
+          pnpm test:websocket:unit
+        env:
+          CI: true
+
+      - name: Run WebSocket Integration Tests
+        if: matrix.test-type == 'integration'
+        run: |
+          cd frontend
+          pnpm test:websocket:integration
+        env:
+          CI: true
+
+      - name: Run WebSocket Performance Tests
+        if: matrix.test-type == 'performance'
+        run: |
+          cd frontend
+          pnpm test:websocket:performance
+        env:
+          CI: true
+
+      - name: Run WebSocket E2E Tests
+        if: matrix.test-type == 'e2e'
+        run: |
+          cd frontend
+          pnpm test:websocket:e2e
+        env:
+          CI: true
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: websocket-test-results-${{ matrix.test-type }}
+          path: |
+            frontend/coverage/
+            frontend/test-results/
+            frontend/playwright-report/
+          retention-days: 7
+
+      - name: Upload test coverage
+        uses: codecov/codecov-action@v3
+        if: matrix.test-type == 'unit' || matrix.test-type == 'integration'
+        with:
+          files: frontend/coverage/lcov.info
+          flags: websocket-tests
+          name: websocket-coverage
+
+  websocket-smoke-tests:
+    name: WebSocket Smoke Tests
+    runs-on: ubuntu-latest
+    needs: websocket-tests
+    if: success()
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: omi_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          cd backend && npm ci
+          cd ../frontend && pnpm install --frozen-lockfile
+
+      - name: Setup test environment
+        run: |
+          cp backend/.env.example backend/.env.test
+          cp frontend/.env.example frontend/.env.test
+          echo "DATABASE_URL=postgresql://postgres:postgres@localhost:5432/omi_test" >> backend/.env.test
+          echo "REDIS_URL=redis://localhost:6379" >> backend/.env.test
+
+      - name: Run database migrations
+        run: |
+          cd backend && npm run db:migrate:test
+
+      - name: Build applications
+        run: |
+          npm run build
+
+      - name: Start backend server
+        run: |
+          cd backend
+          npm start &
+          echo $! > backend.pid
+          sleep 10
+        env:
+          NODE_ENV: test
+
+      - name: Run smoke tests
+        run: |
+          cd frontend
+          pnpm test:websocket:smoke
+        env:
+          CI: true
+          VITE_API_URL: http://localhost:3001
+
+      - name: Cleanup
+        if: always()
+        run: |
+          if [ -f backend.pid ]; then
+            kill $(cat backend.pid) || true
+            rm backend.pid
+          fi
+
+  websocket-performance-benchmark:
+    name: WebSocket Performance Benchmark
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    needs: websocket-tests
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: omi_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          cd backend && npm ci
+          cd ../frontend && pnpm install --frozen-lockfile
+
+      - name: Setup test environment
+        run: |
+          cp backend/.env.example backend/.env.test
+          echo "DATABASE_URL=postgresql://postgres:postgres@localhost:5432/omi_test" >> backend/.env.test
+          echo "REDIS_URL=redis://localhost:6379" >> backend/.env.test
+
+      - name: Run database migrations
+        run: |
+          cd backend && npm run db:migrate:test
+
+      - name: Run performance benchmarks
+        run: |
+          cd frontend
+          pnpm test:websocket:benchmark
+        env:
+          CI: true
+
+      - name: Store benchmark results
+        uses: benchmark-action/github-action-benchmark@v1
+        if: github.ref == 'refs/heads/main'
+        with:
+          tool: 'customSmallerIsBetter'
+          output-file-path: frontend/benchmark-results.json
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          auto-push: true
+          comment-on-alert: true
+          summary-always: true

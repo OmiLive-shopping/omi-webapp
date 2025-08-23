@@ -19,7 +19,8 @@ import {
   WishlistPage,
   SchedulePage,
   AuthPage,
-  LiveStreamsPage
+  LiveStreamsPage,
+  AboutPage
 } from '@/pages';
 import MessageListDemo from '@/components/chat/MessageListDemo';
 import ChatInputDemo from '@/components/chat/ChatInputDemo';
@@ -59,6 +60,7 @@ function App() {
               {/* Public Routes */}
               <Route index element={<HomePage />} />
               <Route path="auth" element={<AuthPage />} />
+              <Route path="about" element={<AboutPage />} />
               <Route path="live-streams" element={<LiveStreamsPage />} />
               <Route path="products" element={<ProductsPage />} />
               <Route path="product/:id" element={<ProductDetailPage />} />

@@ -8,3 +8,4 @@ export { default as WishlistPage } from './wishlist/WishlistPage';
 export { default as SchedulePage } from './schedule/SchedulePage';
 export { default as AuthPage } from './auth/AuthPage';
 export { default as LiveStreamsPage } from './live-streams/LiveStreamsPage';
+export { default as AboutPage } from './about/AboutPage';

@@ -19,7 +19,11 @@
     "seed": "npx prisma db seed",
     "seed:run": "tsx scripts/seed.ts run",
     "seed:reset": "tsx scripts/seed.ts reset",
-    "seed:clean": "tsx scripts/seed.ts clean"
+    "seed:clean": "tsx scripts/seed.ts clean",
+    "db:migrate": "npx prisma migrate dev",
+    "db:migrate:test": "npx prisma migrate deploy",
+    "db:migrate:reset": "npx prisma migrate reset --force",
+    "db:generate": "npx prisma generate"
   },
   "keywords": [
     "Express",
@@ -93,6 +97,7 @@
     "pino-http": "^10.4.0",
     "pino-pretty": "^13.0.0",
     "rate-limit-redis": "^4.2.1",
+    "rate-limiter-flexible": "^5.0.3",
     "redis": "^5.6.0",
     "reflect-metadata": "^0.2.2",
     "rotating-file-stream": "^3.2.6",

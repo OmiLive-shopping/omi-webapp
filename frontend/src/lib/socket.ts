@@ -3,6 +3,7 @@ import { io, Socket } from 'socket.io-client';
 export interface ServerToClientEvents {
   'chat:message': (message: ChatMessage) => void;
   'chat:system:message': (message: VdoSystemMessage) => void;
+  'chat:system-message': (message: any) => void;
   'stream:viewer-count': (count: number) => void;
   'stream:status': (status: StreamStatus) => void;
   'stream:error': (error: string) => void;
