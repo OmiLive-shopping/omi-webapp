@@ -12,7 +12,6 @@ import {
   BellOff,
   Play
 } from 'lucide-react';
-import Layout from '@/components/layouts/Layout';
 
 interface WishlistItem {
   id: number;
@@ -42,24 +41,6 @@ const WishlistPage: React.FC = () => {
 
   // Mock wishlist data
   const [wishlistItems, setWishlistItems] = useState<WishlistItem[]>([
-    {
-      id: 1,
-      title: "Premium Wireless Headphones",
-      price: 299.99,
-      originalPrice: 399.99,
-      image: "/placeholder-product.jpg",
-      rating: 4.5,
-      reviews: 342,
-      inStock: true,
-      addedDate: "2 days ago",
-      category: "Electronics",
-      priceAlert: true,
-      streamer: {
-        id: 1,
-        name: "TechReviewer",
-        isLive: true
-      }
-    },
     {
       id: 2,
       title: "Smart Watch Pro",
@@ -168,32 +149,32 @@ const WishlistPage: React.FC = () => {
   }, 0);
 
   return (
-    <Layout>
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">My Wishlist</h1>
-          <p className="text-gray-400">{filteredItems.length} items saved</p>
+          <h1 className="text-3xl font-bold mb-2 text-gray-900 dark:text-white">My Wishlist</h1>
+          <p className="text-gray-600 dark:text-gray-400">{filteredItems.length} items saved</p>
         </div>
 
         {/* Stats Bar */}
-        <div className="bg-gray-900 rounded-xl p-6 mb-8">
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 mb-8 shadow-sm">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <div>
-              <p className="text-sm text-gray-400 mb-1">Total Items</p>
-              <p className="text-2xl font-bold">{filteredItems.length}</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Total Items</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">{filteredItems.length}</p>
             </div>
             <div>
-              <p className="text-sm text-gray-400 mb-1">Total Value</p>
-              <p className="text-2xl font-bold">${totalValue.toFixed(2)}</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Total Value</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">${totalValue.toFixed(2)}</p>
             </div>
             <div>
-              <p className="text-sm text-gray-400 mb-1">Potential Savings</p>
-              <p className="text-2xl font-bold text-green-400">${totalSavings.toFixed(2)}</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Potential Savings</p>
+              <p className="text-2xl font-bold text-green-500 dark:text-green-400">${totalSavings.toFixed(2)}</p>
             </div>
             <div>
-              <p className="text-sm text-gray-400 mb-1">Price Alerts</p>
-              <p className="text-2xl font-bold">{wishlistItems.filter(item => item.priceAlert).length} active</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Price Alerts</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">{wishlistItems.filter(item => item.priceAlert).length} active</p>
             </div>
           </div>
         </div>
@@ -207,9 +188,9 @@ const WishlistPage: React.FC = () => {
                 type="checkbox" 
                 checked={selectedItems.length === filteredItems.length && filteredItems.length > 0}
                 onChange={handleSelectAll}
-                className="w-4 h-4 text-primary-600 bg-gray-800 border-gray-600 rounded focus:ring-primary-500"
+                className="w-4 h-4 text-primary-600 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded focus:ring-primary-500"
               />
-              <span className="text-sm">Select All</span>
+              <span className="text-sm text-gray-700 dark:text-gray-300">Select All</span>
             </label>
 
             {/* Bulk Actions */}
@@ -217,7 +198,7 @@ const WishlistPage: React.FC = () => {
               <div className="flex items-center gap-2">
                 <button 
                   onClick={handleRemoveSelected}
-                  className="text-sm text-red-400 hover:text-red-300"
+                  className="text-sm text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300"
                 >
                   Remove Selected ({selectedItems.length})
                 </button>
@@ -230,7 +211,7 @@ const WishlistPage: React.FC = () => {
             <div className="relative">
               <button 
                 onClick={() => setShowFilters(!showFilters)}
-                className="flex items-center gap-2 bg-gray-800 px-4 py-2 rounded-lg hover:bg-gray-700"
+                className="flex items-center gap-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
               >
                 <Filter className="w-4 h-4" />
                 <span>{filterCategory === 'all' ? 'All Categories' : filterCategory}</span>
@@ -238,7 +219,7 @@ const WishlistPage: React.FC = () => {
               </button>
               
               {showFilters && (
-                <div className="absolute right-0 mt-2 w-48 bg-gray-800 rounded-lg shadow-lg z-10">
+                <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-10">
                   {categories.map((category) => (
                     <button
                       key={category}
@@ -246,7 +227,7 @@ const WishlistPage: React.FC = () => {
                         setFilterCategory(category);
                         setShowFilters(false);
                       }}
-                      className="w-full text-left px-4 py-2 hover:bg-gray-700 first:rounded-t-lg last:rounded-b-lg"
+                      className="w-full text-left px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 first:rounded-t-lg last:rounded-b-lg"
                     >
                       {category === 'all' ? 'All Categories' : category}
                     </button>
@@ -259,7 +240,7 @@ const WishlistPage: React.FC = () => {
             <select 
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="bg-gray-800 px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
             >
               <option value="newest">Newest First</option>
               <option value="oldest">Oldest First</option>
@@ -284,7 +265,7 @@ const WishlistPage: React.FC = () => {
             {filteredItems.map((item) => (
               <div 
                 key={item.id} 
-                className="bg-gray-900 rounded-xl p-6 flex flex-col md:flex-row gap-6"
+                className="bg-white dark:bg-gray-800 rounded-xl p-6 flex flex-col md:flex-row gap-6 shadow-sm"
               >
                 {/* Checkbox */}
                 <div className="flex items-start">
@@ -292,23 +273,23 @@ const WishlistPage: React.FC = () => {
                     type="checkbox"
                     checked={selectedItems.includes(item.id)}
                     onChange={() => handleToggleSelect(item.id)}
-                    className="w-4 h-4 mt-1 text-primary-600 bg-gray-800 border-gray-600 rounded focus:ring-primary-500"
+                    className="w-4 h-4 mt-1 text-primary-600 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded focus:ring-primary-500"
                   />
                 </div>
 
                 {/* Product Image */}
-                <div className="relative">
+                <div className="relative w-full md:w-32 h-32 flex-shrink-0">
                   <img 
                     src={item.image} 
                     alt={item.title}
-                    className="w-full md:w-32 h-32 object-cover rounded-lg cursor-pointer"
+                    className="w-full h-full object-cover rounded-lg cursor-pointer"
                     onClick={() => navigate(`/products/${item.id}`)}
                   />
                   {item.streamer?.isLive && (
-                    <div className="absolute top-2 left-2 bg-red-600 text-white px-2 py-1 rounded-full flex items-center gap-1 text-xs">
-                      <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
+                    <span className="absolute top-2 left-2 bg-red-600 text-white text-xs font-medium px-2 py-1 rounded-full">
+                      <span className="inline-block w-2 h-2 bg-white rounded-full animate-pulse mr-1"></span>
                       LIVE
-                    </div>
+                    </span>
                   )}
                 </div>
 
@@ -316,18 +297,18 @@ const WishlistPage: React.FC = () => {
                 <div className="flex-1">
                   <div className="mb-2">
                     <h3 
-                      className="text-lg font-semibold mb-1 cursor-pointer hover:text-primary-400"
+                      className="text-lg font-semibold mb-1 text-gray-900 dark:text-white cursor-pointer hover:text-primary-600 dark:hover:text-primary-400"
                       onClick={() => navigate(`/products/${item.id}`)}
                     >
                       {item.title}
                     </h3>
-                    <div className="flex items-center gap-4 text-sm text-gray-400">
+                    <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
                       <div className="flex items-center gap-1">
                         <div className="flex">
                           {[...Array(5)].map((_, i) => (
                             <Star 
                               key={i} 
-                              className={`w-3 h-3 ${i < Math.floor(item.rating) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-600'}`} 
+                              className={`w-3 h-3 ${i < Math.floor(item.rating) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300 dark:text-gray-600'}`} 
                             />
                           ))}
                         </div>
@@ -339,10 +320,10 @@ const WishlistPage: React.FC = () => {
 
                   {/* Price */}
                   <div className="flex items-baseline gap-3 mb-3">
-                    <span className="text-xl font-bold">${item.price}</span>
+                    <span className="text-xl font-bold text-gray-900 dark:text-white">${item.price}</span>
                     {item.originalPrice && (
                       <>
-                        <span className="text-gray-400 line-through">${item.originalPrice}</span>
+                        <span className="text-gray-500 dark:text-gray-400 line-through">${item.originalPrice}</span>
                         <span className="bg-red-600 text-white px-2 py-0.5 rounded text-xs">
                           {Math.round(((item.originalPrice - item.price) / item.originalPrice) * 100)}% OFF
                         </span>
@@ -387,8 +368,8 @@ const WishlistPage: React.FC = () => {
                       onClick={() => handleTogglePriceAlert(item.id)}
                       className={`px-4 py-2 rounded-lg flex items-center gap-2 border ${
                         item.priceAlert 
-                          ? 'border-primary-500 text-primary-400' 
-                          : 'border-gray-700 text-gray-400 hover:border-gray-600'
+                          ? 'border-primary-500 text-primary-500 dark:text-primary-400' 
+                          : 'border-gray-300 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-gray-400 dark:hover:border-gray-600'
                       }`}
                     >
                       {item.priceAlert ? (
@@ -404,13 +385,13 @@ const WishlistPage: React.FC = () => {
                       )}
                     </button>
 
-                    <button className="p-2 text-gray-400 hover:text-white">
+                    <button className="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                       <Share2 className="w-4 h-4" />
                     </button>
 
                     <button 
                       onClick={() => handleRemoveItem(item.id)}
-                      className="p-2 text-gray-400 hover:text-red-400"
+                      className="p-2 text-gray-600 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -420,10 +401,10 @@ const WishlistPage: React.FC = () => {
             ))}
           </div>
         ) : (
-          <div className="bg-gray-900 rounded-xl p-12 text-center">
-            <Heart className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-            <h2 className="text-xl font-semibold mb-2">Your wishlist is empty</h2>
-            <p className="text-gray-400 mb-6">Start adding items you love to keep track of them</p>
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-12 text-center">
+            <Heart className="w-16 h-16 text-gray-400 dark:text-gray-600 mx-auto mb-4" />
+            <h2 className="text-xl font-semibold mb-2 text-gray-900 dark:text-white">Your wishlist is empty</h2>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">Start adding items you love to keep track of them</p>
             <button 
               onClick={() => navigate('/products')}
               className="bg-primary-600 text-white px-6 py-3 rounded-lg hover:bg-primary-700"
@@ -436,12 +417,12 @@ const WishlistPage: React.FC = () => {
         {/* Recommendations */}
         {filteredItems.length > 0 && (
           <div className="mt-12">
-            <h2 className="text-2xl font-bold mb-6">You May Also Like</h2>
+            <h2 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white">You May Also Like</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
               {[1, 2, 3, 4].map((i) => (
                 <div 
                   key={i}
-                  className="bg-gray-900 rounded-lg overflow-hidden cursor-pointer hover:transform hover:scale-105 transition-transform"
+                  className="bg-white dark:bg-gray-800 rounded-lg overflow-hidden cursor-pointer hover:transform hover:scale-105 transition-transform shadow-sm"
                   onClick={() => navigate(`/products/${i + 10}`)}
                 >
                   <img 
@@ -450,19 +431,19 @@ const WishlistPage: React.FC = () => {
                     className="w-full h-48 object-cover"
                   />
                   <div className="p-4">
-                    <h3 className="font-medium mb-2 line-clamp-2">Recommended Product {i}</h3>
+                    <h3 className="font-medium mb-2 line-clamp-2 text-gray-900 dark:text-white">Recommended Product {i}</h3>
                     <div className="flex items-center gap-2 mb-2">
                       <div className="flex">
                         {[...Array(5)].map((_, i) => (
                           <Star 
                             key={i} 
-                            className={`w-3 h-3 ${i < 4 ? 'fill-yellow-400 text-yellow-400' : 'text-gray-600'}`} 
+                            className={`w-3 h-3 ${i < 4 ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300 dark:text-gray-600'}`} 
                           />
                         ))}
                       </div>
-                      <span className="text-sm text-gray-400">(89)</span>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">(89)</span>
                     </div>
-                    <p className="text-lg font-bold">$99.99</p>
+                    <p className="text-lg font-bold text-gray-900 dark:text-white">$99.99</p>
                   </div>
                 </div>
               ))}
@@ -470,7 +451,7 @@ const WishlistPage: React.FC = () => {
           </div>
         )}
       </div>
-    </Layout>
+    </div>
   );
 };
 
