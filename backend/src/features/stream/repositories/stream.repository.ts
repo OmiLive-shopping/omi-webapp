@@ -153,11 +153,18 @@ export class StreamRepository {
   }
 
   async goLive(streamId: string) {
+    // Generate VDO.Ninja compatible room ID (alphanumeric only)
+    // Remove hyphens and use first 8 chars + timestamp for uniqueness
+    const sanitizedId = streamId.replace(/-/g, '').substring(0, 8);
+    const timestamp = Date.now().toString(36); // Base36 timestamp
+    const vdoRoomId = `stream${sanitizedId}${timestamp}`;
+    
     return this.prisma.stream.update({
       where: { id: streamId },
       data: {
         isLive: true,
         startedAt: new Date(),
+        vdoRoomId: vdoRoomId,
       },
     });
   }
@@ -169,6 +176,7 @@ export class StreamRepository {
         isLive: false,
         endedAt: new Date(),
         viewerCount: 0,
+        vdoRoomId: null, // Clear the room ID when stream ends
       },
     });
   }

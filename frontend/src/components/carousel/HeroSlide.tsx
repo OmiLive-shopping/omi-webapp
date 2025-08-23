@@ -40,15 +40,14 @@ export const HeroSlide: React.FC<HeroSlideProps> = ({ slide, isActive }) => {
         {/* Content */}
         <div className="absolute inset-0 flex items-center">
           <div className="container mx-auto px-4">
-            <div className="max-w-2xl">
-              {/* Live Badge */}
+            <div className="max-w-2xl relative">
+              {/* Live Badge - Positioned at top but aligned with content */}
               {slide.isLive && (
-                <div className="inline-flex items-center gap-2 px-3 py-1 bg-red-600 text-white text-sm rounded-full mb-4">
+                <div className="absolute -top-16 left-0 inline-flex items-center gap-2 px-3 py-1 bg-red-600 text-white text-sm rounded-full">
                   <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
                   LIVE
                 </div>
               )}
-              
               {/* Title */}
               <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
                 {slide.title}

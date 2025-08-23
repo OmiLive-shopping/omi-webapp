@@ -6,66 +6,117 @@ import ProductCard from '@/components/products/ProductCard';
 import { useStreams, useStream } from '@/hooks/queries/useStreamQueries';
 import { Loader2 } from 'lucide-react';
 import { StreamSimulator } from '@/components/test/StreamSimulator';
+import { io, Socket } from 'socket.io-client';
 
 const LiveStreamsPage = () => {
   const [selectedStreamId, setSelectedStreamId] = useState<string | null>(null);
   const [messages, setMessages] = useState<any[]>([]);
   const [viewers, setViewers] = useState<any[]>([]);
+  const [socket, setSocket] = useState<Socket | null>(null);
   
   // Fetch all streams from backend (not just live ones)
   const { data: streams = [], isLoading, error } = useStreams('all');
   const { data: selectedStream } = useStream(selectedStreamId);
   
-  // Initialize mock chat data when a stream is selected
+  // Setup WebSocket connection
   useEffect(() => {
-    if (selectedStreamId) {
-      // Mock viewers
+    const newSocket = io('http://localhost:9000', {
+      transports: ['websocket'],
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+    });
+
+    newSocket.on('connect', () => {
+      console.log('Connected to WebSocket server');
+    });
+
+    newSocket.on('disconnect', () => {
+      console.log('Disconnected from WebSocket server');
+    });
+
+    setSocket(newSocket);
+
+    return () => {
+      newSocket.close();
+    };
+  }, []);
+
+  // Join stream room and listen for chat messages
+  useEffect(() => {
+    if (selectedStreamId && socket) {
+      // Join the stream room
+      socket.emit('stream:join', { streamId: selectedStreamId });
+      console.log('Joined stream room:', selectedStreamId);
+
+      // Listen for chat messages
+      const handleChatMessage = (message: any) => {
+        console.log('Received chat message:', message);
+        setMessages(prev => [...prev, {
+          id: message.id,
+          user: {
+            id: message.userId,
+            username: message.username,
+            role: message.role || 'viewer'
+          },
+          content: message.content,
+          timestamp: new Date(message.timestamp)
+        }]);
+      };
+
+      // Listen for viewer updates
+      const handleViewerUpdate = (data: any) => {
+        console.log('Viewer count updated:', data.viewerCount);
+        // Update viewer count if needed
+      };
+
+      socket.on('chat:message', handleChatMessage);
+      socket.on('stream:viewers:update', handleViewerUpdate);
+      
+      // Also listen for test messages
+      socket.on('test:chat:message', handleChatMessage);
+
+      // Initialize with some viewers
       const mockViewers = [
-        { id: '1', username: 'StreamerPro', role: 'streamer', isOnline: true },
-        { id: '2', username: 'ModeratorMike', role: 'moderator', isOnline: true },
-        { id: '3', username: 'ViewerVicky', role: 'viewer', isOnline: true },
-        { id: '4', username: 'ChatterChris', role: 'viewer', isOnline: true },
-        { id: '5', username: 'GamerGary', role: 'viewer', isOnline: true },
-        { id: 'current-user', username: 'You', role: 'viewer', isOnline: true }
+        { id: 'current-user', username: 'You', role: 'viewer', isOnline: true },
+        { id: 'streamer', username: 'Streamer', role: 'streamer', isOnline: true }
       ];
       setViewers(mockViewers);
 
-      // Mock initial messages
-      const mockMessages = [
-        {
-          id: '1',
-          user: mockViewers[0],
-          content: 'Welcome everyone to the stream! 🎉',
-          timestamp: new Date(Date.now() - 10 * 60 * 1000),
-          isPinned: true
-        },
-        {
-          id: '2',
-          user: mockViewers[2],
-          content: 'Hey! Excited for today\'s content!',
-          timestamp: new Date(Date.now() - 8 * 60 * 1000)
-        },
-        {
-          id: '3',
-          user: mockViewers[3],
-          content: 'This is awesome! 🔥',
-          timestamp: new Date(Date.now() - 5 * 60 * 1000)
-        }
-      ];
-      setMessages(mockMessages);
+      // Clear messages when switching streams
+      setMessages([]);
+
+      return () => {
+        socket.emit('stream:leave', { streamId: selectedStreamId });
+        socket.off('chat:message', handleChatMessage);
+        socket.off('stream:viewers:update', handleViewerUpdate);
+        socket.off('test:chat:message', handleChatMessage);
+      };
     }
-  }, [selectedStreamId]);
+  }, [selectedStreamId, socket]);
 
   // Handle sending message
   const handleSendMessage = (content: string, mentions?: string[]) => {
-    const newMessage = {
-      id: Date.now().toString(),
-      user: viewers.find(v => v.id === 'current-user'),
-      content,
-      timestamp: new Date(),
-      mentions
-    };
-    setMessages(prev => [...prev, newMessage]);
+    if (socket && selectedStreamId) {
+      const messageData = {
+        streamId: selectedStreamId,
+        content,
+        mentions
+      };
+      
+      // Emit to backend
+      socket.emit('chat:send-message', messageData);
+      
+      // Add message locally (the server will echo it back)
+      const newMessage = {
+        id: Date.now().toString(),
+        user: viewers.find(v => v.id === 'current-user'),
+        content,
+        timestamp: new Date(),
+        mentions
+      };
+      setMessages(prev => [...prev, newMessage]);
+    }
   };
   
   // Mock products data
