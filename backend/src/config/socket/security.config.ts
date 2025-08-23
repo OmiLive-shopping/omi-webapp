@@ -404,8 +404,13 @@ export class PayloadValidator {
  * Get client IP address from socket
  */
 export function getClientIP(socket: Socket): string {
+  // Safety check for handshake object
+  if (!socket?.handshake) {
+    return 'unknown';
+  }
+  
   // Check for forwarded IP (behind proxy/load balancer)
-  const forwarded = socket.handshake.headers['x-forwarded-for'];
+  const forwarded = socket.handshake.headers?.['x-forwarded-for'];
   if (forwarded) {
     // Take the first IP if there are multiple
     const ips = Array.isArray(forwarded) ? forwarded[0] : forwarded;
@@ -413,7 +418,7 @@ export function getClientIP(socket: Socket): string {
   }
   
   // Check for real IP (CloudFlare, etc.)
-  const realIP = socket.handshake.headers['x-real-ip'];
+  const realIP = socket.handshake.headers?.['x-real-ip'];
   if (realIP && typeof realIP === 'string') {
     return realIP;
   }

@@ -439,6 +439,3 @@ export class StreamSocketIntegration {
     };
   }
 }
-
-// Export singleton instance
-export const streamSocketIntegration = StreamSocketIntegration.getInstance();

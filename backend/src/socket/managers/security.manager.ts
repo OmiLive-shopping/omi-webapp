@@ -528,12 +528,18 @@ export function createEventValidationWrapper(securityManager: SecurityManager) {
         await handler(socket, data);
       } catch (error) {
         console.error(`Event validation error for ${eventName}:`, error);
-        socket.emit('error', { 
-          message: 'Event processing failed',
-          event: eventName 
-        });
+        // Check if socket.emit exists before trying to use it
+        if (socket && typeof socket.emit === 'function') {
+          socket.emit('error', { 
+            message: 'Event processing failed',
+            event: eventName 
+          });
+        }
         
-        securityManager.reportSuspiciousActivity(socket, `Event processing error: ${eventName}`);
+        // Only report if socket is valid
+        if (socket) {
+          securityManager.reportSuspiciousActivity(socket, `Event processing error: ${eventName}`);
+        }
       }
     };
   };

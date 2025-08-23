@@ -25,7 +25,13 @@ export class StreamController {
   };
 
   getStreams = async (req: Request, res: Response) => {
-    const filters: StreamFilters = req.query as any;
+    const filters: StreamFilters = {
+      ...req.query,
+      // Convert string booleans to actual booleans
+      isLive: req.query.isLive === 'true' ? true : req.query.isLive === 'false' ? false : undefined,
+      upcoming: req.query.upcoming === 'true' ? true : req.query.upcoming === 'false' ? false : undefined,
+      past: req.query.past === 'true' ? true : req.query.past === 'false' ? false : undefined,
+    } as StreamFilters;
     const result = await this.streamService.getStreams(filters);
     res.status(200).json(result);
   };

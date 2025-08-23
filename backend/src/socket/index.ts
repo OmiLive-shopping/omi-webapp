@@ -7,7 +7,7 @@ import { StreamHandler } from './handlers/stream.handler.js';
 import { vdoAnalyticsHandler } from './handlers/vdo-analytics.handler.js';
 import { RoomManager } from './managers/room.manager.js';
 import { socketAuthMiddleware } from './middleware/auth.middleware.js';
-import { streamSocketIntegration } from '../features/stream/events/socket-integration.js';
+import { StreamSocketIntegration } from '../features/stream/events/socket-integration.js';
 import RealtimeAnalyticsService from '../features/analytics/services/realtime-analytics.service.js';
 import { SecurityManager, createSecurityMiddleware, createEventValidationWrapper } from './managers/security.manager.js';
 
@@ -21,7 +21,8 @@ export async function initializeSocketServer(httpServer: HTTPServer): Promise<vo
   const securityMiddleware = createSecurityMiddleware(securityManager);
   const validateEvent = createEventValidationWrapper(securityManager);
 
-  // Initialize stream event socket integration
+  // Initialize stream event socket integration with the HTTP server
+  const streamSocketIntegration = StreamSocketIntegration.getInstance();
   streamSocketIntegration.initialize();
   
   // Initialize analytics socket integration
