@@ -182,8 +182,6 @@ const LiveStreamsPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      {/* Stream Simulator only shows when viewing a live stream */}
-      {process.env.NODE_ENV === 'development' && selectedStreamId && <StreamSimulator />}
       
       <div className="max-w-full mx-auto px-2 py-2">
         <div className="flex items-center justify-between mb-8">
@@ -266,95 +264,127 @@ const LiveStreamsPage = () => {
             <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">Please try again later</p>
           </div>
         ) : selectedStreamId ? (
-          <div className={clsx(
-            "transition-all duration-300 ease-in-out",
-            viewingMode === 'regular' && "max-w-7xl mx-auto",
-            viewingMode === 'theatre' && "max-w-full",
-            viewingMode === 'fullwidth' && "max-w-full"
-          )}>
-            {/* Viewing Mode Controls */}
-            <div className="flex items-center justify-between mb-2 px-2">
-              <button
-                onClick={() => setSelectedStreamId(null)}
-                className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                Back to streams
-              </button>
-              
-              <div className="flex items-center gap-2">
+          <>
+            {/* Viewing Mode Controls - Fixed at top */}
+            <div className={clsx(
+              "sticky top-0 z-30 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700",
+              "transition-all duration-300 ease-in-out"
+            )}>
+              <div className={clsx(
+                "flex items-center justify-between py-2 px-4",
+                viewingMode === 'regular' && "max-w-7xl mx-auto",
+                viewingMode === 'theatre' && "max-w-full",
+                viewingMode === 'fullwidth' && "max-w-full"
+              )}>
                 <button
-                  onClick={() => setViewingMode('regular')}
-                  className={clsx(
-                    "px-3 py-1.5 text-sm rounded-md transition-colors",
-                    viewingMode === 'regular'
-                      ? "bg-primary-600 text-white"
-                      : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
-                  )}
+                  onClick={() => setSelectedStreamId(null)}
+                  className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
                 >
-                  Regular
+                  <ArrowLeft className="w-4 h-4" />
+                  Back to streams
                 </button>
-                <button
-                  onClick={() => setViewingMode('theatre')}
-                  className={clsx(
-                    "px-3 py-1.5 text-sm rounded-md transition-colors flex items-center gap-1",
-                    viewingMode === 'theatre'
-                      ? "bg-primary-600 text-white"
-                      : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
-                  )}
-                >
-                  <Maximize2 className="w-3.5 h-3.5" />
-                  Theatre
-                </button>
-                <button
-                  onClick={() => setViewingMode('fullwidth')}
-                  className={clsx(
-                    "px-3 py-1.5 text-sm rounded-md transition-colors",
-                    viewingMode === 'fullwidth'
-                      ? "bg-primary-600 text-white"
-                      : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
-                  )}
-                >
-                  Full Width
-                </button>
+                
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setViewingMode('regular')}
+                    className={clsx(
+                      "px-3 py-1.5 text-sm rounded-md transition-colors",
+                      viewingMode === 'regular'
+                        ? "bg-primary-600 text-white"
+                        : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
+                    )}
+                  >
+                    Regular
+                  </button>
+                  <button
+                    onClick={() => setViewingMode('theatre')}
+                    className={clsx(
+                      "px-3 py-1.5 text-sm rounded-md transition-colors flex items-center gap-1",
+                      viewingMode === 'theatre'
+                        ? "bg-primary-600 text-white"
+                        : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
+                    )}
+                  >
+                    <Maximize2 className="w-3.5 h-3.5" />
+                    Theatre
+                  </button>
+                  <button
+                    onClick={() => setViewingMode('fullwidth')}
+                    className={clsx(
+                      "px-3 py-1.5 text-sm rounded-md transition-colors",
+                      viewingMode === 'fullwidth'
+                        ? "bg-primary-600 text-white"
+                        : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
+                    )}
+                  >
+                    Full Width
+                  </button>
+                </div>
               </div>
             </div>
 
             {/* Main content area - Video and Chat */}
             <div className={clsx(
-              "transition-all duration-300",
-              viewingMode === 'regular' && "h-[calc(100vh-12rem)]",
-              viewingMode === 'theatre' && "h-[calc(100vh-10rem)]",
-              viewingMode === 'fullwidth' && "h-[calc(100vh-10rem)]"
+              "transition-all duration-300 ease-in-out",
+              viewingMode === 'regular' && "max-w-7xl mx-auto",
+              viewingMode === 'theatre' && "max-w-full",
+              viewingMode === 'fullwidth' && "max-w-full"
             )}>
               <div className={clsx(
-                "grid gap-1 h-full transition-all duration-300",
-                viewingMode === 'regular' && "grid-cols-1 lg:grid-cols-4",
-                viewingMode === 'theatre' && "grid-cols-1 lg:grid-cols-5",
-                viewingMode === 'fullwidth' && "grid-cols-1"
+                "flex gap-1 transition-all duration-300",
+                viewingMode === 'regular' && "min-h-[calc(100vh-14rem)]",
+                viewingMode === 'theatre' && "min-h-[calc(100vh-12rem)]",
+                viewingMode === 'fullwidth' && "min-h-[calc(100vh-12rem)]"
               )}>
-                {/* Video Player */}
+                {/* Video and Products Container */}
                 <div className={clsx(
-                  "h-full transition-all duration-300",
-                  viewingMode === 'regular' && "lg:col-span-3",
-                  viewingMode === 'theatre' && "lg:col-span-4",
-                  viewingMode === 'fullwidth' && "lg:col-span-1"
+                  "flex-1 transition-all duration-300",
+                  viewingMode === 'fullwidth' && "w-full"
                 )}>
-                  <ViewerPlayer 
-                    streamId={selectedStreamId}
-                    viewerCount={selectedStream?.viewerCount || 0}
-                    isLive={selectedStream?.isLive || false}
-                    streamTitle={selectedStream?.title}
-                    streamerName={selectedStream?.streamer?.username || 'Unknown'}
-                  />
+                  {/* Video Player */}
+                  <div className={clsx(
+                    "transition-all duration-300",
+                    viewingMode === 'regular' && "h-[calc(100vh-14rem)]",
+                    viewingMode === 'theatre' && "h-[calc(100vh-12rem)]",
+                    viewingMode === 'fullwidth' && "h-[calc(100vh-12rem)]"
+                  )}>
+                    <ViewerPlayer 
+                      streamId={selectedStreamId}
+                      viewerCount={selectedStream?.viewerCount || 0}
+                      isLive={selectedStream?.isLive || false}
+                      streamTitle={selectedStream?.title}
+                      streamerName={selectedStream?.streamer?.username || 'Unknown'}
+                    />
+                  </div>
+
+                  {/* Products Section - Only show in regular mode, below video */}
+                  {viewingMode === 'regular' && (
+                    <div className="mt-4 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+                      <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">
+                        Featured Products
+                      </h2>
+                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+                        {mockProducts.map(product => (
+                          <ProductCard
+                            key={product.id}
+                            product={product}
+                            onAddToCart={() => console.log('Add to cart:', product.name)}
+                            onQuickView={() => console.log('Quick view:', product.name)}
+                            isInWishlist={false}
+                            onToggleWishlist={() => console.log('Toggle wishlist:', product.name)}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
-                {/* Chat Section - Hidden in fullwidth mode */}
+                {/* Chat Section - Sticky on the right, hidden in fullwidth mode */}
                 {viewingMode !== 'fullwidth' && (
                   <div className={clsx(
-                    "h-full transition-all duration-300",
-                    viewingMode === 'regular' && "lg:col-span-1",
-                    viewingMode === 'theatre' && "lg:col-span-1"
+                    "sticky top-12 transition-all duration-300",
+                    viewingMode === 'regular' && "w-80 h-[calc(100vh-14rem)]",
+                    viewingMode === 'theatre' && "w-80 h-[calc(100vh-12rem)]"
                   )}>
                     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg h-full flex flex-col">
                       <EnhancedChatContainer
@@ -372,28 +402,7 @@ const LiveStreamsPage = () => {
                 )}
               </div>
             </div>
-
-            {/* Products Section - Only show in regular mode */}
-            {viewingMode === 'regular' && (
-              <div className="mt-4 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">
-                  Featured Products
-                </h2>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
-                  {mockProducts.map(product => (
-                    <ProductCard
-                      key={product.id}
-                      product={product}
-                      onAddToCart={() => console.log('Add to cart:', product.name)}
-                      onQuickView={() => console.log('Quick view:', product.name)}
-                      isInWishlist={false}
-                      onToggleWishlist={() => console.log('Toggle wishlist:', product.name)}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
+          </>
         ) : streams.length === 0 ? (
           <div className="text-center py-12">
             <div className="w-24 h-24 mx-auto mb-4 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
