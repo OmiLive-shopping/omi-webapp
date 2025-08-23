@@ -4,15 +4,18 @@ import { ViewerPlayer } from '@/components/stream/ViewerPlayer';
 import EnhancedChatContainer from '@/components/chat/EnhancedChatContainer';
 import ProductCard from '@/components/products/ProductCard';
 import { useStreams, useStream } from '@/hooks/queries/useStreamQueries';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Maximize2, Minimize2, ArrowLeft } from 'lucide-react';
 import { StreamSimulator } from '@/components/test/StreamSimulator';
 import { io, Socket } from 'socket.io-client';
+
+type ViewingMode = 'regular' | 'theatre' | 'fullwidth';
 
 const LiveStreamsPage = () => {
   const [selectedStreamId, setSelectedStreamId] = useState<string | null>(null);
   const [messages, setMessages] = useState<any[]>([]);
   const [viewers, setViewers] = useState<any[]>([]);
   const [socket, setSocket] = useState<Socket | null>(null);
+  const [viewingMode, setViewingMode] = useState<ViewingMode>('regular');
   
   // Fetch all streams from backend (not just live ones)
   const { data: streams = [], isLoading, error } = useStreams('all');
@@ -182,59 +185,73 @@ const LiveStreamsPage = () => {
       {/* Stream Simulator only shows when viewing a live stream */}
       {process.env.NODE_ENV === 'development' && selectedStreamId && <StreamSimulator />}
       
-      <div className="max-w-7xl mx-auto px-4 py-8">
+      <div className="max-w-full mx-auto px-2 py-2">
         <div className="flex items-center justify-between mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-            Live Streams
-          </h1>
-          {/* Quick simulation button for development */}
+          {/* Development buttons */}
           {process.env.NODE_ENV === 'development' && !selectedStreamId && (
-            <button
-              onClick={async () => {
-                try {
-                  // Check if any stream is live
-                  const isAnyStreamLive = streams.some((stream: any) => stream.isLive);
-                  
-                  if (isAnyStreamLive) {
-                    // Reset all streams
-                    const response = await fetch('http://localhost:9000/v1/streams/test/reset-all', {
-                      method: 'POST'
-                    });
-                    if (response.ok) {
-                      window.location.reload();
-                    }
-                  } else {
-                    // Start simulation
-                    const response = await fetch('http://localhost:9000/v1/streams/test/simulate/start', {
-                      method: 'POST'
-                    });
-                    if (response.ok) {
-                      window.location.reload();
-                    }
+            <div className="flex items-center gap-2">
+              {/* Direct dev mode button */}
+              <button
+                onClick={() => {
+                  // Just directly go to the first stream for development
+                  if (streams.length > 0) {
+                    setSelectedStreamId(streams[0].id);
                   }
-                } catch (error) {
-                  console.error('Failed to toggle simulation:', error);
-                }
-              }}
-              className={clsx(
-                "px-4 py-2 text-white rounded-lg transition-colors flex items-center gap-2",
-                streams.some((stream: any) => stream.isLive) 
-                  ? "bg-red-600 hover:bg-red-700" 
-                  : "bg-green-600 hover:bg-green-700"
-              )}
-            >
-              {streams.some((stream: any) => stream.isLive) ? (
-                <>
-                  <span className="w-2 h-2 bg-white rounded-full"></span>
-                  Reset All Streams (Dev)
-                </>
-              ) : (
-                <>
-                  <span className="w-2 h-2 bg-white rounded-full animate-pulse"></span>
-                  Make First Stream Live (Dev)
-                </>
-              )}
-            </button>
+                }}
+                className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors flex items-center gap-2"
+              >
+                <span className="text-lg">🚀</span>
+                Dev Mode (Skip to Stream)
+              </button>
+
+              {/* Original simulation button */}
+              <button
+                onClick={async () => {
+                  try {
+                    // Check if any stream is live
+                    const isAnyStreamLive = streams.some((stream: any) => stream.isLive);
+                    
+                    if (isAnyStreamLive) {
+                      // Reset all streams
+                      const response = await fetch('http://localhost:9000/v1/streams/test/reset-all', {
+                        method: 'POST'
+                      });
+                      if (response.ok) {
+                        window.location.reload();
+                      }
+                    } else {
+                      // Start simulation
+                      const response = await fetch('http://localhost:9000/v1/streams/test/simulate/start', {
+                        method: 'POST'
+                      });
+                      if (response.ok) {
+                        window.location.reload();
+                      }
+                    }
+                  } catch (error) {
+                    console.error('Failed to toggle simulation:', error);
+                  }
+                }}
+                className={clsx(
+                  "px-4 py-2 text-white rounded-lg transition-colors flex items-center gap-2",
+                  streams.some((stream: any) => stream.isLive) 
+                    ? "bg-red-600 hover:bg-red-700" 
+                    : "bg-green-600 hover:bg-green-700"
+                )}
+              >
+                {streams.some((stream: any) => stream.isLive) ? (
+                  <>
+                    <span className="w-2 h-2 bg-white rounded-full"></span>
+                    Reset All Streams
+                  </>
+                ) : (
+                  <>
+                    <span className="w-2 h-2 bg-white rounded-full animate-pulse"></span>
+                    Make Stream Live
+                  </>
+                )}
+              </button>
+            </div>
           )}
         </div>
 
@@ -249,63 +266,133 @@ const LiveStreamsPage = () => {
             <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">Please try again later</p>
           </div>
         ) : selectedStreamId ? (
-          <div className="space-y-6">
-            {/* Back button */}
-            <button
-              onClick={() => setSelectedStreamId(null)}
-              className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
-            >
-              ← Back to all streams
-            </button>
-            
-            {/* Main content area - Video and Chat */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[600px]">
-              {/* Video Player - Takes 2/3 width on desktop */}
-              <div className="lg:col-span-2">
-                <ViewerPlayer 
-                  streamId={selectedStreamId}
-                  viewerCount={selectedStream?.viewerCount || 0}
-                  isLive={selectedStream?.isLive || false}
-                  streamTitle={selectedStream?.title}
-                  streamerName={selectedStream?.streamer?.username || 'Unknown'}
-                />
+          <div className={clsx(
+            "transition-all duration-300 ease-in-out",
+            viewingMode === 'regular' && "max-w-7xl mx-auto",
+            viewingMode === 'theatre' && "max-w-full",
+            viewingMode === 'fullwidth' && "max-w-full"
+          )}>
+            {/* Viewing Mode Controls */}
+            <div className="flex items-center justify-between mb-2 px-2">
+              <button
+                onClick={() => setSelectedStreamId(null)}
+                className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                Back to streams
+              </button>
+              
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setViewingMode('regular')}
+                  className={clsx(
+                    "px-3 py-1.5 text-sm rounded-md transition-colors",
+                    viewingMode === 'regular'
+                      ? "bg-primary-600 text-white"
+                      : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
+                  )}
+                >
+                  Regular
+                </button>
+                <button
+                  onClick={() => setViewingMode('theatre')}
+                  className={clsx(
+                    "px-3 py-1.5 text-sm rounded-md transition-colors flex items-center gap-1",
+                    viewingMode === 'theatre'
+                      ? "bg-primary-600 text-white"
+                      : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
+                  )}
+                >
+                  <Maximize2 className="w-3.5 h-3.5" />
+                  Theatre
+                </button>
+                <button
+                  onClick={() => setViewingMode('fullwidth')}
+                  className={clsx(
+                    "px-3 py-1.5 text-sm rounded-md transition-colors",
+                    viewingMode === 'fullwidth'
+                      ? "bg-primary-600 text-white"
+                      : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
+                  )}
+                >
+                  Full Width
+                </button>
               </div>
+            </div>
 
-              {/* Chat Section - Takes 1/3 width on desktop */}
-              <div className="lg:col-span-1">
-                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg h-[600px] flex flex-col">
-                  <EnhancedChatContainer
+            {/* Main content area - Video and Chat */}
+            <div className={clsx(
+              "transition-all duration-300",
+              viewingMode === 'regular' && "h-[calc(100vh-12rem)]",
+              viewingMode === 'theatre' && "h-[calc(100vh-10rem)]",
+              viewingMode === 'fullwidth' && "h-[calc(100vh-10rem)]"
+            )}>
+              <div className={clsx(
+                "grid gap-1 h-full transition-all duration-300",
+                viewingMode === 'regular' && "grid-cols-1 lg:grid-cols-4",
+                viewingMode === 'theatre' && "grid-cols-1 lg:grid-cols-5",
+                viewingMode === 'fullwidth' && "grid-cols-1"
+              )}>
+                {/* Video Player */}
+                <div className={clsx(
+                  "h-full transition-all duration-300",
+                  viewingMode === 'regular' && "lg:col-span-3",
+                  viewingMode === 'theatre' && "lg:col-span-4",
+                  viewingMode === 'fullwidth' && "lg:col-span-1"
+                )}>
+                  <ViewerPlayer 
                     streamId={selectedStreamId}
                     viewerCount={selectedStream?.viewerCount || 0}
-                    messages={messages}
-                    viewers={viewers}
-                    currentUser={viewers.find(v => v.id === 'current-user')}
-                    onSendMessage={handleSendMessage}
-                    showViewerList={false}
-                    maxMessagesPerMinute={10}
+                    isLive={selectedStream?.isLive || false}
+                    streamTitle={selectedStream?.title}
+                    streamerName={selectedStream?.streamer?.username || 'Unknown'}
                   />
                 </div>
+
+                {/* Chat Section - Hidden in fullwidth mode */}
+                {viewingMode !== 'fullwidth' && (
+                  <div className={clsx(
+                    "h-full transition-all duration-300",
+                    viewingMode === 'regular' && "lg:col-span-1",
+                    viewingMode === 'theatre' && "lg:col-span-1"
+                  )}>
+                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg h-full flex flex-col">
+                      <EnhancedChatContainer
+                        streamId={selectedStreamId}
+                        viewerCount={selectedStream?.viewerCount || 0}
+                        messages={messages}
+                        viewers={viewers}
+                        currentUser={viewers.find(v => v.id === 'current-user')}
+                        onSendMessage={handleSendMessage}
+                        showViewerList={false}
+                        maxMessagesPerMinute={10}
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* Products Section */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">
-                Featured Products
-              </h2>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
-                {mockProducts.map(product => (
-                  <ProductCard
-                    key={product.id}
-                    product={product}
-                    onAddToCart={() => console.log('Add to cart:', product.name)}
-                    onQuickView={() => console.log('Quick view:', product.name)}
-                    isInWishlist={false}
-                    onToggleWishlist={() => console.log('Toggle wishlist:', product.name)}
-                  />
-                ))}
+            {/* Products Section - Only show in regular mode */}
+            {viewingMode === 'regular' && (
+              <div className="mt-4 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">
+                  Featured Products
+                </h2>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+                  {mockProducts.map(product => (
+                    <ProductCard
+                      key={product.id}
+                      product={product}
+                      onAddToCart={() => console.log('Add to cart:', product.name)}
+                      onQuickView={() => console.log('Quick view:', product.name)}
+                      isInWishlist={false}
+                      onToggleWishlist={() => console.log('Toggle wishlist:', product.name)}
+                    />
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
           </div>
         ) : streams.length === 0 ? (
           <div className="text-center py-12">
