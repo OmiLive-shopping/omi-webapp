@@ -35,7 +35,8 @@ export const useSocketStore = create<SocketState>((set, get) => ({
   },
 
   connect: (token?: string) => {
-    socketManager.connect(undefined, token);
+    // Don't pass token - cookies will be sent with withCredentials
+    socketManager.connect();
     
     // Setup event listeners
     socketManager.on('chat:message', (message) => {

@@ -76,6 +76,8 @@ class SocketManager {
       return this.socket;
     }
 
+    console.log('SocketManager connecting with credentials');
+
     this.socket = io(url, {
       reconnection: true,
       reconnectionAttempts: this.maxReconnectAttempts,
@@ -84,8 +86,8 @@ class SocketManager {
       timeout: 20000,
       transports: ['websocket', 'polling'],
       autoConnect: true,
-      withCredentials: true,
-      auth: token ? { token } : undefined,
+      withCredentials: true, // This will send cookies automatically
+      // Don't send token in auth, let cookies handle authentication
     });
 
     this.setupBaseListeners();

@@ -5,8 +5,8 @@ import EnhancedChatContainer from '@/components/chat/EnhancedChatContainer';
 import ProductCard from '@/components/products/ProductCard';
 import { useStreams, useStream } from '@/hooks/queries/useStreamQueries';
 import { Loader2, Maximize2, Minimize2, ArrowLeft } from 'lucide-react';
-import { io, Socket } from 'socket.io-client';
-import { getSession } from '@/lib/auth-client';
+import { socketManager } from '@/lib/socket';
+import { useAuthenticatedSocket } from '@/hooks/useAuthenticatedSocket';
 
 // type ViewingMode = 'regular' | 'theatre' | 'fullwidth';
 
@@ -14,68 +14,20 @@ const LiveStreamsPage = () => {
   const [selectedStreamId, setSelectedStreamId] = useState<string | null>(null);
   const [messages, setMessages] = useState<any[]>([]);
   const [viewers, setViewers] = useState<any[]>([]);
-  const [socket, setSocket] = useState<Socket | null>(null);
   // const [viewingMode, setViewingMode] = useState<ViewingMode>('regular');
   
   // Fetch all streams from backend (not just live ones)
   const { data: streams = [], isLoading, error } = useStreams('all');
   const { data: selectedStream } = useStream(selectedStreamId);
   
-
-  // Setup WebSocket connection
-  useEffect(() => {
-    const setupSocket = async () => {
-      try {
-        // Get the current session for authentication
-        const session = await getSession();
-        console.log('Got session for viewer WebSocket:', session);
-        
-        const newSocket = io('http://localhost:9000', {
-          transports: ['websocket'],
-          reconnection: true,
-          reconnectionAttempts: 5,
-          reconnectionDelay: 1000,
-          auth: {
-            token: (session as any)?.session?.id || (session as any)?.data?.session?.id // Try both structures
-          }
-        });
-
-        newSocket.on('connect', () => {
-          console.log('Connected to WebSocket server');
-        });
-
-        newSocket.on('disconnect', () => {
-          console.log('Disconnected from WebSocket server');
-        });
-
-        setSocket(newSocket);
-      } catch (error) {
-        console.error('Failed to setup authenticated socket:', error);
-        // Still set up socket without auth for anonymous viewing
-        const newSocket = io('http://localhost:9000', {
-          transports: ['websocket'],
-          reconnection: true,
-          reconnectionAttempts: 5,
-          reconnectionDelay: 1000,
-        });
-        setSocket(newSocket);
-      }
-    };
-    
-    setupSocket();
-
-    return () => {
-      if (socket) {
-        socket.close();
-      }
-    };
-  }, []);
+  // Use the authenticated socket hook to ensure we have a connection
+  useAuthenticatedSocket();
 
   // Join stream room and listen for chat messages
   useEffect(() => {
-    if (selectedStreamId && socket) {
+    if (selectedStreamId) {
       // Join the stream room
-      socket.emit('stream:join', { streamId: selectedStreamId });
+      socketManager.emit('stream:join', { streamId: selectedStreamId });
       console.log('Joined stream room:', selectedStreamId);
 
       // Listen for chat messages
@@ -99,12 +51,12 @@ const LiveStreamsPage = () => {
         // Update viewer count if needed
       };
 
-      socket.on('chat:message', handleChatMessage);
-      socket.on('chat:message:sent', handleChatMessage); // Also listen for sent confirmation
-      socket.on('stream:viewers:update', handleViewerUpdate);
+      socketManager.on('chat:message', handleChatMessage);
+      socketManager.on('chat:message:sent', handleChatMessage); // Also listen for sent confirmation
+      socketManager.on('stream:viewers:update', handleViewerUpdate);
       
       // Also listen for test messages
-      socket.on('test:chat:message', handleChatMessage);
+      socketManager.on('test:chat:message', handleChatMessage);
 
       // Initialize with some viewers
       const mockViewers = [
@@ -117,18 +69,18 @@ const LiveStreamsPage = () => {
       setMessages([]);
 
       return () => {
-        socket.emit('stream:leave', { streamId: selectedStreamId });
-        socket.off('chat:message', handleChatMessage);
-        socket.off('chat:message:sent', handleChatMessage);
-        socket.off('stream:viewers:update', handleViewerUpdate);
-        socket.off('test:chat:message', handleChatMessage);
+        socketManager.emit('stream:leave', { streamId: selectedStreamId });
+        socketManager.off('chat:message', handleChatMessage);
+        socketManager.off('chat:message:sent', handleChatMessage);
+        socketManager.off('stream:viewers:update', handleViewerUpdate);
+        socketManager.off('test:chat:message', handleChatMessage);
       };
     }
-  }, [selectedStreamId, socket]);
+  }, [selectedStreamId]);
 
   // Handle sending message
   const handleSendMessage = (content: string, mentions?: string[]) => {
-    if (socket && selectedStreamId) {
+    if (selectedStreamId) {
       const messageData = {
         streamId: selectedStreamId,
         content,
@@ -136,7 +88,7 @@ const LiveStreamsPage = () => {
       };
       
       // Emit to backend with correct event name
-      socket.emit('chat:send-message', messageData);
+      socketManager.emit('chat:send-message', messageData);
       // Don't add message locally - wait for server echo
     }
   };
