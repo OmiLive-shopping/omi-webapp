@@ -1,13 +1,14 @@
 import { useEffect } from 'react';
 import { useSocketStore } from '@/stores/socket-store';
 import { getSession } from '@/lib/auth-client';
+import { extractSessionToken } from '@/utils/auth-helpers';
 
 /**
  * Hook to establish an authenticated WebSocket connection
  * Automatically retrieves the Better Auth session token and connects
  */
 export function useAuthenticatedSocket() {
-  const { connect, disconnect, isConnected } = useSocketStore();
+  const { connect, isConnected } = useSocketStore();
 
   useEffect(() => {
     let mounted = true;
@@ -15,13 +16,12 @@ export function useAuthenticatedSocket() {
     const initSocket = async () => {
       try {
         // Get the current session from Better Auth
-        const session = await getSession();
+        const sessionResponse = await getSession();
         
         if (!mounted) return;
         
-        // Connect with the session token if available
-        // If no token, connection will be anonymous (for viewers)
-        const token = session?.session?.token || session?.token;
+        // Extract token using the proper type-safe helper
+        const token = extractSessionToken(sessionResponse);
         connect(token);
       } catch (error) {
         console.error('Failed to initialize authenticated socket:', error);
@@ -55,13 +55,16 @@ export function useStreamSocket() {
 
   const connectWithAuth = async () => {
     try {
-      const session = await getSession();
+      const sessionResponse = await getSession();
+      console.log('Session retrieved:', sessionResponse); // Debug log
       
-      if (!session?.session?.token && !session?.token) {
+      // Extract token using the proper type-safe helper
+      const token = extractSessionToken(sessionResponse);
+      
+      if (!token) {
         throw new Error('No authentication token available');
       }
       
-      const token = session.session?.token || session.token;
       connect(token);
       return true;
     } catch (error) {

@@ -5,7 +5,6 @@ import EnhancedChatContainer from '@/components/chat/EnhancedChatContainer';
 import ProductCard from '@/components/products/ProductCard';
 import { useStreams, useStream } from '@/hooks/queries/useStreamQueries';
 import { Loader2, Maximize2, Minimize2, ArrowLeft } from 'lucide-react';
-import { StreamSimulator } from '@/components/test/StreamSimulator';
 import { io, Socket } from 'socket.io-client';
 
 type ViewingMode = 'regular' | 'theatre' | 'fullwidth';

@@ -64,8 +64,8 @@ app.use(pinoLogger);
 // Trust proxy for accurate IP addresses (important for rate limiting)
 app.set('trust proxy', 1);
 
-// Global rate limiting
-app.use(apiRateLimiter);
+// Global rate limiting - DISABLED FOR NOW
+// app.use(apiRateLimiter);
 
 // Health check endpoints (no auth required)
 app.get('/heartbeat', (req: Request, res: Response): void => {

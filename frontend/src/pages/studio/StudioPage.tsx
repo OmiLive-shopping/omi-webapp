@@ -52,7 +52,7 @@ const StudioPage: React.FC = () => {
   usePageTitle('Creator Studio');
   const navigate = useNavigate();
   const [isStreaming, setIsStreaming] = useState(false);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'stream' | 'analytics' | 'products'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'stream' | 'analytics' | 'products'>('stream');
   
   // Generate a unique stream key (in production this would come from the backend)
   const streamKey = `stream-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -180,8 +180,8 @@ const StudioPage: React.FC = () => {
           {/* Tabs */}
           <div className="flex gap-6 mt-6">
             {[
-              { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
               { id: 'stream', label: 'Go Live', icon: Video },
+              { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
               { id: 'analytics', label: 'Analytics', icon: TrendingUp },
               { id: 'products', label: 'Products', icon: Package }
             ].map((tab) => (

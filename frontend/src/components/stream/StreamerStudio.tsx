@@ -59,8 +59,13 @@ export const StreamerStudio: React.FC<StreamerStudioProps> = ({
   const [showStatsOverlay, setShowStatsOverlay] = useState(true);
   const [showAdvancedControls, setShowAdvancedControls] = useState(false);
   
-  // Generate a unique stream key for VDO.Ninja room (only used when going live)
-  const [streamKey] = useState(() => `stream-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`);
+  // Generate a unique VDO room ID once and use it everywhere
+  const [vdoRoomId] = useState(() => {
+    // Generate alphanumeric room ID that's VDO.ninja compatible
+    const timestamp = Date.now().toString(36);
+    const random = Math.random().toString(36).substr(2, 9);
+    return `room${timestamp}${random}`.replace(/[^a-zA-Z0-9]/g, '');
+  });
   
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const eventManagerRef = useRef<VdoEventManager | null>(null);
@@ -127,7 +132,7 @@ export const StreamerStudio: React.FC<StreamerStudioProps> = ({
     };
   }, [iframeRef.current, setManagers]);
 
-  // Stream key management
+  // Stream key management (not used with VDO.Ninja)
   const streamKeyData = user?.streamKey ? {
     streamKey: user.streamKey,
     vdoRoomName: `room-${user.email?.replace('@', '-').replace('.', '-')}` // Generate safe room name
@@ -149,7 +154,7 @@ export const StreamerStudio: React.FC<StreamerStudioProps> = ({
     setIsPreviewMode(false);
     
     // Initialize stream in store
-    initializeStream(streamKey, streamKey, streamKey);
+    initializeStream(vdoRoomId, vdoRoomId, vdoRoomId);
     
     // Update stream info
     updateStreamInfo({
@@ -164,7 +169,10 @@ export const StreamerStudio: React.FC<StreamerStudioProps> = ({
     
     // Reload iframe with room URL
     if (iframeRef.current) {
-      iframeRef.current.src = `https://vdo.ninja/?room=${streamKey}&push=host&webcam&microphone&quality=2&autostart&bitrate=2500`;
+      const vdoUrl = `https://vdo.ninja/?room=${vdoRoomId}&push=host&webcam&microphone&quality=2&autostart&bitrate=2500`;
+      console.log('Streamer VDO URL:', vdoUrl);
+      console.log('Streamer Room ID:', vdoRoomId);
+      iframeRef.current.src = vdoUrl;
     }
     
     // Start VDO.Ninja stream through store
@@ -172,11 +180,11 @@ export const StreamerStudio: React.FC<StreamerStudioProps> = ({
     
     // Log stream start event
     eventManagerRef.current?.emit('custom:streamStarted', {
-      streamId: currentStreamId || streamKey,
+      streamId: currentStreamId || vdoRoomId,
       timestamp: Date.now(),
       user: user?.email
     });
-  }, [streamKey, currentStreamId, onStreamStart, initializeStream, updateStreamInfo, storeStartStream, user, isSocketConnected, connectWithAuth]);
+  }, [vdoRoomId, currentStreamId, onStreamStart, initializeStream, updateStreamInfo, storeStartStream, user, isSocketConnected, connectWithAuth]);
 
   // Enhanced stream end handler
   const handleStreamEnd = useCallback(async () => {
@@ -194,17 +202,20 @@ export const StreamerStudio: React.FC<StreamerStudioProps> = ({
     
     // Log stream end event
     eventManagerRef.current?.emit('custom:streamEnded', {
-      streamId: currentStreamId || streamKey,
+      streamId: currentStreamId || vdoRoomId,
       timestamp: Date.now(),
       stats: aggregatedStats
     });
-  }, [streamKey, currentStreamId, onStreamEnd, storeStopStream, aggregatedStats, currentStats]);
+  }, [vdoRoomId, currentStreamId, onStreamEnd, storeStopStream, aggregatedStats, currentStats]);
 
   // Handle authentication and authorization
   useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
-      navigate('/auth');
-    } else if (!authLoading && isAuthenticated && !canStream) {
+    // Only redirect if we're definitely not authenticated and loading is complete
+    if (authLoading === false && isAuthenticated === false) {
+      console.log('User not authenticated, redirecting to auth page');
+      // Use replace to avoid the "leave site" warning
+      navigate('/auth', { replace: true });
+    } else if (authLoading === false && isAuthenticated === true && !canStream) {
       console.log('User is not authorized to stream');
     }
   }, [authLoading, isAuthenticated, canStream, navigate]);
@@ -293,22 +304,20 @@ export const StreamerStudio: React.FC<StreamerStudioProps> = ({
               </div>
             </div>
             
-            <div className="flex-1 min-h-[300px] lg:min-h-0 flex items-center justify-center bg-black p-4">
-              <div className="relative w-full" style={{ maxWidth: '100%', maxHeight: '100%' }}>
-                {/* 16:9 Aspect Ratio Container */}
-                <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
+            <div className="flex-1 min-h-[400px] max-h-[600px] flex items-center justify-center bg-black">
+              <div className="relative w-full h-full flex items-center justify-center">
                   {isStreaming || isPreviewMode ? (
                     <>
                       <iframe
                         ref={iframeRef}
                         src={
                           isPreviewMode 
-                            ? `https://vdo.ninja/?push&webcam&microphone&quality=2&autostart&bitrate=2500&fullscreen&noroom` // Preview mode - no room
-                            : `https://vdo.ninja/?room=${streamKey}&push=host&webcam&microphone&quality=2&autostart&bitrate=2500` // Live mode - with room
+                            ? `https://vdo.ninja/?push&webcam&microphone&quality=2&autostart&bitrate=2500&fullscreen&noroom&scale=100&cover&noborder&noheader` // Preview mode - no room
+                            : `https://vdo.ninja/?room=${vdoRoomId}&push=host&webcam&microphone&quality=2&autostart&bitrate=2500&scale=100&cover&noborder&noheader` // Live mode - with room
                         }
-                        className="absolute inset-0 w-full h-full"
+                        className="w-full h-full"
                         allow="camera; microphone; autoplay; display-capture"
-                        style={{ border: 'none' }}
+                        style={{ border: 'none', backgroundColor: '#000' }}
                       />
                   
                   {/* Enhanced Stats Overlay */}
@@ -355,7 +364,7 @@ export const StreamerStudio: React.FC<StreamerStudioProps> = ({
                   ) : null}
                     </>
                   ) : (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center text-white bg-gray-900/50">
+                    <div className="w-full h-full flex flex-col items-center justify-center text-white bg-gray-900/50">
                       <div className="text-center max-w-md">
                         <Video className="w-20 h-20 mb-4 text-gray-400 mx-auto" />
                         <h3 className="text-2xl font-semibold mb-2">Ready to Set Up Your Stream?</h3>
@@ -373,7 +382,6 @@ export const StreamerStudio: React.FC<StreamerStudioProps> = ({
                       </div>
                     </div>
                   )}
-                </div>
               </div>
             </div>
             
@@ -490,12 +498,21 @@ export const StreamerStudio: React.FC<StreamerStudioProps> = ({
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg">
             <div className="p-6">
               <SimpleStreamControls
-                vdoRoomId={streamKey}  // Use the locally generated streamKey as VDO room ID
+                vdoRoomId={vdoRoomId}  // Use the locally generated vdoRoomId
                 isStreaming={isStreaming}
                 currentStreamId={currentStreamId || undefined}
                 onStreamStart={handleStreamStart}
                 onStreamEnd={handleStreamEnd}
-                onStreamCreated={(streamId) => setCurrentStreamId(streamId)}
+                onStreamCreated={(streamId, actualVdoRoomId) => {
+                  setCurrentStreamId(streamId);
+                  // If we got an actual room ID from the backend, update the iframe
+                  if (actualVdoRoomId && iframeRef.current) {
+                    const newUrl = `https://vdo.ninja/?room=${actualVdoRoomId}&push=host&webcam&microphone&quality=2&autostart&bitrate=2500`;
+                    console.log('Updating streamer to use actual room ID:', actualVdoRoomId);
+                    console.log('New streamer URL:', newUrl);
+                    iframeRef.current.src = newUrl;
+                  }
+                }}
                 isPreviewMode={isPreviewMode}
               />
             </div>

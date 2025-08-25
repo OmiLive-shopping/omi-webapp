@@ -19,7 +19,7 @@ interface SimpleStreamControlsProps {
   onStreamStart: () => void;
   onStreamEnd: () => void;
   currentStreamId?: string;
-  onStreamCreated?: (streamId: string) => void;
+  onStreamCreated?: (streamId: string, actualVdoRoomId?: string) => void;
   isPreviewMode?: boolean;
 }
 
@@ -66,24 +66,6 @@ export const SimpleStreamControls: React.FC<SimpleStreamControlsProps> = ({
           Create and manage your stream listing
         </p>
         
-        {/* Info Box */}
-        <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-          <div className="flex items-start gap-3">
-            <Info className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5" />
-            <div className="text-sm text-blue-800 dark:text-blue-200">
-              <p className="font-medium mb-1">How to stream:</p>
-              <ol className="list-decimal list-inside space-y-1">
-                <li>Click the <strong>"Start"</strong> button in VDO.ninja above to begin broadcasting</li>
-                <li>Once VDO.ninja is streaming, click <strong>"Create Stream Page"</strong> below</li>
-                <li>Share your stream page URL with viewers</li>
-                <li>When done, stop in VDO.ninja first, then click "End Stream" here</li>
-              </ol>
-              <p className="mt-2 text-xs italic">
-                Note: VDO.ninja controls the actual video stream, this page manages your stream listing.
-              </p>
-            </div>
-          </div>
-        </div>
 
         {/* Stream Status */}
         <div className="mb-4">
@@ -214,13 +196,37 @@ export const SimpleStreamControls: React.FC<SimpleStreamControlsProps> = ({
                 const response = await apiClient.post<any>('/streams', {
                   title: `Live Stream ${new Date().toLocaleDateString()}`,
                   description: 'Live streaming now!',
-                  // No scheduled field - going live immediately
                   vdoRoomId: vdoRoomId
                 });
                 
                 if (response?.success && response?.data?.id) {
-                  setStreamId(response.data.id);
-                  onStreamCreated?.(response.data.id);
+                  const streamId = response.data.id;
+                  setStreamId(streamId);
+                  
+                  // Now make the stream go live
+                  try {
+                    const goLiveResponse = await apiClient.post<any>(`/streams/${streamId}/go-live`, {
+                      streamKey: vdoRoomId // Use vdoRoomId as streamKey
+                    });
+                    
+                    if (goLiveResponse?.success) {
+                      console.log('Stream is now live!', goLiveResponse.data);
+                      // The backend should return the stream with the vdoRoomId
+                      const actualRoomId = goLiveResponse.data?.vdoRoomId || vdoRoomId;
+                      console.log('VDO Room ID for streaming:', actualRoomId);
+                      
+                      // Pass the actual room ID back to the parent
+                      onStreamCreated?.(streamId, actualRoomId);
+                      onStreamStart();
+                      return; // Exit early since we handled it
+                    }
+                  } catch (goLiveError) {
+                    console.error('Failed to go live:', goLiveError);
+                    // Continue anyway - stream is created
+                  }
+                  
+                  // Fallback if go-live failed
+                  onStreamCreated?.(streamId, vdoRoomId);
                   onStreamStart();
                 }
               } catch (error) {

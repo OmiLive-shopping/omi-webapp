@@ -154,7 +154,19 @@ export class VdoCommandManager {
     }
     
     try {
-      this.iframe.contentWindow.postMessage(command, '*');
+      // Ensure the command is properly serializable by creating a clean object
+      const messageData = {
+        action: command.action,
+        value: command.value !== undefined ? command.value : null,
+        target: command.target || null,
+        streamId: command.streamId || null,
+        commandId: command.commandId || null
+      };
+      
+      // Remove any undefined/null properties to avoid serialization issues
+      const cleanMessage = JSON.parse(JSON.stringify(messageData));
+      
+      this.iframe.contentWindow.postMessage(cleanMessage, '*');
       console.log('VDO.ninja: Command sent', command.action, command.commandId);
     } catch (error) {
       console.error('VDO.ninja: Failed to send command', error);
