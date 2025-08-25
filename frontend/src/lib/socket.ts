@@ -25,8 +25,9 @@ export interface ServerToClientEvents {
 
 export interface ClientToServerEvents {
   'chat:send': (message: string) => void;
-  'stream:join': (streamId: string) => void;
-  'stream:leave': (streamId: string) => void;
+  'chat:send-message': (data: { streamId: string; content: string; mentions?: string[] }) => void;
+  'stream:join': (data: { streamId: string }) => void;
+  'stream:leave': (data: { streamId: string }) => void;
 }
 
 export interface ChatMessage {
@@ -69,7 +70,7 @@ class SocketManager {
   private reconnectDelay = 1000;
   private listeners: Map<string, Set<Function>> = new Map();
 
-  connect(url: string = import.meta.env.VITE_SOCKET_URL || 'http://localhost:3000', token?: string) {
+  connect(url: string = import.meta.env.VITE_SOCKET_URL || 'http://localhost:9000', token?: string) {
     if (this.socket?.connected) {
       console.log('Socket already connected');
       return this.socket;
@@ -192,6 +193,39 @@ class SocketManager {
 
   isConnected() {
     return this.socket?.connected ?? false;
+  }
+
+  // Helper method to send chat messages with proper format
+  sendChatMessage(streamId: string, content: string, mentions?: string[]) {
+    if (!this.socket?.connected) {
+      console.warn('Socket not connected. Message not sent.');
+      return;
+    }
+
+    console.log('Sending chat message:', { streamId, content, mentions });
+    this.socket.emit('chat:send-message', { streamId, content, mentions });
+  }
+
+  // Helper method to join a stream room
+  joinStreamRoom(streamId: string) {
+    if (!this.socket?.connected) {
+      console.warn('Socket not connected. Cannot join stream.');
+      return;
+    }
+
+    console.log('Joining stream room:', streamId);
+    this.socket.emit('stream:join', { streamId });
+  }
+
+  // Helper method to leave a stream room
+  leaveStreamRoom(streamId: string) {
+    if (!this.socket?.connected) {
+      console.warn('Socket not connected. Cannot leave stream.');
+      return;
+    }
+
+    console.log('Leaving stream room:', streamId);
+    this.socket.emit('stream:leave', { streamId });
   }
 }
 

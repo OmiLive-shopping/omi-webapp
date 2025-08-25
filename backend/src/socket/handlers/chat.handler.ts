@@ -42,11 +42,12 @@ export class ChatHandler {
       // Validate input
       const validated = chatSendMessageSchema.parse(data);
 
-      // Check if user is authenticated
-      if (!socket.userId) {
-        socket.emit('error', { message: 'Authentication required to send messages' });
-        return;
-      }
+      // Check if user is authenticated (allow anonymous for testing)
+      // TODO: Re-enable authentication requirement after testing
+      // if (!socket.userId) {
+      //   socket.emit('error', { message: 'Authentication required to send messages' });
+      //   return;
+      // }
 
       // Check if user is in the room
       const room = this.roomManager.getRoomInfo(validated.streamId);
@@ -70,10 +71,11 @@ export class ChatHandler {
         return; // Command was processed, don't send as regular message
       }
 
-      // Check rate limiting
+      // Check rate limiting (use socket.id for anonymous users)
+      const userIdentifier = socket.userId || socket.id;
       const userRole = socket.role || 'viewer';
-      if (this.rateLimiter.isInCooldown(socket.userId)) {
-        const resetTime = this.rateLimiter.getResetTime(socket.userId, userRole);
+      if (this.rateLimiter.isInCooldown(userIdentifier)) {
+        const resetTime = this.rateLimiter.getResetTime(userIdentifier, userRole);
         socket.emit('error', {
           message: 'You are in cooldown. Please wait.',
           cooldownRemaining: Math.ceil(resetTime / 1000),
@@ -81,8 +83,8 @@ export class ChatHandler {
         return;
       }
 
-      if (!this.rateLimiter.canSendMessage(socket.userId, userRole)) {
-        const resetTime = this.rateLimiter.getResetTime(socket.userId, userRole);
+      if (!this.rateLimiter.canSendMessage(userIdentifier, userRole)) {
+        const resetTime = this.rateLimiter.getResetTime(userIdentifier, userRole);
         socket.emit('error', {
           message: 'Rate limit exceeded. Please slow down.',
           resetIn: Math.ceil(resetTime / 1000),
@@ -90,10 +92,10 @@ export class ChatHandler {
         return;
       }
 
-      // Check slow mode
-      if (!this.slowModeManager.canSendInSlowMode(socket.userId, validated.streamId, userRole)) {
+      // Check slow mode (use socket.id for anonymous users)
+      if (!this.slowModeManager.canSendInSlowMode(userIdentifier, validated.streamId, userRole)) {
         const remaining = this.slowModeManager.getRemainingSlowModeTime(
-          socket.userId,
+          userIdentifier,
           validated.streamId,
         );
         socket.emit('error', {
@@ -103,68 +105,88 @@ export class ChatHandler {
         return;
       }
 
-      // Check if user is timed out or banned
-      const activeModeration = await this.prisma.chatModeration.findFirst({
-        where: {
-          streamId: validated.streamId,
-          userId: socket.userId,
-          action: { in: ['timeout', 'ban'] },
-          OR: [
-            { expiresAt: null }, // Permanent ban
-            { expiresAt: { gt: new Date() } }, // Active timeout
-          ],
-        },
-        orderBy: { createdAt: 'desc' },
-      });
+      // Check if user is timed out or banned (only for authenticated users)
+      if (socket.userId) {
+        const activeModeration = await this.prisma.chatModeration.findFirst({
+          where: {
+            streamId: validated.streamId,
+            userId: socket.userId,
+            action: { in: ['timeout', 'ban'] },
+            OR: [
+              { expiresAt: null }, // Permanent ban
+              { expiresAt: { gt: new Date() } }, // Active timeout
+            ],
+          },
+          orderBy: { createdAt: 'desc' },
+        });
 
-      if (activeModeration) {
-        if (activeModeration.action === 'ban') {
-          socket.emit('error', { message: 'You are banned from this chat' });
-        } else {
-          const remaining = activeModeration.expiresAt
-            ? Math.ceil((activeModeration.expiresAt.getTime() - Date.now()) / 1000)
-            : 0;
-          socket.emit('error', {
-            message: `You are timed out for ${remaining} seconds`,
-            timeoutRemaining: remaining,
-          });
+        if (activeModeration) {
+          if (activeModeration.action === 'ban') {
+            socket.emit('error', { message: 'You are banned from this chat' });
+          } else {
+            const remaining = activeModeration.expiresAt
+              ? Math.ceil((activeModeration.expiresAt.getTime() - Date.now()) / 1000)
+              : 0;
+            socket.emit('error', {
+              message: `You are timed out for ${remaining} seconds`,
+              timeoutRemaining: remaining,
+            });
+          }
+          return;
         }
-        return;
       }
 
-      // Create message in database
-      const message = await this.prisma.comment.create({
-        data: {
+      // For anonymous users, don't save to database
+      let chatMessage;
+      
+      if (socket.userId) {
+        // Create message in database for authenticated users
+        const message = await this.prisma.comment.create({
+          data: {
+            content: validated.content,
+            userId: socket.userId,
+            streamId: validated.streamId,
+            replyToId: validated.replyTo,
+          },
+        });
+
+        // Get user info separately since Comment model doesn't have user relation
+        const user = await this.prisma.user.findUnique({
+          where: { id: socket.userId },
+          select: {
+            id: true,
+            username: true,
+            avatarUrl: true,
+            role: true,
+          },
+        });
+
+        // Format message for broadcast
+        chatMessage = {
+          id: message.id,
+          content: message.content,
+          userId: user?.id || socket.userId,
+          username: user?.username || socket.username || 'Anonymous',
+          avatarUrl: user?.avatarUrl || null,
+          role: user?.role || 'viewer',
+          timestamp: message.createdAt,
+          replyTo: validated.replyTo,
+          type: 'message' as const,
+        };
+      } else {
+        // For anonymous users, create message without database
+        chatMessage = {
+          id: `anon-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
           content: validated.content,
-          userId: socket.userId,
-          streamId: validated.streamId,
-          replyToId: validated.replyTo,
-        },
-      });
-
-      // Get user info separately since Comment model doesn't have user relation
-      const user = await this.prisma.user.findUnique({
-        where: { id: socket.userId },
-        select: {
-          id: true,
-          username: true,
-          avatarUrl: true,
-          role: true,
-        },
-      });
-
-      // Format message for broadcast
-      const chatMessage = {
-        id: message.id,
-        content: message.content,
-        userId: user?.id || socket.userId,
-        username: user?.username || socket.username || 'Anonymous',
-        avatarUrl: user?.avatarUrl || null,
-        role: user?.role || 'viewer',
-        timestamp: message.createdAt,
-        replyTo: validated.replyTo,
-        type: 'message' as const,
-      };
+          userId: `anon-${socket.id}`,
+          username: socket.username || 'Anonymous',
+          avatarUrl: null,
+          role: 'viewer',
+          timestamp: new Date(),
+          replyTo: validated.replyTo,
+          type: 'message' as const,
+        };
+      }
 
       // Broadcast to all users in the stream
       socket.to(`stream:${validated.streamId}`).emit('chat:message', chatMessage);

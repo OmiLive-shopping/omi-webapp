@@ -202,8 +202,8 @@ export class SecurityManager {
     }
 
     // Validate message content if it's a chat message
-    if (eventName === 'chat:send-message' && data.message) {
-      if (!this.payloadValidator.validateMessageLength(data.message)) {
+    if (eventName === 'chat:send-message' && data && data.content) {
+      if (!this.payloadValidator.validateMessageLength(data.content)) {
         this.logSecurityEvent({
           eventType: SecurityEventType.VALIDATION_ERROR,
           ip,
@@ -217,7 +217,7 @@ export class SecurityManager {
       }
 
       // Sanitize message content
-      data.message = this.payloadValidator.sanitizeMessage(data.message);
+      data.content = this.payloadValidator.sanitizeMessage(data.content);
     }
 
     return true;
@@ -526,8 +526,9 @@ export function createEventValidationWrapper(securityManager: SecurityManager) {
         }
         
         await handler(socket, data);
-      } catch (error) {
-        console.error(`Event validation error for ${eventName}:`, error);
+      } catch (error: any) {
+        const errorMessage = error?.message || error?.toString() || 'Unknown error';
+        console.error(`Event validation error for ${eventName}:`, errorMessage, error);
         // Check if socket.emit exists before trying to use it
         if (socket && typeof socket.emit === 'function') {
           socket.emit('error', { 

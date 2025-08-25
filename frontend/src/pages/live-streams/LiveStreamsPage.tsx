@@ -6,41 +6,68 @@ import ProductCard from '@/components/products/ProductCard';
 import { useStreams, useStream } from '@/hooks/queries/useStreamQueries';
 import { Loader2, Maximize2, Minimize2, ArrowLeft } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
+import { getSession } from '@/lib/auth-client';
 
-type ViewingMode = 'regular' | 'theatre' | 'fullwidth';
+// type ViewingMode = 'regular' | 'theatre' | 'fullwidth';
 
 const LiveStreamsPage = () => {
   const [selectedStreamId, setSelectedStreamId] = useState<string | null>(null);
   const [messages, setMessages] = useState<any[]>([]);
   const [viewers, setViewers] = useState<any[]>([]);
   const [socket, setSocket] = useState<Socket | null>(null);
-  const [viewingMode, setViewingMode] = useState<ViewingMode>('regular');
+  // const [viewingMode, setViewingMode] = useState<ViewingMode>('regular');
   
   // Fetch all streams from backend (not just live ones)
   const { data: streams = [], isLoading, error } = useStreams('all');
   const { data: selectedStream } = useStream(selectedStreamId);
   
+
   // Setup WebSocket connection
   useEffect(() => {
-    const newSocket = io('http://localhost:9000', {
-      transports: ['websocket'],
-      reconnection: true,
-      reconnectionAttempts: 5,
-      reconnectionDelay: 1000,
-    });
+    const setupSocket = async () => {
+      try {
+        // Get the current session for authentication
+        const session = await getSession();
+        console.log('Got session for viewer WebSocket:', session);
+        
+        const newSocket = io('http://localhost:9000', {
+          transports: ['websocket'],
+          reconnection: true,
+          reconnectionAttempts: 5,
+          reconnectionDelay: 1000,
+          auth: {
+            token: (session as any)?.session?.id || (session as any)?.data?.session?.id // Try both structures
+          }
+        });
 
-    newSocket.on('connect', () => {
-      console.log('Connected to WebSocket server');
-    });
+        newSocket.on('connect', () => {
+          console.log('Connected to WebSocket server');
+        });
 
-    newSocket.on('disconnect', () => {
-      console.log('Disconnected from WebSocket server');
-    });
+        newSocket.on('disconnect', () => {
+          console.log('Disconnected from WebSocket server');
+        });
 
-    setSocket(newSocket);
+        setSocket(newSocket);
+      } catch (error) {
+        console.error('Failed to setup authenticated socket:', error);
+        // Still set up socket without auth for anonymous viewing
+        const newSocket = io('http://localhost:9000', {
+          transports: ['websocket'],
+          reconnection: true,
+          reconnectionAttempts: 5,
+          reconnectionDelay: 1000,
+        });
+        setSocket(newSocket);
+      }
+    };
+    
+    setupSocket();
 
     return () => {
-      newSocket.close();
+      if (socket) {
+        socket.close();
+      }
     };
   }, []);
 
@@ -58,7 +85,7 @@ const LiveStreamsPage = () => {
           id: message.id,
           user: {
             id: message.userId,
-            username: message.username,
+            username: message.username || 'Anonymous',
             role: message.role || 'viewer'
           },
           content: message.content,
@@ -73,6 +100,7 @@ const LiveStreamsPage = () => {
       };
 
       socket.on('chat:message', handleChatMessage);
+      socket.on('chat:message:sent', handleChatMessage); // Also listen for sent confirmation
       socket.on('stream:viewers:update', handleViewerUpdate);
       
       // Also listen for test messages
@@ -91,6 +119,7 @@ const LiveStreamsPage = () => {
       return () => {
         socket.emit('stream:leave', { streamId: selectedStreamId });
         socket.off('chat:message', handleChatMessage);
+        socket.off('chat:message:sent', handleChatMessage);
         socket.off('stream:viewers:update', handleViewerUpdate);
         socket.off('test:chat:message', handleChatMessage);
       };
@@ -106,23 +135,14 @@ const LiveStreamsPage = () => {
         mentions
       };
       
-      // Emit to backend
+      // Emit to backend with correct event name
       socket.emit('chat:send-message', messageData);
-      
-      // Add message locally (the server will echo it back)
-      const newMessage = {
-        id: Date.now().toString(),
-        user: viewers.find(v => v.id === 'current-user'),
-        content,
-        timestamp: new Date(),
-        mentions
-      };
-      setMessages(prev => [...prev, newMessage]);
+      // Don't add message locally - wait for server echo
     }
   };
   
-  // Mock products data
-  const mockProducts = [
+  // Mock products data (commented out for now)
+  /* const mockProducts = [
     {
       id: '1',
       name: 'Pantene Gold Series: Moisture Boost Conditioner',
@@ -177,13 +197,14 @@ const LiveStreamsPage = () => {
       description: 'Deep conditioning treatment for all hair types',
       stock: 10
     }
-  ];
+  ]; */
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       
-      <div className="max-w-full mx-auto px-2 py-2">
-        <div className="flex items-center justify-between mb-8">
+      <div className="flex flex-col">
+        {!selectedStreamId && (
+          <div className="flex items-center justify-between p-4">
           {/* Development buttons */}
           {process.env.NODE_ENV === 'development' && !selectedStreamId && (
             <div className="flex items-center gap-2">
@@ -250,7 +271,8 @@ const LiveStreamsPage = () => {
               </button>
             </div>
           )}
-        </div>
+          </div>
+        )}
 
         {isLoading ? (
           <div className="flex items-center justify-center h-64">
@@ -264,89 +286,15 @@ const LiveStreamsPage = () => {
           </div>
         ) : selectedStreamId ? (
           <>
-            {/* Viewing Mode Controls - Fixed at top */}
-            <div className={clsx(
-              "sticky top-0 z-30 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700",
-              "transition-all duration-300 ease-in-out"
-            )}>
-              <div className={clsx(
-                "flex items-center justify-between py-2 px-4",
-                viewingMode === 'regular' && "max-w-7xl mx-auto",
-                viewingMode === 'theatre' && "max-w-full",
-                viewingMode === 'fullwidth' && "max-w-full"
-              )}>
-                <button
-                  onClick={() => setSelectedStreamId(null)}
-                  className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
-                >
-                  <ArrowLeft className="w-4 h-4" />
-                  Back to streams
-                </button>
-                
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setViewingMode('regular')}
-                    className={clsx(
-                      "px-3 py-1.5 text-sm rounded-md transition-colors",
-                      viewingMode === 'regular'
-                        ? "bg-primary-600 text-white"
-                        : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
-                    )}
-                  >
-                    Regular
-                  </button>
-                  <button
-                    onClick={() => setViewingMode('theatre')}
-                    className={clsx(
-                      "px-3 py-1.5 text-sm rounded-md transition-colors flex items-center gap-1",
-                      viewingMode === 'theatre'
-                        ? "bg-primary-600 text-white"
-                        : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
-                    )}
-                  >
-                    <Maximize2 className="w-3.5 h-3.5" />
-                    Theatre
-                  </button>
-                  <button
-                    onClick={() => setViewingMode('fullwidth')}
-                    className={clsx(
-                      "px-3 py-1.5 text-sm rounded-md transition-colors",
-                      viewingMode === 'fullwidth'
-                        ? "bg-primary-600 text-white"
-                        : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
-                    )}
-                  >
-                    Full Width
-                  </button>
-                </div>
-              </div>
-            </div>
+            {/* Viewing controls removed for cleaner UI */}
 
             {/* Main content area - Video and Chat */}
-            <div className={clsx(
-              "transition-all duration-300 ease-in-out",
-              viewingMode === 'regular' && "max-w-7xl mx-auto",
-              viewingMode === 'theatre' && "max-w-full",
-              viewingMode === 'fullwidth' && "max-w-full"
-            )}>
-              <div className={clsx(
-                "flex gap-1 transition-all duration-300",
-                viewingMode === 'regular' && "min-h-[calc(100vh-14rem)]",
-                viewingMode === 'theatre' && "min-h-[calc(100vh-12rem)]",
-                viewingMode === 'fullwidth' && "min-h-[calc(100vh-12rem)]"
-              )}>
-                {/* Video and Products Container */}
-                <div className={clsx(
-                  "flex-1 transition-all duration-300",
-                  viewingMode === 'fullwidth' && "w-full"
-                )}>
-                  {/* Video Player */}
-                  <div className={clsx(
-                    "transition-all duration-300",
-                    viewingMode === 'regular' && "h-[calc(100vh-14rem)]",
-                    viewingMode === 'theatre' && "h-[calc(100vh-12rem)]",
-                    viewingMode === 'fullwidth' && "h-[calc(100vh-12rem)]"
-                  )}>
+            <div className="w-full" style={{ height: 'calc(100vh - 60px)' }}>
+              <div className="flex gap-0 h-full">
+                {/* Video Container - YouTube/Twitch style sizing */}
+                <div className="flex-1 p-4 flex items-center justify-center">
+                  {/* Video Player - constrained to fit viewport */}
+                  <div className="w-full" style={{ maxHeight: 'calc(100vh - 100px)', height: 'calc(100vh - 100px)' }}>
                     <ViewerPlayer 
                       streamId={selectedStreamId}
                       viewerCount={selectedStream?.viewerCount || 0}
@@ -356,49 +304,24 @@ const LiveStreamsPage = () => {
                     />
                   </div>
 
-                  {/* Products Section - Only show in regular mode, below video */}
-                  {viewingMode === 'regular' && (
-                    <div className="mt-4 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
-                      <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">
-                        Featured Products
-                      </h2>
-                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
-                        {mockProducts.map(product => (
-                          <ProductCard
-                            key={product.id}
-                            product={product}
-                            onAddToCart={() => console.log('Add to cart:', product.name)}
-                            onQuickView={() => console.log('Quick view:', product.name)}
-                            isInWishlist={false}
-                            onToggleWishlist={() => console.log('Toggle wishlist:', product.name)}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                  {/* Products Section removed for space */}
                 </div>
 
-                {/* Chat Section - Sticky on the right, hidden in fullwidth mode */}
-                {viewingMode !== 'fullwidth' && (
-                  <div className={clsx(
-                    "sticky top-12 transition-all duration-300",
-                    viewingMode === 'regular' && "w-80 h-[calc(100vh-14rem)]",
-                    viewingMode === 'theatre' && "w-80 h-[calc(100vh-12rem)]"
-                  )}>
-                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg h-full flex flex-col">
-                      <EnhancedChatContainer
-                        streamId={selectedStreamId}
-                        viewerCount={selectedStream?.viewerCount || 0}
-                        messages={messages}
-                        viewers={viewers}
-                        currentUser={viewers.find(v => v.id === 'current-user')}
-                        onSendMessage={handleSendMessage}
-                        showViewerList={false}
-                        maxMessagesPerMinute={10}
-                      />
-                    </div>
+                {/* Chat Section - Twitch-style width */}
+                <div className="w-[340px] h-full bg-white dark:bg-gray-800">
+                  <div className="h-full flex flex-col">
+                    <EnhancedChatContainer
+                      streamId={selectedStreamId}
+                      viewerCount={selectedStream?.viewerCount || 0}
+                      messages={messages}
+                      viewers={viewers}
+                      currentUser={viewers.find(v => v.id === 'current-user')}
+                      onSendMessage={handleSendMessage}
+                      showViewerList={false}
+                      maxMessagesPerMinute={10}
+                    />
                   </div>
-                )}
+                </div>
               </div>
             </div>
           </>
@@ -418,7 +341,8 @@ const LiveStreamsPage = () => {
           </div>
         ) : (
           /* Stream Selection Grid */
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <div className="overflow-y-auto flex-1 p-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {streams.map((stream: any) => (
               <div
                 key={stream.id}
@@ -499,6 +423,7 @@ const LiveStreamsPage = () => {
                 </div>
               </div>
             ))}
+            </div>
           </div>
         )}
       </div>

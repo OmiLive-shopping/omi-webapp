@@ -33,6 +33,7 @@ import StreamLayoutDemo from '@/components/stream/StreamLayoutDemo';
 // import MockApiDebugPage from '@/pages/debug/MockApiDebugPage'; // Removed - used old stream store
 import VdoNinjaTestPage from '@/pages/debug/VdoNinjaTestPage';
 import WebSocketTestPage from '@/pages/debug/WebSocketTestPage';
+import WebSocketChatTest from '@/pages/test/WebSocketChatTest';
 
 function App() {
   useEffect(() => {
@@ -77,6 +78,7 @@ function App() {
               {/* <Route path="mock-api-debug" element={<MockApiDebugPage />} /> Removed - used old stream store */}
               <Route path="vdo-ninja-test" element={<VdoNinjaTestPage />} />
               <Route path="websocket-test" element={<WebSocketTestPage />} />
+              <Route path="websocket-chat-test" element={<WebSocketChatTest />} />
               
               {/* Protected Routes */}
               <Route path="studio" element={

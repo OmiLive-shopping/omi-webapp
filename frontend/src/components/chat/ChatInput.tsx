@@ -148,7 +148,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
   // Filter users for mention suggestions
   const filteredUsers = users.filter(user =>
-    user.username.toLowerCase().includes(mentionSearch.toLowerCase())
+    user.username && user.username.toLowerCase().includes(mentionSearch.toLowerCase())
   ).slice(0, 5);
 
   // Handle mention selection

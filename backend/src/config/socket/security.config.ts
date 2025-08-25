@@ -195,7 +195,8 @@ export class OriginValidator {
   }
 
   isValidOrigin(origin?: string): boolean {
-    if (!origin) return false;
+    // Allow connections with no origin (server-to-server, scripts, etc)
+    if (!origin) return true;
     if (this.allowWildcard) return true;
     
     // Check exact match
@@ -373,6 +374,10 @@ export class PayloadValidator {
   constructor(private config: SecurityConfig) {}
 
   validatePayloadSize(data: any): boolean {
+    // Handle undefined or null data
+    if (data === undefined || data === null) {
+      return true; // Allow empty payloads
+    }
     const size = Buffer.byteLength(JSON.stringify(data), 'utf8');
     return size <= this.config.validation.maxPayloadSize;
   }

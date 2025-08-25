@@ -32,6 +32,7 @@ import { SimpleStreamControls } from './SimpleStreamControls';
 import { useAuthState, isStreamer } from '@/lib/auth-client';
 import { useNavigate } from 'react-router-dom';
 import { useStreamSocket } from '@/hooks/useAuthenticatedSocket';
+import { socketManager } from '@/lib/socket';
 
 // VDO.Ninja Integration
 import { VdoEventManager } from '@/lib/vdo-ninja/event-manager';
@@ -166,6 +167,12 @@ export const StreamerStudio: React.FC<StreamerStudioProps> = ({
     
     setIsStreaming(true);
     onStreamStart();
+    
+    // Join the WebSocket room for this stream
+    // Use the currentStreamId if available, otherwise use vdoRoomId
+    const roomId = currentStreamId || vdoRoomId;
+    console.log('Streamer joining WebSocket room:', roomId);
+    socketManager.joinStreamRoom(roomId);
     
     // Reload iframe with room URL
     if (iframeRef.current) {
@@ -391,10 +398,10 @@ export const StreamerStudio: React.FC<StreamerStudioProps> = ({
         </div>
         
         {/* Controls Sidebar */}
-        <div className="col-span-12 lg:col-span-4 lg:h-full flex flex-col gap-4">
-          {/* Stream Controls */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg">
-            <div className="p-6">
+        <div className="col-span-12 lg:col-span-4 lg:h-full">
+          {/* Stream Controls - Full Height */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg h-full flex flex-col">
+            <div className="flex-1 flex flex-col">
               <SimpleStreamControls
                 vdoRoomId={vdoRoomId}  // Use the locally generated vdoRoomId
                 isStreaming={isStreaming}
@@ -403,6 +410,11 @@ export const StreamerStudio: React.FC<StreamerStudioProps> = ({
                 onStreamEnd={handleStreamEnd}
                 onStreamCreated={(streamId, actualVdoRoomId) => {
                   setCurrentStreamId(streamId);
+                  
+                  // Join the WebSocket room for this stream
+                  console.log('Joining WebSocket room for stream:', streamId);
+                  socketManager.joinStreamRoom(streamId);
+                  
                   // If we got an actual room ID from the backend, update the iframe
                   if (actualVdoRoomId && iframeRef.current) {
                     const newUrl = `https://vdo.ninja/?room=${actualVdoRoomId}&push=host&webcam&microphone&quality=2&autostart&bitrate=2500`;
@@ -413,216 +425,6 @@ export const StreamerStudio: React.FC<StreamerStudioProps> = ({
                 }}
                 isPreviewMode={isPreviewMode}
               />
-            </div>
-          </div>
-
-          {/* Enhanced Stream Stats */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
-            <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Live Statistics</h3>
-            <div className="space-y-3">
-              {/* Viewers */}
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600 dark:text-gray-400">Viewers</span>
-                <div className="flex items-center gap-2">
-                  <Users className="w-4 h-4 text-gray-500" />
-                  <span className="font-semibold text-gray-900 dark:text-white">
-                    {viewerCount || 0}
-                  </span>
-                </div>
-              </div>
-              
-              {/* Duration */}
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600 dark:text-gray-400">Duration</span>
-                <div className="flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-gray-500" />
-                  <span className="font-semibold text-gray-900 dark:text-white">
-                    {formatDuration(0)}
-                  </span>
-                </div>
-              </div>
-              
-              {/* FPS */}
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600 dark:text-gray-400">FPS</span>
-                <div className="flex items-center gap-2">
-                  <span className="font-semibold text-gray-900 dark:text-white">
-                    {currentStats?.fps || 0}
-                  </span>
-                </div>
-              </div>
-              
-              {/* Bitrate */}
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600 dark:text-gray-400">Bitrate</span>
-                <div className="flex items-center gap-2">
-                  <Wifi className="w-4 h-4 text-gray-500" />
-                  <span className="font-semibold text-gray-900 dark:text-white">
-                    {Math.round((currentStats?.bitrate || 0) / 1000)} kbps
-                  </span>
-                </div>
-              </div>
-              
-              {/* Latency */}
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600 dark:text-gray-400">Latency</span>
-                <span className={clsx(
-                  "font-semibold",
-                  latency < 50 ? "text-green-600" :
-                  latency < 150 ? "text-yellow-600" : "text-red-600"
-                )}>
-                  {latency || 0} ms
-                </span>
-              </div>
-              
-              {/* Packet Loss */}
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600 dark:text-gray-400">Packet Loss</span>
-                <span className={clsx(
-                  "font-semibold",
-                  packetLoss < 1 ? "text-green-600" :
-                  packetLoss < 5 ? "text-yellow-600" : "text-red-600"
-                )}>
-                  {(packetLoss || 0).toFixed(1)}%
-                </span>
-              </div>
-              
-              {/* Data Usage */}
-              {currentStats?.bytesSent && (
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600 dark:text-gray-400">Data Sent</span>
-                  <span className="font-semibold text-gray-900 dark:text-white">
-                    {(currentStats.bytesSent / 1024 / 1024).toFixed(1)} MB
-                  </span>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Enhanced Tabs with Stats */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg flex-1 flex flex-col">
-            <div className="border-b border-gray-200 dark:border-gray-700">
-              <div className="flex">
-                <button
-                  onClick={() => setActiveTab('products')}
-                  className={clsx(
-                    "flex-1 px-4 py-3 text-sm font-medium transition-colors flex items-center justify-center gap-2",
-                    activeTab === 'products' 
-                      ? "text-primary-600 border-b-2 border-primary-600" 
-                      : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-                  )}
-                >
-                  <Package className="w-4 h-4" />
-                  Products
-                </button>
-                <button
-                  onClick={() => setActiveTab('chat')}
-                  className={clsx(
-                    "flex-1 px-4 py-3 text-sm font-medium transition-colors flex items-center justify-center gap-2",
-                    activeTab === 'chat' 
-                      ? "text-primary-600 border-b-2 border-primary-600" 
-                      : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-                  )}
-                >
-                  <MessageSquare className="w-4 h-4" />
-                  Chat
-                </button>
-                <button
-                  onClick={() => setActiveTab('stats')}
-                  className={clsx(
-                    "flex-1 px-4 py-3 text-sm font-medium transition-colors flex items-center justify-center gap-2",
-                    activeTab === 'stats' 
-                      ? "text-primary-600 border-b-2 border-primary-600" 
-                      : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-                  )}
-                >
-                  <Activity className="w-4 h-4" />
-                  Analytics
-                </button>
-                <button
-                  onClick={() => setActiveTab('settings')}
-                  className={clsx(
-                    "flex-1 px-4 py-3 text-sm font-medium transition-colors flex items-center justify-center gap-2",
-                    activeTab === 'settings' 
-                      ? "text-primary-600 border-b-2 border-primary-600" 
-                      : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-                  )}
-                >
-                  <Settings className="w-4 h-4" />
-                  Settings
-                </button>
-              </div>
-            </div>
-            
-            <div className="flex-1 p-4 overflow-y-auto">
-              {activeTab === 'products' && (
-                <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                  Product management panel coming soon
-                </div>
-              )}
-              
-              {activeTab === 'chat' && (
-                <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                  <MessageSquare className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                  <p>Chat moderation tools coming soon</p>
-                  <p className="text-sm mt-2">
-                    {viewerCount > 0 ? `${viewerCount} viewers connected` : 'No viewers yet'}
-                  </p>
-                </div>
-              )}
-              
-              {activeTab === 'stats' && (
-                <div>
-                  <StatsDashboard
-                    stats={currentStats}
-                    history={[]}
-                    aggregatedStats={aggregatedStats}
-                    qualityMetrics={null}
-                    layout="grid"
-                    showHeader={false}
-                    showExport={true}
-                    size="sm"
-                    onExport={(format) => {
-                      console.log('Export format:', format);
-                      console.log('Current stats:', currentStats);
-                      console.log('Aggregated stats:', aggregatedStats);
-                    }}
-                  />
-                </div>
-              )}
-              
-              {activeTab === 'settings' && (
-                <div className="space-y-4">
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">Stream Quality</h4>
-                    <select
-                      value={'medium'}
-                      onChange={(e) => setQualityPreset(e.target.value as any)}
-                      className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg"
-                    >
-                      <option value="low">Low (480p)</option>
-                      <option value="medium">Medium (720p)</option>
-                      <option value="high">High (1080p)</option>
-                      <option value="ultra">Ultra (4K)</option>
-                    </select>
-                  </div>
-                  
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">Volume</h4>
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      value={volume}
-                      onChange={(e) => setVolume(parseInt(e.target.value))}
-                      className="w-full"
-                    />
-                    <div className="text-sm text-gray-600 dark:text-gray-400 text-center">
-                      {volume}%
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
           </div>
         </div>

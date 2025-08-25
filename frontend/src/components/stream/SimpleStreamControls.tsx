@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Video, 
   StopCircle, 
@@ -7,11 +7,19 @@ import {
   Copy,
   Check,
   Loader,
-  Eye
+  Eye,
+  MessageSquare,
+  Settings,
+  Users,
+  Activity
 } from 'lucide-react';
 import clsx from 'clsx';
 import { apiClient } from '@/lib/api-client';
 import { useNavigate } from 'react-router-dom';
+import { EnhancedChatContainer } from '@/components/chat/EnhancedChatContainer';
+import { ChatMessage, Viewer } from '@/types';
+import { io, Socket } from 'socket.io-client';
+import { getSession } from '@/lib/auth-client';
 
 interface SimpleStreamControlsProps {
   vdoRoomId: string;  // The actual VDO.Ninja room ID being used
@@ -36,7 +44,115 @@ export const SimpleStreamControls: React.FC<SimpleStreamControlsProps> = ({
   const [copiedUrl, setCopiedUrl] = React.useState(false);
   const [isCreatingStream, setIsCreatingStream] = React.useState(false);
   const [streamId, setStreamId] = React.useState<string | null>(currentStreamId || null);
+  const [activeTab, setActiveTab] = useState<'stream' | 'chat' | 'viewers' | 'stats'>('stream');
   const navigate = useNavigate();
+  
+  // Chat state
+  const [socket, setSocket] = useState<Socket | null>(null);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [viewers, setViewers] = useState<Viewer[]>([]);
+  
+  // Setup WebSocket connection for chat
+  useEffect(() => {
+    if (streamId && isStreaming) {
+      // Setup authenticated WebSocket connection
+      const setupSocket = async () => {
+        try {
+          // Get the current session for authentication
+          const session = await getSession();
+          console.log('Got session for WebSocket:', session);
+          
+          const newSocket = io('http://localhost:9000', {
+            transports: ['websocket'],
+            reconnection: true,
+            reconnectionAttempts: 5,
+            reconnectionDelay: 1000,
+            auth: {
+              token: (session as any)?.session?.id || (session as any)?.data?.session?.id // Try both structures
+            }
+          });
+
+          newSocket.on('connect', () => {
+            console.log('Streamer connected to chat for stream:', streamId);
+            // Join the stream room
+            newSocket.emit('stream:join', { streamId });
+          });
+
+      // Listen for chat messages
+      newSocket.on('chat:message', (message: any) => {
+        console.log('Received chat message:', message);
+        const formattedMessage: ChatMessage = {
+          id: message.id || Date.now().toString(),
+          user: {
+            id: message.userId,
+            username: message.username || 'Anonymous',
+            role: message.role || 'viewer'
+          },
+          content: message.content,
+          timestamp: new Date(message.timestamp || Date.now())
+        };
+        setMessages(prev => [...prev, formattedMessage]);
+      });
+      
+      // Also listen for sent message confirmation
+      newSocket.on('chat:message:sent', (message: any) => {
+        console.log('Message sent confirmation:', message);
+        const formattedMessage: ChatMessage = {
+          id: message.id || Date.now().toString(),
+          user: {
+            id: message.userId,
+            username: message.username || 'Anonymous',
+            role: message.role || 'viewer'
+          },
+          content: message.content,
+          timestamp: new Date(message.timestamp || Date.now())
+        };
+        setMessages(prev => [...prev, formattedMessage]);
+      });
+
+      // Listen for viewer updates
+      newSocket.on('stream:viewer:joined', (viewer: Viewer) => {
+        console.log('Viewer joined:', viewer);
+        setViewers(prev => [...prev, viewer]);
+      });
+      
+      newSocket.on('stream:viewer:left', (viewerId: string) => {
+        console.log('Viewer left:', viewerId);
+        setViewers(prev => prev.filter(v => v.id !== viewerId));
+      });
+      
+      // Listen for viewer count updates
+      newSocket.on('stream:viewers:update', (data: { count: number, viewers: Viewer[] }) => {
+        console.log('Viewers update:', data);
+        setViewers(data.viewers || []);
+      });
+
+          setSocket(newSocket);
+        } catch (error) {
+          console.error('Failed to setup authenticated socket:', error);
+        }
+      };
+      
+      setupSocket();
+      
+      return () => {
+        if (socket) {
+          socket.emit('stream:leave', { streamId });
+          socket.close();
+        }
+      };
+    }
+  }, [streamId, isStreaming]);
+  
+  const handleSendMessage = (content: string) => {
+    if (socket && streamId) {
+      // Use the correct event name expected by backend
+      socket.emit('chat:send-message', {
+        streamId,
+        content
+      });
+    }
+  };
 
   const vdoViewerUrl = `https://vdo.ninja/?room=${vdoRoomId}&view=${vdoRoomId}&scene`;
   const appStreamUrl = streamId ? `${window.location.origin}/stream/${streamId}` : null;
@@ -57,8 +173,65 @@ export const SimpleStreamControls: React.FC<SimpleStreamControlsProps> = ({
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 space-y-6">
-      <div>
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg flex flex-col h-full">
+      {/* Tabs */}
+      <div className="border-b border-gray-200 dark:border-gray-700">
+        <div className="flex">
+          <button
+            onClick={() => setActiveTab('stream')}
+            className={clsx(
+              "flex-1 px-4 py-3 text-sm font-medium transition-colors flex items-center justify-center gap-2",
+              activeTab === 'stream' 
+                ? "text-primary-600 border-b-2 border-primary-600" 
+                : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+            )}
+          >
+            <Video className="w-4 h-4" />
+            Stream
+          </button>
+          <button
+            onClick={() => setActiveTab('chat')}
+            className={clsx(
+              "flex-1 px-4 py-3 text-sm font-medium transition-colors flex items-center justify-center gap-2",
+              activeTab === 'chat' 
+                ? "text-primary-600 border-b-2 border-primary-600" 
+                : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+            )}
+          >
+            <MessageSquare className="w-4 h-4" />
+            Chat
+          </button>
+          <button
+            onClick={() => setActiveTab('viewers')}
+            className={clsx(
+              "flex-1 px-4 py-3 text-sm font-medium transition-colors flex items-center justify-center gap-2",
+              activeTab === 'viewers' 
+                ? "text-primary-600 border-b-2 border-primary-600" 
+                : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+            )}
+          >
+            <Users className="w-4 h-4" />
+            Viewers
+          </button>
+          <button
+            onClick={() => setActiveTab('stats')}
+            className={clsx(
+              "flex-1 px-4 py-3 text-sm font-medium transition-colors flex items-center justify-center gap-2",
+              activeTab === 'stats' 
+                ? "text-primary-600 border-b-2 border-primary-600" 
+                : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+            )}
+          >
+            <Activity className="w-4 h-4" />
+            Stats
+          </button>
+        </div>
+      </div>
+
+      {/* Tab Content */}
+      <div className="flex-1 p-6 overflow-y-auto">
+        {activeTab === 'stream' && (
+          <div className="space-y-6">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
           Stream Page Management
         </h3>
@@ -266,22 +439,125 @@ export const SimpleStreamControls: React.FC<SimpleStreamControlsProps> = ({
             End Stream Page
           </button>
         )}
-      </div>
+            {/* Additional Info */}
+            <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+              <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                OBS Studio Setup
+              </h4>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                To stream with OBS instead of your browser:
+              </p>
+              <ol className="list-decimal list-inside text-xs text-gray-500 dark:text-gray-400 space-y-1">
+                <li>Add a Browser Source in OBS</li>
+                <li>Set URL to: <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">https://vdo.ninja/?push={vdoRoomId}</code></li>
+                <li>Set dimensions to 1920x1080</li>
+                <li>Start your OBS stream</li>
+              </ol>
+            </div>
+          </div>
+        )}
 
-      {/* Additional Info */}
-      <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-        <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          OBS Studio Setup
-        </h4>
-        <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-          To stream with OBS instead of your browser:
-        </p>
-        <ol className="list-decimal list-inside text-xs text-gray-500 dark:text-gray-400 space-y-1">
-          <li>Add a Browser Source in OBS</li>
-          <li>Set URL to: <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">https://vdo.ninja/?push={vdoRoomId}</code></li>
-          <li>Set dimensions to 1920x1080</li>
-          <li>Start your OBS stream</li>
-        </ol>
+        {activeTab === 'chat' && (
+          <div className="h-full flex flex-col">
+            {isStreaming && streamId ? (
+              <EnhancedChatContainer
+                streamId={streamId}
+                viewerCount={viewers.length}
+                messages={messages}
+                viewers={viewers}
+                currentUser={viewers.find(v => v.id === 'streamer') || {
+                  id: 'streamer',
+                  username: 'Streamer',
+                  isStreamer: true,
+                  joinTime: new Date(),
+                  connectionQuality: 'excellent'
+                }}
+                onSendMessage={handleSendMessage}
+                showViewerList={false}
+                maxMessagesPerMinute={10}
+              />
+            ) : (
+              <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                <MessageSquare className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                <p className="font-medium">Stream Chat</p>
+                <p className="text-sm mt-2">Start streaming to enable chat</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'viewers' && (
+          <div>
+            {isStreaming && viewers.length > 0 ? (
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                  {viewers.length} viewer{viewers.length !== 1 ? 's' : ''} watching
+                </p>
+                {viewers.map((viewer) => (
+                  <div key={viewer.id} className="flex items-center justify-between py-2 px-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 bg-primary-600 text-white rounded-full flex items-center justify-center text-sm font-medium">
+                        {viewer.username?.charAt(0).toUpperCase() || '?'}
+                      </div>
+                      <span className="text-sm font-medium text-gray-900 dark:text-white">
+                        {viewer.username || 'Anonymous'}
+                      </span>
+                    </div>
+                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                      {viewer.connectionQuality || 'good'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                <Users className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                <p className="font-medium">Viewer List</p>
+                <p className="text-sm mt-2">
+                  {isStreaming ? 'No viewers yet' : 'Start streaming to see viewers'}
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'stats' && (
+          <div className="space-y-3">
+            <div className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-700">
+              <span className="text-sm text-gray-600 dark:text-gray-400">Status</span>
+              <span className={clsx(
+                "text-sm font-medium",
+                isStreaming ? "text-green-600" : "text-gray-500"
+              )}>
+                {isStreaming ? 'Live' : 'Offline'}
+              </span>
+            </div>
+            <div className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-700">
+              <span className="text-sm text-gray-600 dark:text-gray-400">Viewers</span>
+              <span className="text-sm font-medium text-gray-900 dark:text-white">0</span>
+            </div>
+            <div className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-700">
+              <span className="text-sm text-gray-600 dark:text-gray-400">Duration</span>
+              <span className="text-sm font-medium text-gray-900 dark:text-white">00:00:00</span>
+            </div>
+            <div className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-700">
+              <span className="text-sm text-gray-600 dark:text-gray-400">Bitrate</span>
+              <span className="text-sm font-medium text-gray-900 dark:text-white">0 kbps</span>
+            </div>
+            <div className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-700">
+              <span className="text-sm text-gray-600 dark:text-gray-400">FPS</span>
+              <span className="text-sm font-medium text-gray-900 dark:text-white">0</span>
+            </div>
+            <div className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-700">
+              <span className="text-sm text-gray-600 dark:text-gray-400">Resolution</span>
+              <span className="text-sm font-medium text-gray-900 dark:text-white">-</span>
+            </div>
+            <div className="flex justify-between items-center py-2">
+              <span className="text-sm text-gray-600 dark:text-gray-400">Data Sent</span>
+              <span className="text-sm font-medium text-gray-900 dark:text-white">0 MB</span>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

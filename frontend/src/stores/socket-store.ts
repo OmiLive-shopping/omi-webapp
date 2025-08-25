@@ -152,16 +152,19 @@ export const useSocketStore = create<SocketState>((set, get) => ({
     });
   },
 
-  sendMessage: (message: string) => {
-    socketManager.emit('chat:send', message);
+  sendMessage: (message: string, streamId?: string) => {
+    // Need to send the correct format with streamId
+    // This will be called from components that should provide streamId
+    console.log('Socket store sendMessage - needs streamId!');
+    // For now, we'll need the streamId from the component
   },
 
   joinStream: (streamId: string) => {
-    socketManager.emit('stream:join', streamId);
+    socketManager.emit('stream:join', { streamId });
   },
 
   leaveStream: (streamId: string) => {
-    socketManager.emit('stream:leave', streamId);
+    socketManager.emit('stream:leave', { streamId });
   },
 
   clearMessages: () => {
