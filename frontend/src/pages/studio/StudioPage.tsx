@@ -144,41 +144,11 @@ const StudioPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      {/* Header */}
+      {/* Simplified Header with Tabs */}
       <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Creator Studio</h1>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                Manage your streams and grow your audience
-              </p>
-            </div>
-            
-            {/* Quick Actions */}
-            <div className="flex items-center gap-3">
-              {!isStreaming ? (
-                <button
-                  onClick={() => setActiveTab('stream')}
-                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2"
-                >
-                  <Video className="w-4 h-4" />
-                  Go Live
-                </button>
-              ) : (
-                <div className="flex items-center gap-2 px-4 py-2 bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-300 rounded-lg">
-                  <div className="w-2 h-2 bg-red-600 rounded-full animate-pulse" />
-                  Live Now
-                </div>
-              )}
-              <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
-                <Settings className="w-5 h-5" />
-              </button>
-            </div>
-          </div>
-
+        <div className="max-w-7xl mx-auto px-4 py-2">
           {/* Tabs */}
-          <div className="flex gap-6 mt-6">
+          <div className="flex gap-6">
             {[
               { id: 'stream', label: 'Go Live', icon: Video },
               { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
@@ -203,8 +173,8 @@ const StudioPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Content */}
-      <div className="max-w-7xl mx-auto px-4 py-6">
+      {/* Content - no padding for stream tab */}
+      <div className={activeTab === 'stream' ? '' : 'max-w-7xl mx-auto px-4 py-6'}>
         {activeTab === 'dashboard' && (
           <div className="space-y-6">
             {/* Stats Grid */}
@@ -359,45 +329,12 @@ const StudioPage: React.FC = () => {
         )}
 
         {activeTab === 'stream' && (
-          <div>
-            {/* Stream Status Bar */}
-            {isStreaming && (
-              <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-3 h-3 bg-red-600 rounded-full animate-pulse"></div>
-                    <span className="text-red-800 dark:text-red-200 font-semibold">You are currently live!</span>
-                  </div>
-                  <div className="text-sm text-red-700 dark:text-red-300">
-                    Stream Key: <code className="bg-red-100 dark:bg-red-800/30 px-2 py-1 rounded">{streamKey.slice(0, 20)}...</code>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Main Studio Component */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden">
-              <StreamerStudio
-                onStreamStart={handleStreamStart}
-                onStreamEnd={handleStreamEnd}
-              />
-            </div>
-
-            {/* Stream Tips */}
-            <div className="mt-6 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-              <div className="flex items-start gap-3">
-                <AlertCircle className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5" />
-                <div>
-                  <h4 className="font-medium text-blue-900 dark:text-blue-100">Streaming Tips</h4>
-                  <ul className="mt-1 text-sm text-blue-800 dark:text-blue-200 space-y-1">
-                    <li>• Test your audio and video before going live</li>
-                    <li>• Engage with your audience through chat</li>
-                    <li>• Feature products at key moments during your stream</li>
-                    <li>• Keep your stream between 30-120 minutes for best engagement</li>
-                  </ul>
-                </div>
-              </div>
-            </div>
+          <div className="h-[calc(100vh-60px)]">
+            {/* Main Studio Component - full height */}
+            <StreamerStudio
+              onStreamStart={handleStreamStart}
+              onStreamEnd={handleStreamEnd}
+            />
           </div>
         )}
 

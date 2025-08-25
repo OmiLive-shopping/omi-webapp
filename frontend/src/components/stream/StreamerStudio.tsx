@@ -261,12 +261,14 @@ export const StreamerStudio: React.FC<StreamerStudioProps> = ({
   };
 
   return (
-    <div className="h-full p-2 lg:p-4 overflow-y-auto">
-      <div className="grid grid-cols-12 gap-2 lg:gap-4 lg:h-full">
+    <div className="h-full p-4 overflow-hidden">
+      <div className="grid grid-cols-12 gap-4 lg:h-full">
         {/* Main Video Area */}
         <div className="col-span-12 lg:col-span-8 lg:h-full">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg lg:h-full flex flex-col">
-            <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+
+            {/* Header section - commented out for now */}
+            {/* <div className="p-4 border-b border-gray-200 dark:border-gray-700">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <div>
@@ -278,7 +280,6 @@ export const StreamerStudio: React.FC<StreamerStudioProps> = ({
                        isStreaming ? 'Live Streaming' : 'Professional streaming with real-time analytics'}
                     </p>
                   </div>
-                  {/* Connection Status */}
                   <NetworkQualityIndicator
                     quality={connectionQuality || 'offline'}
                     score={0}
@@ -291,7 +292,6 @@ export const StreamerStudio: React.FC<StreamerStudioProps> = ({
                   />
                 </div>
                 
-                {/* Stream Status Indicator */}
                 <StreamStatusIndicator
                   streamId={currentStreamId || undefined}
                   showViewerCount={true}
@@ -302,9 +302,9 @@ export const StreamerStudio: React.FC<StreamerStudioProps> = ({
                   variant="glass"
                 />
               </div>
-            </div>
+            </div> */}
             
-            <div className="flex-1 min-h-[400px] max-h-[600px] flex items-center justify-center bg-black">
+            <div className="flex-1 flex items-center justify-center bg-black rounded-lg" style={{ maxHeight: '70vh' }}>
               <div className="relative w-full h-full flex items-center justify-center">
                   {isStreaming || isPreviewMode ? (
                     <>
@@ -385,110 +385,8 @@ export const StreamerStudio: React.FC<StreamerStudioProps> = ({
               </div>
             </div>
             
-            {/* Bottom Control Bar */}
-            <div className="p-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  {/* Show Stop Preview button in preview mode */}
-                  {isPreviewMode && !isStreaming && (
-                    <button
-                      onClick={() => {
-                        setIsPreviewMode(false);
-                        // Clear iframe src to stop camera
-                        if (iframeRef.current) {
-                          iframeRef.current.src = 'about:blank';
-                        }
-                      }}
-                      className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
-                    >
-                      <VideoOff className="w-4 h-4" />
-                      Stop Preview
-                    </button>
-                  )}
-                  
-                  {/* Quick Media Controls */}
-                  <button
-                    onClick={toggleAudio}
-                    className={clsx(
-                      "p-2 rounded-lg transition-colors",
-                      isAudioMuted 
-                        ? "bg-red-100 dark:bg-red-900/30 text-red-600" 
-                        : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
-                    )}
-                  >
-                    {isAudioMuted ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-                  </button>
-                  
-                  <button
-                    onClick={toggleVideo}
-                    className={clsx(
-                      "p-2 rounded-lg transition-colors",
-                      isVideoHidden 
-                        ? "bg-red-100 dark:bg-red-900/30 text-red-600" 
-                        : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
-                    )}
-                  >
-                    {isVideoHidden ? <VideoOff className="w-4 h-4" /> : <Video className="w-4 h-4" />}
-                  </button>
-                  
-                  <button
-                    onClick={toggleScreenShare}
-                    className={clsx(
-                      "p-2 rounded-lg transition-colors",
-                      isScreenSharing 
-                        ? "bg-blue-100 dark:bg-blue-900/30 text-blue-600" 
-                        : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
-                    )}
-                  >
-                    <MonitorUp className="w-4 h-4" />
-                  </button>
-                  
-                  {isVdoStreaming && (
-                    <button
-                      onClick={() => streamState === 'paused' ? resumeStream() : pauseStream()}
-                      className="p-2 rounded-lg bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
-                    >
-                      {streamState === 'paused' ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
-                    </button>
-                  )}
-                  
-                  {false && (
-                    <div className="flex items-center gap-2 px-3 py-1 bg-red-600 text-white rounded-full text-sm">
-                      <Circle className="w-3 h-3 fill-current animate-pulse" />
-                      <span>REC</span>
-                    </div>
-                  )}
-                </div>
-                
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setShowStatsOverlay(!showStatsOverlay)}
-                    className={clsx(
-                      "p-2 rounded-lg transition-colors",
-                      showStatsOverlay 
-                        ? "bg-primary-100 dark:bg-primary-900/30 text-primary-600" 
-                        : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
-                    )}
-                    title="Toggle stats overlay"
-                  >
-                    <Activity className="w-4 h-4" />
-                  </button>
-                  
-                  <button
-                    onClick={() => setShowAdvancedControls(!showAdvancedControls)}
-                    className={clsx(
-                      "p-2 rounded-lg transition-colors",
-                      showAdvancedControls 
-                        ? "bg-primary-100 dark:bg-primary-900/30 text-primary-600" 
-                        : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
-                    )}
-                    title="Toggle advanced controls"
-                  >
-                    <Settings className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            </div>
+            {/* Bottom Control Bar - commented out for cleaner view */}
+            {/* Bottom controls removed for no-scroll experience */}
           </div>
         </div>
         
