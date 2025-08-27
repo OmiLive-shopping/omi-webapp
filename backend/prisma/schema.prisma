@@ -31,7 +31,7 @@ model User {
   username             String              @unique
   avatarUrl            String?
   bio                  String?
-  comments             Comment[]
+  streamMessages       StreamMessage[]
   streams              Stream[]
   roleRelation         Roles?              @relation(fields: [roleId], references: [id])
   wishlist             Product[]           @relation("UserWishlist")
@@ -133,7 +133,7 @@ model Stream {
   slowModeDelay   Int                @default(0) // Slow mode delay in seconds
   createdAt       DateTime           @default(now())
   updatedAt       DateTime           @default(now()) @updatedAt
-  comments        Comment[]
+  streamMessages  StreamMessage[]
   user            User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   category        Category?          @relation(fields: [categoryId], references: [id])
   products        StreamProduct[]
@@ -166,11 +166,15 @@ model StreamProduct {
   @@index([productId])
 }
 
-model Comment {
+model StreamMessage {
   id        String              @id @default(uuid())
   content   String
   userId    String
   streamId  String
+  username  String?             // Cached username for faster display
+  type      String              @default("message") // message, system, announcement, donation, subscription
+  subType   String?             // For system messages: stream, viewer, quality, error, etc.
+  metadata  Json?               // Extra data like donation amounts, subscriber tiers, etc.
   isPinned  Boolean             @default(false)
   isDeleted Boolean             @default(false)
   replyToId String?
@@ -178,12 +182,13 @@ model Comment {
   updatedAt DateTime            @default(now()) @updatedAt
   stream    Stream              @relation(fields: [streamId], references: [id], onDelete: Cascade)
   user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  replyTo   Comment?            @relation("CommentReplies", fields: [replyToId], references: [id])
-  replies   Comment[]           @relation("CommentReplies")
+  replyTo   StreamMessage?      @relation("StreamMessageReplies", fields: [replyToId], references: [id])
+  replies   StreamMessage[]     @relation("StreamMessageReplies")
   reactions MessageReaction[]
 
   @@index([streamId])
   @@index([userId])
+  @@index([type])
   @@index([isPinned])
   @@index([createdAt])
 }
@@ -307,7 +312,7 @@ model MessageReaction {
   userId    String
   emoji     String   // The emoji used for reaction
   createdAt DateTime @default(now())
-  message   Comment  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  message   StreamMessage  @relation(fields: [messageId], references: [id], onDelete: Cascade)
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([messageId, userId, emoji])

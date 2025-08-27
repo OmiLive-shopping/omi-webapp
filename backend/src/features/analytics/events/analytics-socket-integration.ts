@@ -320,13 +320,10 @@ export class AnalyticsSocketIntegration {
    * Emit subscription status update
    */
   public emitSubscriptionStatus(socketId: string, status: any): void {
-    const socket = this.socketServer.getSocket();
-    if (socket) {
-      socket.to(socketId).emit('analytics:subscription:status', {
-        status,
-        timestamp: new Date().toISOString(),
-      });
-    }
+    this.socketServer.getIO().to(socketId).emit('analytics:subscription:status', {
+      status,
+      timestamp: new Date().toISOString(),
+    });
   }
 }
 

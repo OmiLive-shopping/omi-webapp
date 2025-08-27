@@ -53,7 +53,7 @@ export class StreamRepository {
         },
         _count: {
           select: {
-            comments: true,
+            streamMessages: true,
           },
         },
       },
@@ -99,7 +99,7 @@ export class StreamRepository {
         },
         _count: {
           select: {
-            comments: true,
+            streamMessages: true,
             products: true,
           },
         },

@@ -311,19 +311,19 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           <button
             onClick={handleSend}
             disabled={!message.trim() || disabled || isRateLimited || isSending}
+            title={isSending ? "Sending..." : "Send message"}
             className={clsx(
-              "px-4 py-2.5 rounded-lg font-medium transition-all flex items-center gap-1.5",
-              "transform active:scale-95 h-[44px] flex-shrink-0",
+              "w-[44px] h-[44px] rounded-lg font-medium transition-all flex items-center justify-center",
+              "transform active:scale-95 flex-shrink-0",
               message.trim() && !disabled && !isRateLimited && !isSending
                 ? "bg-primary-600 text-white hover:bg-primary-700 shadow-sm"
                 : "bg-gray-200 dark:bg-gray-700 text-gray-500 cursor-not-allowed"
             )}
           >
             <Send className={clsx(
-              "w-4 h-4 transition-transform",
+              "w-5 h-5 transition-transform",
               isSending && "animate-pulse"
             )} />
-            {isSending ? "Sending..." : "Send"}
           </button>
         </div>
       </div>

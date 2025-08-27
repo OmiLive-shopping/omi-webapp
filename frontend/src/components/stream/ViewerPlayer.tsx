@@ -370,11 +370,44 @@ export const ViewerPlayer: React.FC<ViewerPlayerProps> = ({
 
   if (!isLive && !isReconnecting) {
     return (
-      <div className="relative w-full h-full bg-black rounded-lg overflow-hidden flex items-center justify-center">
-        <div className="text-center">
-          <WifiOff className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-          <h3 className="text-white text-xl font-semibold mb-2">Stream Offline</h3>
-          <p className="text-gray-400">The streamer is currently offline</p>
+      <div className="relative w-full h-full bg-gradient-to-br from-gray-900 via-black to-gray-800 rounded-lg overflow-hidden flex items-center justify-center">
+        {/* Animated background elements */}
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute -top-1/2 -left-1/2 w-full h-full bg-gradient-to-br from-purple-600/10 via-transparent to-blue-600/10 animate-pulse"></div>
+          <div className="absolute -bottom-1/2 -right-1/2 w-full h-full bg-gradient-to-tl from-pink-600/10 via-transparent to-indigo-600/10 animate-pulse delay-1000"></div>
+        </div>
+        
+        <div className="relative z-10 text-center px-8 max-w-md">
+          {/* Animated icon */}
+          <div className="relative mb-6">
+            <div className="absolute inset-0 w-20 h-20 mx-auto bg-gradient-to-r from-purple-500 to-blue-500 rounded-full blur-lg opacity-50 animate-pulse"></div>
+            <div className="relative w-20 h-20 mx-auto bg-gradient-to-r from-purple-600 to-blue-600 rounded-full flex items-center justify-center">
+              <Radio className="w-10 h-10 text-white" />
+            </div>
+          </div>
+          
+          {/* Main message */}
+          <h3 className="text-white text-2xl font-bold mb-3 bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
+            Stream Has Ended
+          </h3>
+          
+          <p className="text-gray-300 text-lg mb-4 leading-relaxed">
+            Thanks for watching! The live stream has finished.
+          </p>
+          
+          <p className="text-gray-400 text-sm mb-6">
+            Stay tuned for the next amazing stream
+          </p>
+          
+          {/* Animated "coming back soon" indicator */}
+          <div className="flex items-center justify-center gap-2 text-purple-400">
+            <div className="flex gap-1">
+              <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce"></div>
+              <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce delay-100"></div>
+              <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce delay-200"></div>
+            </div>
+            <span className="text-sm">We'll be back soon</span>
+          </div>
         </div>
       </div>
     );
@@ -448,10 +481,10 @@ export const ViewerPlayer: React.FC<ViewerPlayerProps> = ({
               packetLoss: packetLoss || 0,
               viewers: viewerCount || initialViewerCount
             }}
-            layout="horizontal"
-            variant="glass"
+            orientation="horizontal"
             size="sm"
-            showTrends={false}
+            showLabels={true}
+            showIcons={true}
           />
         </div>
       )}

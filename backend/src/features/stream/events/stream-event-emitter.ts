@@ -299,7 +299,7 @@ const baseEventSchema = z.object({
 const userSchema = z.object({
   id: z.string(),
   username: z.string(),
-  avatarUrl: z.string().optional(),
+  avatarUrl: z.string().optional().nullable(),
 });
 
 const streamCreatedSchema = baseEventSchema.extend({
@@ -308,7 +308,7 @@ const streamCreatedSchema = baseEventSchema.extend({
     id: z.string(),
     title: z.string(),
     description: z.string().optional(),
-    thumbnailUrl: z.string().optional(),
+    thumbnailUrl: z.string().optional().nullable(),
     userId: z.string(),
     user: userSchema,
     scheduledFor: z.string().optional(),
@@ -321,7 +321,7 @@ const streamUpdatedSchema = baseEventSchema.extend({
   changes: z.object({
     title: z.string().optional(),
     description: z.string().optional(),
-    thumbnailUrl: z.string().optional(),
+    thumbnailUrl: z.string().optional().nullable(),
     scheduledFor: z.string().optional(),
     tags: z.array(z.string()).optional(),
   }),

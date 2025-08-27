@@ -276,7 +276,7 @@ export class ChatCommandHandler {
     }
 
     // Mark all messages as deleted
-    await this.prisma.comment.updateMany({
+    await this.prisma.streamMessage.updateMany({
       where: {
         streamId: ctx.streamId,
         isDeleted: false,
@@ -305,7 +305,7 @@ export class ChatCommandHandler {
     }
 
     // Check if message exists
-    const message = await this.prisma.comment.findUnique({
+    const message = await this.prisma.streamMessage.findUnique({
       where: { id: messageId },
       include: {
         user: {
@@ -324,7 +324,7 @@ export class ChatCommandHandler {
     }
 
     // Unpin any existing pinned message
-    await this.prisma.comment.updateMany({
+    await this.prisma.streamMessage.updateMany({
       where: {
         streamId: ctx.streamId,
         isPinned: true,
@@ -333,7 +333,7 @@ export class ChatCommandHandler {
     });
 
     // Pin the new message
-    await this.prisma.comment.update({
+    await this.prisma.streamMessage.update({
       where: { id: messageId },
       data: { isPinned: true },
     });
@@ -361,7 +361,7 @@ export class ChatCommandHandler {
     }
 
     // Find pinned message
-    const pinnedMessage = await this.prisma.comment.findFirst({
+    const pinnedMessage = await this.prisma.streamMessage.findFirst({
       where: {
         streamId: ctx.streamId,
         isPinned: true,
@@ -374,7 +374,7 @@ export class ChatCommandHandler {
     }
 
     // Unpin the message
-    await this.prisma.comment.update({
+    await this.prisma.streamMessage.update({
       where: { id: pinnedMessage.id },
       data: { isPinned: false },
     });

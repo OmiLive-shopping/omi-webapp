@@ -38,16 +38,17 @@ export class ChatHandler {
   private prisma = PrismaService.getInstance().client;
 
   handleSendMessage = async (socket: SocketWithAuth, data: any) => {
+    console.log(`[CHAT] handleSendMessage called for socket ${socket.id} with data:`, data);
     try {
       // Validate input
       const validated = chatSendMessageSchema.parse(data);
+      console.log(`[CHAT] Message validated:`, validated);
 
-      // Check if user is authenticated (allow anonymous for testing)
-      // TODO: Re-enable authentication requirement after testing
-      // if (!socket.userId) {
-      //   socket.emit('error', { message: 'Authentication required to send messages' });
-      //   return;
-      // }
+      // Check if user is authenticated
+      if (!socket.userId) {
+        socket.emit('error', { message: 'Authentication required to send messages' });
+        return;
+      }
 
       // Check if user is in the room
       const room = this.roomManager.getRoomInfo(validated.streamId);
@@ -71,8 +72,8 @@ export class ChatHandler {
         return; // Command was processed, don't send as regular message
       }
 
-      // Check rate limiting (use socket.id for anonymous users)
-      const userIdentifier = socket.userId || socket.id;
+      // Check rate limiting
+      const userIdentifier = socket.userId;
       const userRole = socket.role || 'viewer';
       if (this.rateLimiter.isInCooldown(userIdentifier)) {
         const resetTime = this.rateLimiter.getResetTime(userIdentifier, userRole);
@@ -92,7 +93,7 @@ export class ChatHandler {
         return;
       }
 
-      // Check slow mode (use socket.id for anonymous users)
+      // Check slow mode
       if (!this.slowModeManager.canSendInSlowMode(userIdentifier, validated.streamId, userRole)) {
         const remaining = this.slowModeManager.getRemainingSlowModeTime(
           userIdentifier,
@@ -141,7 +142,7 @@ export class ChatHandler {
       
       if (socket.userId) {
         // Create message in database for authenticated users
-        const message = await this.prisma.comment.create({
+        const message = await this.prisma.streamMessage.create({
           data: {
             content: validated.content,
             userId: socket.userId,
@@ -189,8 +190,13 @@ export class ChatHandler {
       }
 
       // Broadcast to all users in the stream
+      console.log(`[CHAT] ${socket.username || 'anonymous'}(${socket.id}) sending to room stream:${validated.streamId}: "${validated.content}"`);
       socket.to(`stream:${validated.streamId}`).emit('chat:message', chatMessage);
       socket.emit('chat:message:sent', chatMessage);
+      
+      // Check who's in the room
+      const isInRoom = socket.rooms.has(`stream:${validated.streamId}`);
+      console.log(`[CHAT] Sender is in room: ${isInRoom}, socket rooms:`, Array.from(socket.rooms));
     } catch (error) {
       if (error instanceof z.ZodError) {
         socket.emit('error', { message: 'Invalid message data', errors: error.errors });
@@ -206,7 +212,7 @@ export class ChatHandler {
       const validated = chatDeleteMessageSchema.parse(data);
 
       // Get message to check ownership
-      const message = await this.prisma.comment.findUnique({
+      const message = await this.prisma.streamMessage.findUnique({
         where: { id: validated.messageId },
         select: {
           userId: true,
@@ -229,7 +235,7 @@ export class ChatHandler {
       }
 
       // Delete message
-      await this.prisma.comment.delete({
+      await this.prisma.streamMessage.delete({
         where: { id: validated.messageId },
       });
 
@@ -379,7 +385,7 @@ export class ChatHandler {
     try {
       const limit = Math.min(data.limit || 50, 100);
 
-      const messages = await this.prisma.comment.findMany({
+      const messages = await this.prisma.streamMessage.findMany({
         where: {
           streamId: data.streamId,
           ...(data.before && { createdAt: { lt: new Date(data.before) } }),
@@ -439,7 +445,7 @@ export class ChatHandler {
       }
 
       // Check if message exists
-      const message = await this.prisma.comment.findUnique({
+      const message = await this.prisma.streamMessage.findUnique({
         where: { id: validated.messageId },
         select: { streamId: true },
       });
@@ -530,7 +536,7 @@ export class ChatHandler {
 
       if (validated.pin) {
         // Unpin any existing pinned message
-        await this.prisma.comment.updateMany({
+        await this.prisma.streamMessage.updateMany({
           where: {
             streamId: validated.streamId,
             isPinned: true,
@@ -539,7 +545,7 @@ export class ChatHandler {
         });
 
         // Pin the new message
-        const message = await this.prisma.comment.update({
+        const message = await this.prisma.streamMessage.update({
           where: { id: validated.messageId },
           data: { isPinned: true },
           include: {
@@ -567,7 +573,7 @@ export class ChatHandler {
         });
       } else {
         // Unpin message
-        await this.prisma.comment.update({
+        await this.prisma.streamMessage.update({
           where: { id: validated.messageId },
           data: { isPinned: false },
         });

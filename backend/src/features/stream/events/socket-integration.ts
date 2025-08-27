@@ -196,7 +196,7 @@ export class StreamSocketIntegration {
    */
   private handleViewerJoined(event: ViewerJoinedEvent): void {
     // Notify others in the stream room (exclude the joiner)
-    this.socketServer.getSocket()?.to(`stream:${event.streamId}`).emit('stream:viewer:joined', {
+    this.socketServer.getIO().to(`stream:${event.streamId}`).emit('stream:viewer:joined', {
       streamId: event.streamId,
       viewer: event.viewer.isAnonymous ? null : {
         id: event.viewer.id,
@@ -228,7 +228,7 @@ export class StreamSocketIntegration {
    */
   private handleViewerLeft(event: ViewerLeftEvent): void {
     // Notify others in the stream room
-    this.socketServer.getSocket()?.to(`stream:${event.streamId}`).emit('stream:viewer:left', {
+    this.socketServer.getIO().to(`stream:${event.streamId}`).emit('stream:viewer:left', {
       streamId: event.streamId,
       viewer: event.viewer.id ? {
         id: event.viewer.id,

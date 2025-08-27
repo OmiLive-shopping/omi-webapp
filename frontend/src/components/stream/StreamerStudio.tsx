@@ -141,16 +141,6 @@ export const StreamerStudio: React.FC<StreamerStudioProps> = ({
 
   // Enhanced stream start handler - transition from preview to live
   const handleStreamStart = useCallback(async () => {
-    // Ensure WebSocket is connected with authentication
-    if (!isSocketConnected) {
-      const connected = await connectWithAuth();
-      if (!connected) {
-        console.error('Failed to establish authenticated WebSocket connection');
-        // Could show an error toast here
-        return;
-      }
-    }
-    
     // Exit preview mode and enter live mode
     setIsPreviewMode(false);
     
@@ -167,12 +157,6 @@ export const StreamerStudio: React.FC<StreamerStudioProps> = ({
     
     setIsStreaming(true);
     onStreamStart();
-    
-    // Join the WebSocket room for this stream
-    // Use the currentStreamId if available, otherwise use vdoRoomId
-    const roomId = currentStreamId || vdoRoomId;
-    console.log('Streamer joining WebSocket room:', roomId);
-    socketManager.joinStreamRoom(roomId);
     
     // Reload iframe with room URL
     if (iframeRef.current) {
@@ -191,7 +175,7 @@ export const StreamerStudio: React.FC<StreamerStudioProps> = ({
       timestamp: Date.now(),
       user: user?.email
     });
-  }, [vdoRoomId, currentStreamId, onStreamStart, initializeStream, updateStreamInfo, storeStartStream, user, isSocketConnected, connectWithAuth]);
+  }, [vdoRoomId, currentStreamId, onStreamStart, initializeStream, updateStreamInfo, storeStartStream, user]);
 
   // Enhanced stream end handler
   const handleStreamEnd = useCallback(async () => {
@@ -411,9 +395,38 @@ export const StreamerStudio: React.FC<StreamerStudioProps> = ({
                 onStreamCreated={(streamId, actualVdoRoomId) => {
                   setCurrentStreamId(streamId);
                   
-                  // Join the WebSocket room for this stream
-                  console.log('Joining WebSocket room for stream:', streamId);
-                  socketManager.joinStreamRoom(streamId);
+                  // Ensure socket is connected before joining room
+                  const joinStreamRoom = () => {
+                    if (socketManager.isConnected()) {
+                      console.log('Socket is connected, joining WebSocket room for stream:', streamId);
+                      socketManager.joinStreamRoom(streamId);
+                    } else {
+                      console.log('Socket not connected yet, retrying in 1 second...');
+                      setTimeout(() => {
+                        if (socketManager.isConnected()) {
+                          console.log('Socket connected on retry, joining WebSocket room for stream:', streamId);
+                          socketManager.joinStreamRoom(streamId);
+                        } else {
+                          console.warn('Socket still not connected after retry. Stream room join may fail.');
+                          socketManager.joinStreamRoom(streamId); // Try anyway
+                        }
+                      }, 1000);
+                    }
+                  };
+                  
+                  // Ensure socket is connected with authentication first
+                  if (!isSocketConnected) {
+                    console.log('Socket not connected, connecting with auth before joining stream room');
+                    connectWithAuth().then((connected) => {
+                      if (connected) {
+                        setTimeout(joinStreamRoom, 500); // Small delay to ensure connection is fully established
+                      } else {
+                        console.error('Failed to establish authenticated WebSocket connection for stream');
+                      }
+                    });
+                  } else {
+                    joinStreamRoom();
+                  }
                   
                   // If we got an actual room ID from the backend, update the iframe
                   if (actualVdoRoomId && iframeRef.current) {

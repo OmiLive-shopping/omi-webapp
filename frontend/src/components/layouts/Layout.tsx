@@ -16,7 +16,7 @@ const Layout = ({ children, type }: LayoutProps) => {
   };
 
   return (
-    <div className='min-h-screen bg-gray-50 dark:bg-gray-900'>
+    <div className='h-screen bg-gray-50 dark:bg-gray-900 grid grid-rows-[auto_1fr]'>
       <Navigation 
         isAuthenticated={isAuthenticated}
         user={user ? {

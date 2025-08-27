@@ -94,6 +94,9 @@ export const defaultSecurityConfig: SecurityConfig = {
     requireAuthentication: [
       'stream:start',
       'stream:end',
+      'chat:send-message',
+      'chat:typing',
+      'chat:react',
       'chat:moderate-user',
       'chat:delete-message',
       'chat:pin-message',

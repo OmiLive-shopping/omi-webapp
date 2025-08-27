@@ -51,8 +51,10 @@ export class StreamHandler {
       }
 
       // Join the room
+      console.log(`[STREAM JOIN] ${socket.username || 'anonymous'}(${socket.id}) joining stream room: ${data.streamId}`);
       await this.roomManager.joinRoom(socket, data.streamId);
       const viewerCount = this.roomManager.getViewerCount(data.streamId);
+      console.log(`[STREAM JOIN] Room ${data.streamId} now has ${viewerCount} viewers`);
 
       // Emit viewer joined event
       await streamEventEmitter.emitViewerJoined(data.streamId, {

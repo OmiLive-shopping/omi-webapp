@@ -18,8 +18,8 @@ import { apiClient } from '@/lib/api-client';
 import { useNavigate } from 'react-router-dom';
 import { EnhancedChatContainer } from '@/components/chat/EnhancedChatContainer';
 import { ChatMessage, Viewer } from '@/types';
-import { io, Socket } from 'socket.io-client';
-import { getSession } from '@/lib/auth-client';
+import { socketManager } from '@/lib/socket';
+import { useSocketStore } from '@/stores/socket-store';
 
 interface SimpleStreamControlsProps {
   vdoRoomId: string;  // The actual VDO.Ninja room ID being used
@@ -47,110 +47,26 @@ export const SimpleStreamControls: React.FC<SimpleStreamControlsProps> = ({
   const [activeTab, setActiveTab] = useState<'stream' | 'chat' | 'viewers' | 'stats'>('stream');
   const navigate = useNavigate();
   
-  // Chat state
-  const [socket, setSocket] = useState<Socket | null>(null);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  // Use global socket store for messages
+  const { messages: socketMessages } = useSocketStore();
   const [viewers, setViewers] = useState<Viewer[]>([]);
-  
-  // Setup WebSocket connection for chat
-  useEffect(() => {
-    if (streamId && isStreaming) {
-      // Setup authenticated WebSocket connection
-      const setupSocket = async () => {
-        try {
-          // Get the current session for authentication
-          const session = await getSession();
-          console.log('Got session for WebSocket:', session);
-          
-          const newSocket = io('http://localhost:9000', {
-            transports: ['websocket'],
-            reconnection: true,
-            reconnectionAttempts: 5,
-            reconnectionDelay: 1000,
-            auth: {
-              token: (session as any)?.session?.id || (session as any)?.data?.session?.id // Try both structures
-            }
-          });
 
-          newSocket.on('connect', () => {
-            console.log('Streamer connected to chat for stream:', streamId);
-            // Join the stream room
-            newSocket.emit('stream:join', { streamId });
-          });
-
-      // Listen for chat messages
-      newSocket.on('chat:message', (message: any) => {
-        console.log('Received chat message:', message);
-        const formattedMessage: ChatMessage = {
-          id: message.id || Date.now().toString(),
-          user: {
-            id: message.userId,
-            username: message.username || 'Anonymous',
-            role: message.role || 'viewer'
-          },
-          content: message.content,
-          timestamp: new Date(message.timestamp || Date.now())
-        };
-        setMessages(prev => [...prev, formattedMessage]);
-      });
-      
-      // Also listen for sent message confirmation
-      newSocket.on('chat:message:sent', (message: any) => {
-        console.log('Message sent confirmation:', message);
-        const formattedMessage: ChatMessage = {
-          id: message.id || Date.now().toString(),
-          user: {
-            id: message.userId,
-            username: message.username || 'Anonymous',
-            role: message.role || 'viewer'
-          },
-          content: message.content,
-          timestamp: new Date(message.timestamp || Date.now())
-        };
-        setMessages(prev => [...prev, formattedMessage]);
-      });
-
-      // Listen for viewer updates
-      newSocket.on('stream:viewer:joined', (viewer: Viewer) => {
-        console.log('Viewer joined:', viewer);
-        setViewers(prev => [...prev, viewer]);
-      });
-      
-      newSocket.on('stream:viewer:left', (viewerId: string) => {
-        console.log('Viewer left:', viewerId);
-        setViewers(prev => prev.filter(v => v.id !== viewerId));
-      });
-      
-      // Listen for viewer count updates
-      newSocket.on('stream:viewers:update', (data: { count: number, viewers: Viewer[] }) => {
-        console.log('Viewers update:', data);
-        setViewers(data.viewers || []);
-      });
-
-          setSocket(newSocket);
-        } catch (error) {
-          console.error('Failed to setup authenticated socket:', error);
-        }
-      };
-      
-      setupSocket();
-      
-      return () => {
-        if (socket) {
-          socket.emit('stream:leave', { streamId });
-          socket.close();
-        }
-      };
-    }
-  }, [streamId, isStreaming]);
+  // Convert socket messages to ChatMessage format
+  const messages: ChatMessage[] = socketMessages.map(msg => ({
+    id: msg.id,
+    user: {
+      id: msg.userId,
+      username: msg.username,
+      role: msg.role || 'viewer'
+    },
+    content: msg.content || msg.message || '',
+    timestamp: new Date(msg.timestamp)
+  }));
   
   const handleSendMessage = (content: string) => {
-    if (socket && streamId) {
-      // Use the correct event name expected by backend
-      socket.emit('chat:send-message', {
-        streamId,
-        content
-      });
+    if (streamId) {
+      // Use the global socket manager instead of local socket
+      socketManager.sendChatMessage(streamId, content);
     }
   };
 

@@ -2,9 +2,11 @@ import { io, Socket } from 'socket.io-client';
 
 export interface ServerToClientEvents {
   'chat:message': (message: ChatMessage) => void;
+  'chat:message:sent': (message: ChatMessage) => void;
   'chat:system:message': (message: VdoSystemMessage) => void;
   'chat:system-message': (message: any) => void;
   'stream:viewer-count': (count: number) => void;
+  'stream:viewers:update': (data: { viewerCount: number }) => void;
   'stream:status': (status: StreamStatus) => void;
   'stream:error': (error: string) => void;
   // Stream lifecycle events
@@ -18,6 +20,9 @@ export interface ServerToClientEvents {
   'vdo:viewer:left': (data: { viewerCount?: number; viewer?: any }) => void;
   'vdo:quality:changed': (data: { quality: any }) => void;
   'vdo:quality:warning': (data: { message: string; quality?: any }) => void;
+  // Test events
+  'test:chat:message': (message: ChatMessage) => void;
+  // Socket.IO built-in events
   connect: () => void;
   disconnect: (reason: string) => void;
   connect_error: (error: Error) => void;
@@ -69,25 +74,62 @@ class SocketManager {
   private maxReconnectAttempts = 5;
   private reconnectDelay = 1000;
   private listeners: Map<string, Set<Function>> = new Map();
+  private isConnecting = false;
 
   connect(url: string = import.meta.env.VITE_SOCKET_URL || 'http://localhost:9000', token?: string) {
+    
     if (this.socket?.connected) {
-      console.log('Socket already connected');
+      console.log('[SocketManager] Already connected, returning existing socket');
       return this.socket;
     }
 
-    console.log('SocketManager connecting with credentials');
+    // Prevent multiple simultaneous connection attempts
+    if (this.isConnecting) {
+      console.log('[SocketManager] Connection already in progress, returning existing socket');
+      return this.socket;
+    }
 
+    // If socket exists but is disconnected, check if it's actively connecting
+    if (this.socket && !this.socket.connected && this.socket.active) {
+      console.log('[SocketManager] Socket is reconnecting, returning existing socket');
+      return this.socket;
+    }
+
+    // If we have a disconnected socket that's not active, try to reconnect it
+    if (this.socket && !this.socket.connected && !this.socket.active) {
+      console.log('[SocketManager] Attempting to reconnect existing socket');
+      this.socket.connect();
+      return this.socket;
+    }
+
+    this.isConnecting = true;
+    console.log('[SocketManager] Creating new socket connection to:', url);
+
+    console.log(`[SocketManager] Creating socket with URL: ${url}`);
+    
     this.socket = io(url, {
       reconnection: true,
       reconnectionAttempts: this.maxReconnectAttempts,
       reconnectionDelay: this.reconnectDelay,
       reconnectionDelayMax: 10000,
-      timeout: 20000,
+      timeout: 30000, // Increased from 20000
       transports: ['websocket', 'polling'],
       autoConnect: true,
-      withCredentials: true, // This will send cookies automatically
+      withCredentials: true,
+      upgrade: true, // Allow transport upgrades
+      rememberUpgrade: true, // Remember the successful transport
       // Don't send token in auth, let cookies handle authentication
+    });
+    
+    console.log(`[SocketManager] Socket instance created, connecting...`);
+
+    // Add transport debugging
+    (this.socket.io as any).on('upgrade', (transport: any) => {
+      console.log('Socket transport upgraded to:', transport.name);
+    });
+
+    (this.socket.io as any).on('upgradeError', (error: any) => {
+      console.log('Socket transport upgrade error:', error);
     });
 
     this.setupBaseListeners();
@@ -99,18 +141,23 @@ class SocketManager {
 
     this.socket.on('connect', () => {
       console.log('Socket connected:', this.socket?.id);
+      console.log('Socket transport:', this.socket?.io.engine.transport.name);
+      console.log('Socket connected status:', this.socket?.connected);
       this.reconnectAttempts = 0;
+      this.isConnecting = false;
       this.emitInternal('connection:established', { socketId: this.socket?.id });
     });
 
-    this.socket.on('disconnect', (reason) => {
-      console.log('Socket disconnected:', reason);
-      this.emitInternal('connection:lost', { reason });
+    this.socket.on('disconnect', (reason, details) => {
+      console.log('Socket disconnected - Reason:', reason);
+      console.log('Socket disconnected - Details:', details);
+      this.emitInternal('connection:lost', { reason, details });
     });
 
     this.socket.on('connect_error', (error) => {
       console.error('Connection error:', error.message);
       this.reconnectAttempts++;
+      this.isConnecting = false;
       
       if (this.reconnectAttempts >= this.maxReconnectAttempts) {
         this.emitInternal('connection:failed', { 
@@ -126,6 +173,7 @@ class SocketManager {
       this.socket.disconnect();
       this.socket = null;
       this.listeners.clear();
+      this.isConnecting = false;
     }
   }
 
@@ -135,6 +183,12 @@ class SocketManager {
   ) {
     if (!this.socket) {
       console.warn('Socket not initialized. Call connect() first.');
+      return;
+    }
+
+    // Check if socket still exists and is not disconnected
+    if (this.socket.disconnected) {
+      console.warn('Socket is disconnected. Event listener not added for:', event);
       return;
     }
 
@@ -205,13 +259,29 @@ class SocketManager {
     }
 
     console.log('Sending chat message:', { streamId, content, mentions });
+    console.log('Socket ID when sending:', this.socket.id);
+    console.log('Socket connected:', this.socket.connected);
     this.socket.emit('chat:send-message', { streamId, content, mentions });
   }
 
   // Helper method to join a stream room
   joinStreamRoom(streamId: string) {
-    if (!this.socket?.connected) {
-      console.warn('Socket not connected. Cannot join stream.');
+    if (!this.socket) {
+      console.warn('Socket not initialized. Cannot join stream.');
+      return;
+    }
+    
+    // If socket is not connected yet, wait a bit and try again
+    if (!this.socket.connected) {
+      console.log('Socket connecting... waiting briefly before joining stream.');
+      setTimeout(() => {
+        if (this.socket?.connected) {
+          console.log('Joining stream room (retry):', streamId);
+          this.socket.emit('stream:join', { streamId });
+        } else {
+          console.warn('Socket still not connected after retry. Cannot join stream.');
+        }
+      }, 500);
       return;
     }
 

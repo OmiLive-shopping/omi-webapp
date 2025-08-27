@@ -564,13 +564,19 @@ export function createRateLimitedHandler<T = any>(
   return async (socket: any, data: T) => {
     const rateLimiter = EnhancedRateLimiter.getInstance();
     
-    // Get identifier and metadata
-    const identifier = options?.customKey?.(socket, data) || socket.userId || socket.id;
+    // Get identifier and metadata (require authentication for chat events)
+    const identifier = options?.customKey?.(socket, data) || socket.userId;
     const role = socket.role || 'viewer';
     const ipAddress = socket.handshake?.address;
     const userAgent = socket.handshake?.headers?.['user-agent'];
 
     try {
+      // For chat events, require authentication
+      if (eventType.startsWith('chat:') && !identifier) {
+        socket.emit('error', { message: 'Authentication required' });
+        return;
+      }
+
       // Check rate limit
       const limitCheck = await rateLimiter.checkLimit(
         eventType,

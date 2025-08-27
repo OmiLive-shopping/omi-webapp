@@ -44,9 +44,9 @@ export class SocketServer {
         allowedHeaders: securityConfig.cors.allowedHeaders,
       },
       
-      // Connection timeouts
-      pingTimeout: 60000, // 60 seconds
-      pingInterval: 25000, // 25 seconds
+      // Connection timeouts - more lenient for development
+      pingTimeout: 120000, // 120 seconds (doubled)
+      pingInterval: 30000, // 30 seconds
       
       // Security settings
       maxHttpBufferSize: securityConfig.validation.maxPayloadSize,

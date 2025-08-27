@@ -2,11 +2,10 @@ import { useState, useEffect } from 'react';
 import clsx from 'clsx';
 import { ViewerPlayer } from '@/components/stream/ViewerPlayer';
 import EnhancedChatContainer from '@/components/chat/EnhancedChatContainer';
-import ProductCard from '@/components/products/ProductCard';
 import { useStreams, useStream } from '@/hooks/queries/useStreamQueries';
-import { Loader2, Maximize2, Minimize2, ArrowLeft } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { socketManager } from '@/lib/socket';
-import { useAuthenticatedSocket } from '@/hooks/useAuthenticatedSocket';
+import { useSocketStore } from '@/stores/socket-store';
 
 // type ViewingMode = 'regular' | 'theatre' | 'fullwidth';
 
@@ -20,67 +19,102 @@ const LiveStreamsPage = () => {
   const { data: streams = [], isLoading, error } = useStreams('all');
   const { data: selectedStream } = useStream(selectedStreamId);
   
-  // Use the authenticated socket hook to ensure we have a connection
-  useAuthenticatedSocket();
+  // Get socket store methods, but don't connect globally
+  const { connect, disconnect, isConnected } = useSocketStore();
 
-  // Join stream room and listen for chat messages
+  // Handle socket connection and stream room joining
   useEffect(() => {
+    let cleanup: (() => void) | null = null;
+    
     if (selectedStreamId) {
-      // Join the stream room
-      socketManager.emit('stream:join', { streamId: selectedStreamId });
-      console.log('Joined stream room:', selectedStreamId);
-
-      // Listen for chat messages
-      const handleChatMessage = (message: any) => {
-        console.log('Received chat message:', message);
-        setMessages(prev => [...prev, {
-          id: message.id,
-          user: {
-            id: message.userId,
-            username: message.username || 'Anonymous',
-            role: message.role || 'viewer'
-          },
-          content: message.content,
-          timestamp: new Date(message.timestamp)
-        }]);
-      };
-
-      // Listen for viewer updates
-      const handleViewerUpdate = (data: any) => {
-        console.log('Viewer count updated:', data.viewerCount);
-        // Update viewer count if needed
-      };
-
-      socketManager.on('chat:message', handleChatMessage);
-      socketManager.on('chat:message:sent', handleChatMessage); // Also listen for sent confirmation
-      socketManager.on('stream:viewers:update', handleViewerUpdate);
+      // Connect to socket if not already connected
+      if (!isConnected) {
+        console.log('Connecting to socket for stream:', selectedStreamId);
+        connect();
+      }
       
-      // Also listen for test messages
-      socketManager.on('test:chat:message', handleChatMessage);
+      // Function to join room and set up listeners
+      const joinRoom = () => {
+        if (socketManager.isConnected()) {
+          // Join the stream room
+          socketManager.emit('stream:join', { streamId: selectedStreamId });
+          console.log('Joined stream room:', selectedStreamId);
 
-      // Initialize with some viewers
-      const mockViewers = [
-        { id: 'current-user', username: 'You', role: 'viewer', isOnline: true },
-        { id: 'streamer', username: 'Streamer', role: 'streamer', isOnline: true }
-      ];
-      setViewers(mockViewers);
+          // Listen for chat messages
+          const handleChatMessage = (message: any) => {
+            console.log('Received chat message:', message);
+            setMessages(prev => [...prev, {
+              id: message.id,
+              user: {
+                id: message.userId,
+                username: message.username || 'Anonymous',
+                role: message.role || 'viewer'
+              },
+              content: message.content,
+              timestamp: new Date(message.timestamp)
+            }]);
+          };
 
-      // Clear messages when switching streams
-      setMessages([]);
+          // Listen for viewer updates
+          const handleViewerUpdate = (data: any) => {
+            console.log('Viewer count updated:', data.viewerCount);
+            // Update viewer count if needed
+          };
 
-      return () => {
-        socketManager.emit('stream:leave', { streamId: selectedStreamId });
-        socketManager.off('chat:message', handleChatMessage);
-        socketManager.off('chat:message:sent', handleChatMessage);
-        socketManager.off('stream:viewers:update', handleViewerUpdate);
-        socketManager.off('test:chat:message', handleChatMessage);
+          // Set up event listeners using type-safe events
+          socketManager.on('chat:message', handleChatMessage);
+          socketManager.on('chat:message:sent', handleChatMessage);
+          socketManager.on('stream:viewers:update', handleViewerUpdate);
+          socketManager.on('test:chat:message', handleChatMessage);
+
+          // Initialize with some viewers
+          const mockViewers = [
+            { id: 'current-user', username: 'You', role: 'viewer', isOnline: true },
+            { id: 'streamer', username: 'Streamer', role: 'streamer', isOnline: true }
+          ];
+          setViewers(mockViewers);
+
+          // Clear messages when switching streams
+          setMessages([]);
+
+          // Set up cleanup function
+          cleanup = () => {
+            socketManager.emit('stream:leave', { streamId: selectedStreamId });
+            socketManager.off('chat:message', handleChatMessage);
+            socketManager.off('chat:message:sent', handleChatMessage);
+            socketManager.off('stream:viewers:update', handleViewerUpdate);
+            socketManager.off('test:chat:message', handleChatMessage);
+          };
+        }
       };
+
+      // If already connected, join immediately
+      if (isConnected && socketManager.isConnected()) {
+        joinRoom();
+      } else {
+        // Wait for connection with a small delay
+        const timer = setTimeout(joinRoom, 100);
+        cleanup = () => clearTimeout(timer);
+      }
+    } else {
+      // No stream selected - disconnect socket to save resources
+      if (isConnected) {
+        console.log('No stream selected, disconnecting socket');
+        disconnect();
+      }
     }
-  }, [selectedStreamId]);
+
+    // Return cleanup function
+    return () => {
+      if (cleanup) {
+        cleanup();
+      }
+    };
+  }, [selectedStreamId, isConnected, connect, disconnect]);
 
   // Handle sending message
   const handleSendMessage = (content: string, mentions?: string[]) => {
-    if (selectedStreamId) {
+    if (selectedStreamId && isConnected) {
       const messageData = {
         streamId: selectedStreamId,
         content,
@@ -90,6 +124,8 @@ const LiveStreamsPage = () => {
       // Emit to backend with correct event name
       socketManager.emit('chat:send-message', messageData);
       // Don't add message locally - wait for server echo
+    } else if (!isConnected) {
+      console.error('Socket not connected, cannot send message');
     }
   };
   
@@ -152,11 +188,11 @@ const LiveStreamsPage = () => {
   ]; */
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="h-full flex flex-col">
       
-      <div className="flex flex-col">
+      <div className="flex-1 flex flex-col">
         {!selectedStreamId && (
-          <div className="flex items-center justify-between p-4">
+          <div className="flex items-center justify-between p-4 flex-shrink-0">
           {/* Development buttons */}
           {process.env.NODE_ENV === 'development' && !selectedStreamId && (
             <div className="flex items-center gap-2">
@@ -237,46 +273,36 @@ const LiveStreamsPage = () => {
             <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">Please try again later</p>
           </div>
         ) : selectedStreamId ? (
-          <>
-            {/* Viewing controls removed for cleaner UI */}
-
-            {/* Main content area - Video and Chat */}
-            <div className="w-full" style={{ height: 'calc(100vh - 60px)' }}>
-              <div className="flex gap-0 h-full">
-                {/* Video Container - YouTube/Twitch style sizing */}
-                <div className="flex-1 p-4 flex items-center justify-center">
-                  {/* Video Player - constrained to fit viewport */}
-                  <div className="w-full" style={{ maxHeight: 'calc(100vh - 100px)', height: 'calc(100vh - 100px)' }}>
-                    <ViewerPlayer 
-                      streamId={selectedStreamId}
-                      viewerCount={selectedStream?.viewerCount || 0}
-                      isLive={selectedStream?.isLive || false}
-                      streamTitle={selectedStream?.title}
-                      streamerName={selectedStream?.streamer?.username || 'Unknown'}
-                    />
-                  </div>
-
-                  {/* Products Section removed for space */}
-                </div>
-
-                {/* Chat Section - Twitch-style width */}
-                <div className="w-[340px] h-full bg-white dark:bg-gray-800">
-                  <div className="h-full flex flex-col">
-                    <EnhancedChatContainer
-                      streamId={selectedStreamId}
-                      viewerCount={selectedStream?.viewerCount || 0}
-                      messages={messages}
-                      viewers={viewers}
-                      currentUser={viewers.find(v => v.id === 'current-user')}
-                      onSendMessage={handleSendMessage}
-                      showViewerList={false}
-                      maxMessagesPerMinute={10}
-                    />
-                  </div>
-                </div>
+          /* Main content area - Video and Chat - Takes full remaining height */
+          <div className="flex-1 flex gap-0 min-h-0 bg-black">
+            {/* Video Container - takes remaining space */}
+            <div className="flex-1 flex items-center justify-center bg-black min-h-0">
+              {/* Video Player - fills container while maintaining aspect ratio */}
+              <div className="w-full h-full">
+                <ViewerPlayer 
+                  streamId={selectedStreamId}
+                  viewerCount={selectedStream?.viewerCount || 0}
+                  isLive={selectedStream?.isLive || false}
+                  streamTitle={selectedStream?.title}
+                  streamerName={selectedStream?.streamer?.username || 'Unknown'}
+                />
               </div>
             </div>
-          </>
+
+            {/* Chat Section - Fixed width, full height */}
+            <div className="w-[340px] h-full bg-white dark:bg-gray-800 border-l border-gray-300 dark:border-gray-700 flex flex-col min-h-0">
+              <EnhancedChatContainer
+                streamId={selectedStreamId}
+                viewerCount={selectedStream?.viewerCount || 0}
+                messages={messages}
+                viewers={viewers}
+                currentUser={viewers.find(v => v.id === 'current-user')}
+                onSendMessage={handleSendMessage}
+                showViewerList={false}
+                maxMessagesPerMinute={10}
+              />
+            </div>
+          </div>
         ) : streams.length === 0 ? (
           <div className="text-center py-12">
             <div className="w-24 h-24 mx-auto mb-4 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">

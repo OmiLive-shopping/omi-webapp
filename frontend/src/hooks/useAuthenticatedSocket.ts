@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useSocketStore } from '@/stores/socket-store';
+import { socketManager } from '@/lib/socket';
 
 /**
  * Hook to establish an authenticated WebSocket connection
@@ -9,13 +10,25 @@ export function useAuthenticatedSocket() {
   const { connect, isConnected } = useSocketStore();
 
   useEffect(() => {
-    // Initialize socket connection with credentials
-    // Cookies will be sent automatically with withCredentials: true
-    if (!isConnected) {
-      connect();
-    }
+    let isComponentMounted = true;
+    
+    // Add a small delay to handle React StrictMode double mounting
+    const timer = setTimeout(() => {
+      // Only proceed if component is still mounted and not connected
+      if (isComponentMounted && !isConnected && !socketManager.isConnected()) {
+        try {
+          connect();
+        } catch (error) {
+          console.error('[useAuthenticatedSocket] Error calling connect:', error);
+        }
+      }
+    }, 100);
+    
+    return () => {
+      isComponentMounted = false;
+      clearTimeout(timer);
+    };
   }, []); // Only run once on mount
-
   return { isConnected };
 }
 

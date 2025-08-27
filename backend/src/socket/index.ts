@@ -12,9 +12,12 @@ import RealtimeAnalyticsService from '../features/analytics/services/realtime-an
 import { SecurityManager, createSecurityMiddleware, createEventValidationWrapper } from './managers/security.manager.js';
 
 export async function initializeSocketServer(httpServer: HTTPServer): Promise<void> {
+  console.log(`[SOCKET] Initializing Socket Server`);
   const socketServer = SocketServer.getInstance(httpServer);
   const io = socketServer.getIO();
   const roomManager = RoomManager.getInstance();
+  
+  console.log(`[SOCKET] Socket.IO server listening on HTTP server`);
 
   // Initialize security manager
   const securityManager = SecurityManager.getInstance();
@@ -46,7 +49,7 @@ export async function initializeSocketServer(httpServer: HTTPServer): Promise<vo
 
   // Main namespace - handles general connections
   io.on('connection', (socket: SocketWithAuth) => {
-    console.log(`User connected: ${socket.id} (${socket.username || 'anonymous'})`);
+    console.log(`[SOCKET] User connected: ${socket.id} (${socket.username || 'anonymous'})`);
 
     // Join user-specific room if authenticated
     if (socket.userId) {

@@ -70,7 +70,7 @@ export class ChatStreamIntegrationService {
     } = {}
   ): Promise<void> {
     const {
-      saveToDatabase = true,
+      saveToDatabase = false, // System messages are just real-time announcements
       announceToRoom = true,
       priority = 'medium'
     } = options;
@@ -369,7 +369,7 @@ export class ChatStreamIntegrationService {
    */
   private async saveChatMessage(streamId: string, message: any): Promise<void> {
     try {
-      await this.prisma.chatMessage.create({
+      await this.prisma.streamMessage.create({
         data: {
           id: message.id,
           streamId,
@@ -423,7 +423,7 @@ export class ChatStreamIntegrationService {
     lastSystemMessage?: any;
   }> {
     try {
-      const messages = await this.prisma.chatMessage.findMany({
+      const messages = await this.prisma.streamMessage.findMany({
         where: {
           streamId,
           type: 'system'

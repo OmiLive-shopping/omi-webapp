@@ -141,10 +141,17 @@ export class SecurityManager {
     const ip = getClientIP(socket);
     const identifier = socket.userId || ip;
 
+    console.log(`[SECURITY DEBUG] validateEvent for ${eventName}:`);
+    console.log(`[SECURITY DEBUG] - socket.id: ${socket.id}`);
+    console.log(`[SECURITY DEBUG] - socket.userId: ${socket.userId}`);
+    console.log(`[SECURITY DEBUG] - socket.username: ${socket.username}`);
+    console.log(`[SECURITY DEBUG] - socket.role: ${socket.role}`);
+
     // Check event rate limit
     const eventAllowed = await this.ipReputationManager.checkEventLimit(identifier);
     if (!eventAllowed) {
       this.rateLimitViolations++;
+      console.log(`[SECURITY] Event rate limit exceeded for ${eventName} from ${identifier}`);
       this.logSecurityEvent({
         eventType: SecurityEventType.RATE_LIMIT_EXCEEDED,
         ip,
@@ -159,6 +166,7 @@ export class SecurityManager {
 
     // Check if event type is allowed
     if (!this.payloadValidator.validateEventType(eventName)) {
+      console.log(`[SECURITY] Unauthorized event type: ${eventName}`);
       this.logSecurityEvent({
         eventType: SecurityEventType.UNAUTHORIZED_EVENT,
         ip,
@@ -174,6 +182,7 @@ export class SecurityManager {
 
     // Check authentication requirement
     if (this.payloadValidator.requiresAuthentication(eventName) && !socket.userId) {
+      console.log(`[SECURITY] Authentication required for event: ${eventName}, but socket.userId is ${socket.userId}`);
       this.logSecurityEvent({
         eventType: SecurityEventType.AUTHENTICATION_FAILURE,
         ip,
@@ -220,6 +229,7 @@ export class SecurityManager {
       data.content = this.payloadValidator.sanitizeMessage(data.content);
     }
 
+    console.log(`[SECURITY] Event ${eventName} passed all security checks`);
     return true;
   }
 
@@ -513,22 +523,42 @@ export function createEventValidationWrapper(securityManager: SecurityManager) {
     eventName: string, 
     handler: (socket: SocketWithAuth, data: T) => Promise<void> | void
   ) {
-    return async (socket: SocketWithAuth, data: T) => {
+    return async function(this: SocketWithAuth, data: T) {
       try {
+        // In Socket.IO, 'this' is bound to the socket instance
+        const socket = this;
+        
+        console.log(`[WRAPPER DEBUG] Received event ${eventName} with socket:`);
+        console.log(`[WRAPPER DEBUG] - socket.id: ${socket.id}`);
+        console.log(`[WRAPPER DEBUG] - socket.userId: ${socket.userId}`);
+        console.log(`[WRAPPER DEBUG] - socket.username: ${socket.username}`);
+        console.log(`[WRAPPER DEBUG] - socket.role: ${socket.role}`);
+        
         const isValid = await securityManager.validateEvent(socket, eventName, data);
         
         if (!isValid) {
-          socket.emit('error', { 
-            message: 'Event rejected by security policy',
-            event: eventName 
-          });
+          // Check if socket.emit exists before trying to use it
+          if (socket && typeof socket.emit === 'function') {
+            socket.emit('error', { 
+              message: 'Event rejected by security policy',
+              event: eventName 
+            });
+          }
           return;
         }
+        
+        console.log(`[WRAPPER DEBUG] About to call handler for ${eventName} with same socket:`);
+        console.log(`[WRAPPER DEBUG] - handler socket.id: ${socket.id}`);
+        console.log(`[WRAPPER DEBUG] - handler socket.userId: ${socket.userId}`);
         
         await handler(socket, data);
       } catch (error: any) {
         const errorMessage = error?.message || error?.toString() || 'Unknown error';
         console.error(`Event validation error for ${eventName}:`, errorMessage, error);
+        
+        // In Socket.IO, 'this' is bound to the socket instance
+        const socket = this;
+        
         // Check if socket.emit exists before trying to use it
         if (socket && typeof socket.emit === 'function') {
           socket.emit('error', { 

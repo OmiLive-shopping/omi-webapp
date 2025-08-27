@@ -178,15 +178,12 @@ export class RoomManager {
         where: { id: streamId },
         select: {
           userId: true,
-          user: {
-            select: {
-              role: {
-                select: {
-                  name: true,
-                },
-              },
-            },
-          },
+          // TODO: Add moderators query when implementing StreamModerator functionality
+          // moderators: {
+          //   select: {
+          //     userId: true,
+          //   },
+          // },
         },
       });
 
