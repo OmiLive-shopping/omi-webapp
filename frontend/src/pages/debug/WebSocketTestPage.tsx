@@ -170,6 +170,8 @@ export default function WebSocketTestPage() {
       });
 
       socket.on('chat:message:sent', (msg: any) => {
+        // Add sent message to chat (since sender doesn't receive chat:message)
+        setMessages(prev => [...prev, { user: msg?.user, content: msg?.content }].slice(-100));
         logEvent('chat:message:sent', msg, 'received');
       });
 
