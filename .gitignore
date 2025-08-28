@@ -71,7 +71,8 @@ dev-debug.log
 .vscode
 # OS specific
 
+.cursor/
+
 # Task files
 # tasks.json
 # tasks/ 
-.cursor/

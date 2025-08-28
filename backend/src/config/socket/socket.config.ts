@@ -30,7 +30,11 @@ export class SocketServer {
           
           // Check against allowed origins
           const isAllowed = allowedOrigins.includes(origin) || 
-            (env.NODE_ENV === 'development' && /^https?:\/\/localhost(:\d+)?$/.test(origin));
+            (env.NODE_ENV === 'development' && /^https?:\/\/localhost(:\d+)?$/.test(origin)) ||
+            // Allow Socket.IO Admin UI hosted sites
+            origin === 'https://admin.socket.io' ||
+            origin === 'https://socket.io' ||
+            /^https:\/\/.*\.socket\.io$/.test(origin);
           
           if (isAllowed) {
             callback(null, true);
@@ -64,15 +68,13 @@ export class SocketServer {
 
     // Enable admin UI in development with enhanced security
     if (env.NODE_ENV === 'development') {
+      console.log('🔧 Initializing Socket.IO Admin UI...');
       instrument(this.io, {
-        auth: env.SOCKET_ADMIN_PASSWORD ? {
-          type: 'basic',
-          username: env.SOCKET_ADMIN_USERNAME || 'admin',
-          password: env.SOCKET_ADMIN_PASSWORD,
-        } : false,
+        auth: false, // Temporarily disable auth for testing
         mode: 'development',
         namespaceName: '/admin',
       });
+      console.log('✅ Socket.IO Admin UI initialized at /admin');
     }
   }
 
