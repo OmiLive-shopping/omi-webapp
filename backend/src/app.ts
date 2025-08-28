@@ -59,7 +59,9 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Logging middleware
 app.use(logger);
 app.use(loggerMiddleware);
-app.use(pinoLogger);
+if (env.NODE_ENV === 'production') {
+  app.use(pinoLogger);
+}
 
 // Trust proxy for accurate IP addresses (important for rate limiting)
 app.set('trust proxy', 1);

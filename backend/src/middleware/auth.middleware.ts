@@ -43,14 +43,43 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
       cookie: req.headers.cookie || '',
     };
 
-    console.log('Auth middleware - headers:', headers);
+    if (process.env.SOCKET_DEBUG === 'true') {
+      const cookie = headers.cookie || '';
+      const cookieNames = cookie
+        .split(';')
+        .map(s => s.trim().split('=')[0])
+        .filter(Boolean);
+      console.log('Auth middleware - headers (truncated):', {
+        hasAuth: Boolean(headers.authorization),
+        cookies: cookieNames,
+      });
+    }
 
     // Get session using Better Auth's API
     const session = await betterAuth.api.getSession({
       headers,
     });
 
-    console.log('Auth middleware - session result:', session);
+    if (process.env.SOCKET_DEBUG === 'true') {
+      const maskEmail = (email?: string | null) => {
+        if (!email) return email;
+        const [name, domain] = email.split('@');
+        if (!domain) return email;
+        const masked = name.length > 2 ? name[0] + '***' + name.slice(-1) : name[0] + '*';
+        return `${masked}@${domain}`;
+      };
+      const summary = session
+        ? {
+            userId: (session.user as any)?.id,
+            email: maskEmail((session.user as any)?.email),
+            role: (session.user as any)?.role,
+            isAdmin: (session.user as any)?.isAdmin,
+            sessionId: session.session?.id,
+            expiresAt: session.session?.expiresAt,
+          }
+        : 'No session';
+      console.log('Auth middleware - session (summary):', summary);
+    }
 
     if (!session) {
       res.status(401).json(unifiedResponse(false, 'No valid session found'));

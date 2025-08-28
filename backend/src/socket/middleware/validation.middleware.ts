@@ -25,6 +25,7 @@ export function createValidatedHandler<T>(
     emitError?: boolean; // Whether to emit error back to client
     logError?: boolean; // Whether to log validation errors
     errorEvent?: string; // Custom error event name
+    label?: string; // Optional friendly event label for logging
   },
 ) {
   const { emitError = true, logError = true, errorEvent = 'validation:error' } = options || {};
@@ -45,11 +46,24 @@ export function createValidatedHandler<T>(
         }));
 
         if (logError) {
-          console.error(`Validation error for socket ${socket.id}:`, {
-            event: handler.name,
-            errors,
-            rawData,
-          });
+          const verbose = process.env.SOCKET_DEBUG === 'true';
+          if (verbose) {
+            let preview: unknown = undefined;
+            try {
+              const str = typeof rawData === 'string' ? rawData : JSON.stringify(rawData);
+              preview = str.length > 200 ? str.slice(0, 200) + '…' : str;
+            } catch {}
+            console.error(`Validation error for socket ${socket.id}:`, {
+              event: options?.label || handler.name || '(unknown)',
+              errors,
+              preview,
+            });
+          } else {
+            const label = options?.label || handler.name || '(unknown)';
+            console.error(
+              `Validation error for socket ${socket.id}: ${label} -> ${errors.map(e => `${e.path}:${e.message}`).join(', ')}`,
+            );
+          }
         }
 
         if (emitError) {

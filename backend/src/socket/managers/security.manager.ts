@@ -141,17 +141,21 @@ export class SecurityManager {
     const ip = getClientIP(socket);
     const identifier = socket.userId || ip;
 
-    console.log(`[SECURITY DEBUG] validateEvent for ${eventName}:`);
-    console.log(`[SECURITY DEBUG] - socket.id: ${socket.id}`);
-    console.log(`[SECURITY DEBUG] - socket.userId: ${socket.userId}`);
-    console.log(`[SECURITY DEBUG] - socket.username: ${socket.username}`);
-    console.log(`[SECURITY DEBUG] - socket.role: ${socket.role}`);
+    if (process.env.SOCKET_DEBUG === 'true') {
+      console.log(`[SECURITY DEBUG] validateEvent for ${eventName}:`);
+      console.log(`[SECURITY DEBUG] - socket.id: ${socket.id}`);
+      console.log(`[SECURITY DEBUG] - socket.userId: ${socket.userId}`);
+      console.log(`[SECURITY DEBUG] - socket.username: ${socket.username}`);
+      console.log(`[SECURITY DEBUG] - socket.role: ${socket.role}`);
+    }
 
     // Check event rate limit
     const eventAllowed = await this.ipReputationManager.checkEventLimit(identifier);
     if (!eventAllowed) {
       this.rateLimitViolations++;
-      console.log(`[SECURITY] Event rate limit exceeded for ${eventName} from ${identifier}`);
+      if (process.env.SOCKET_DEBUG === 'true') {
+        console.log(`[SECURITY] Event rate limit exceeded for ${eventName} from ${identifier}`);
+      }
       this.logSecurityEvent({
         eventType: SecurityEventType.RATE_LIMIT_EXCEEDED,
         ip,
@@ -166,7 +170,9 @@ export class SecurityManager {
 
     // Check if event type is allowed
     if (!this.payloadValidator.validateEventType(eventName)) {
-      console.log(`[SECURITY] Unauthorized event type: ${eventName}`);
+      if (process.env.SOCKET_DEBUG === 'true') {
+        console.log(`[SECURITY] Unauthorized event type: ${eventName}`);
+      }
       this.logSecurityEvent({
         eventType: SecurityEventType.UNAUTHORIZED_EVENT,
         ip,
@@ -182,7 +188,9 @@ export class SecurityManager {
 
     // Check authentication requirement
     if (this.payloadValidator.requiresAuthentication(eventName) && !socket.userId) {
-      console.log(`[SECURITY] Authentication required for event: ${eventName}, but socket.userId is ${socket.userId}`);
+      if (process.env.SOCKET_DEBUG === 'true') {
+        console.log(`[SECURITY] Authentication required for event: ${eventName}, but socket.userId is ${socket.userId}`);
+      }
       this.logSecurityEvent({
         eventType: SecurityEventType.AUTHENTICATION_FAILURE,
         ip,
@@ -229,7 +237,9 @@ export class SecurityManager {
       data.content = this.payloadValidator.sanitizeMessage(data.content);
     }
 
-    console.log(`[SECURITY] Event ${eventName} passed all security checks`);
+    if (process.env.SOCKET_DEBUG === 'true') {
+      console.log(`[SECURITY] Event ${eventName} passed all security checks`);
+    }
     return true;
   }
 
@@ -528,11 +538,28 @@ export function createEventValidationWrapper(securityManager: SecurityManager) {
         // In Socket.IO, 'this' is bound to the socket instance
         const socket = this;
         
-        console.log(`[WRAPPER DEBUG] Received event ${eventName} with socket:`);
-        console.log(`[WRAPPER DEBUG] - socket.id: ${socket.id}`);
-        console.log(`[WRAPPER DEBUG] - socket.userId: ${socket.userId}`);
-        console.log(`[WRAPPER DEBUG] - socket.username: ${socket.username}`);
-        console.log(`[WRAPPER DEBUG] - socket.role: ${socket.role}`);
+        // Lightweight tracer: detect missing payload for stream:leave
+        if (
+          (eventName === 'stream:leave' || eventName === 'stream:join') &&
+          (!data || typeof data !== 'object' || !('streamId' in (data as any)))
+        ) {
+          // Concise trace to identify the source socket/client
+          // Not gated by SOCKET_DEBUG to ensure visibility when investigating
+          console.warn(`[TRACE] ${eventName} missing payload`, {
+            socketId: socket.id,
+            user: socket.username,
+            role: socket.role,
+            typeofData: typeof data,
+          });
+        }
+
+        if (process.env.SOCKET_DEBUG === 'true') {
+          console.log(`[WRAPPER DEBUG] Received event ${eventName} with socket:`);
+          console.log(`[WRAPPER DEBUG] - socket.id: ${socket.id}`);
+          console.log(`[WRAPPER DEBUG] - socket.userId: ${socket.userId}`);
+          console.log(`[WRAPPER DEBUG] - socket.username: ${socket.username}`);
+          console.log(`[WRAPPER DEBUG] - socket.role: ${socket.role}`);
+        }
         
         const isValid = await securityManager.validateEvent(socket, eventName, data);
         
@@ -547,9 +574,11 @@ export function createEventValidationWrapper(securityManager: SecurityManager) {
           return;
         }
         
-        console.log(`[WRAPPER DEBUG] About to call handler for ${eventName} with same socket:`);
-        console.log(`[WRAPPER DEBUG] - handler socket.id: ${socket.id}`);
-        console.log(`[WRAPPER DEBUG] - handler socket.userId: ${socket.userId}`);
+        if (process.env.SOCKET_DEBUG === 'true') {
+          console.log(`[WRAPPER DEBUG] About to call handler for ${eventName} with same socket:`);
+          console.log(`[WRAPPER DEBUG] - handler socket.id: ${socket.id}`);
+          console.log(`[WRAPPER DEBUG] - handler socket.userId: ${socket.userId}`);
+        }
         
         await handler(socket, data);
       } catch (error: any) {

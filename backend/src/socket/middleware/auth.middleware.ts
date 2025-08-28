@@ -9,34 +9,44 @@ export const socketAuthMiddleware = async (socket: SocketWithAuth, next: (err?: 
     // Try to get cookies from handshake headers (sent with withCredentials: true)
     const cookies = socket.handshake.headers.cookie || '';
     
-    console.log('Socket auth middleware - cookies available:', cookies ? 'yes' : 'no');
+    if (process.env.SOCKET_DEBUG === 'true') {
+      console.log('Socket auth middleware - cookies available:', cookies ? 'yes' : 'no');
+    }
     
     if (!cookies) {
       // No cookies - allow anonymous connection
       socket.userId = undefined;
       socket.username = undefined;
       socket.role = 'anonymous';
-      console.log('Socket auth: No cookies - anonymous connection');
+      if (process.env.SOCKET_DEBUG === 'true') {
+        console.log('Socket auth: No cookies - anonymous connection');
+      }
       return next();
     }
 
     // Validate session with Better Auth using the cookies
     const headers = new Headers();
     headers.set('cookie', cookies);
-    console.log('Socket auth: Using cookies from handshake headers');
+    if (process.env.SOCKET_DEBUG === 'true') {
+      console.log('Socket auth: Using cookies from handshake headers');
+    }
 
     const session = await auth.api.getSession({
       headers: headers as any,
     });
     
-    console.log('Socket auth: Better Auth session result:', session ? 'Valid session' : 'Invalid session');
+    if (process.env.SOCKET_DEBUG === 'true') {
+      console.log('Socket auth: Better Auth session result:', session ? 'Valid session' : 'Invalid session');
+    }
 
     if (!session || !session.user) {
       // Invalid session - treat as anonymous
       socket.userId = undefined;
       socket.username = undefined;
       socket.role = 'anonymous';
-      console.log('Socket auth: Invalid session - treating as anonymous');
+      if (process.env.SOCKET_DEBUG === 'true') {
+        console.log('Socket auth: Invalid session - treating as anonymous');
+      }
       return next();
     }
 
@@ -81,7 +91,9 @@ export const socketAuthMiddleware = async (socket: SocketWithAuth, next: (err?: 
       socket.role = 'viewer';
     }
     
-    console.log(`Socket auth: Authenticated as ${socket.username} (${socket.role})`);
+    if (process.env.SOCKET_DEBUG === 'true') {
+      console.log(`Socket auth: Authenticated as ${socket.username} (${socket.role})`);
+    }
 
     next();
   } catch (error) {

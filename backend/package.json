@@ -7,7 +7,7 @@
     "prebuild": "npm run lint && npm run format && npm run test:ci",
     "build": "rm -rf dist && tsc && tsc-alias",
     "start": "node dist/server.js",
-    "dev": "nodemon --ext ts --exec tsx src/server.ts",
+    "dev": "nodemon --signal SIGTERM --delay 200ms --ext ts --exec tsx src/server.ts",
     "lint": "eslint . --ext .ts",
     "lint:fix": "eslint . --ext ts --fix",
     "format": "prettier --write .",

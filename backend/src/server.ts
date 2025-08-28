@@ -34,6 +34,10 @@ class Server {
       console.log(`Server running at http://localhost:${this.port}`);
       if (env.NODE_ENV !== 'production') {
         console.log(`Socket.io Admin UI available at http://localhost:${this.port}/admin`);
+        const green = (s: string) => `\x1b[32m${s}\x1b[0m`;
+        console.log(green('──────────────────────────────────────────────────────────────'));
+        console.log(green('Backend initialized. New logs start below.'));
+        console.log(green('──────────────────────────────────────────────────────────────'));
       }
 
       // Analytics cleanup job disabled for now

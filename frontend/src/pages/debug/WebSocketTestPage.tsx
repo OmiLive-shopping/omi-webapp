@@ -1,346 +1,349 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import axios from 'axios';
+import { io, Socket } from 'socket.io-client';
 import { useSession } from '@/lib/auth-client';
-import { useSocketStore } from '@/stores/socket-store';
-import { useChatStore } from '@/stores/chat-store';
-import { useVdoStreamStore } from '@/stores/vdo-stream-store';
-import { socketManager } from '@/lib/socket';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Card } from '@/components/ui/Card';
-import { 
-  Send, 
-  Wifi, 
-  WifiOff, 
-  Users, 
-  MessageSquare, 
-  Radio,
+import {
   Activity,
   AlertCircle,
   CheckCircle,
   Clock,
-  Zap,
-  Eye,
-  UserPlus,
-  UserMinus,
-  Bell
+  MessageSquare,
+  Send,
+  Wifi,
+  WifiOff,
 } from 'lucide-react';
+
+type EventLogEntry = {
+  timestamp: Date;
+  event: string;
+  data?: any;
+  type: 'sent' | 'received' | 'system';
+};
 
 export default function WebSocketTestPage() {
   const session = useSession();
   const user = session.data?.user;
   const isAuthenticated = !!session.data;
-  const { 
-    isConnected, 
-    connectionError: socketError,
-    connect,
-    disconnect,
-    sendMessage,
-    joinStream,
-    leaveStream,
-    messages
-  } = useSocketStore();
-  
-  const chatStore = useChatStore();
-  
-  const { 
-    currentStream,
-    viewerCount,
-    isStreaming
-  } = useVdoStreamStore();
 
-  // Local state for testing
-  // Using a valid UUID for testing (backend requires UUID format)
-  const [testRoomId, setTestRoomId] = useState('550e8400-e29b-41d4-a716-446655440000');
-  const [currentRoom, setCurrentRoom] = useState<string | null>(null);
-  const [testMessage, setTestMessage] = useState('');
-  const [eventLog, setEventLog] = useState<Array<{
-    timestamp: Date;
-    event: string;
-    data?: any;
-    type: 'sent' | 'received' | 'system';
-  }>>([]);
-  const [customEvent, setCustomEvent] = useState('');
-  const [customData, setCustomData] = useState('');
-  const [streamTestId, setStreamTestId] = useState('550e8400-e29b-41d4-a716-446655440001');
-  const [simulatedViewers, setSimulatedViewers] = useState(0);
-  
+  const [isConnected, setIsConnected] = useState(false);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
+  const [socketId, setSocketId] = useState<string | null>(null);
+  const socketRef = useRef<Socket | null>(null);
+  const [transportName, setTransportName] = useState<string | null>(null);
+
+  const [streams, setStreams] = useState<Array<{ id: string; title?: string; isLive?: boolean; viewerCount?: number; user?: { name?: string } }>>([]);
+  const [selectedStreamId, setSelectedStreamId] = useState<string>('');
+  const [joinedStreamId, setJoinedStreamId] = useState<string>('');
+  const [streamMeta, setStreamMeta] = useState<{ title?: string; isLive?: boolean; viewerCount?: number; streamerName?: string } | null>(null);
+
+  const [chatInput, setChatInput] = useState('');
+  const [messages, setMessages] = useState<Array<{ user?: any; content: string }>>([]);
+  const messagesRef = useRef<HTMLDivElement>(null);
+
+  const [eventLog, setEventLog] = useState<EventLogEntry[]>([]);
   const eventLogRef = useRef<HTMLDivElement>(null);
-  const socket = socketManager.getSocket();
 
-  // Log events
-  const logEvent = (event: string, data?: any, type: 'sent' | 'received' | 'system' = 'system') => {
-    setEventLog(prev => [...prev, {
-      timestamp: new Date(),
-      event,
-      data,
-      type
-    }].slice(-50)); // Keep last 50 events
+  const backendBaseUrl = useMemo(() => 'http://localhost:9000', []);
+
+  const logEvent = (event: string, data?: any, type: EventLogEntry['type'] = 'system') => {
+    setEventLog(prev => [...prev, { timestamp: new Date(), event, data, type }].slice(-200));
   };
 
-  // Socket event listeners
   useEffect(() => {
-    if (!socket) return;
-
-    // Chat events
-    const handleMessage = (data: any) => {
-      logEvent('chat:message', data, 'received');
-    };
-
-    const handleUserJoined = (data: any) => {
-      logEvent('chat:user_joined', data, 'received');
-    };
-
-    const handleUserLeft = (data: any) => {
-      logEvent('chat:user_left', data, 'received');
-    };
-
-    const handleRoomInfo = (data: any) => {
-      logEvent('chat:room_info', data, 'received');
-    };
-
-    // Stream events
-    const handleStreamStarted = (data: any) => {
-      logEvent('stream:started', data, 'received');
-    };
-
-    const handleStreamEnded = (data: any) => {
-      logEvent('stream:ended', data, 'received');
-    };
-
-    const handleViewerUpdate = (data: any) => {
-      logEvent('stream:viewer_update', data, 'received');
-    };
-
-    const handleStreamStats = (data: any) => {
-      logEvent('stream:stats', data, 'received');
-    };
-
-    // VDO events
-    const handleVdoStats = (data: any) => {
-      logEvent('vdo:stats', data, 'received');
-    };
-
-    const handleVdoCommand = (data: any) => {
-      logEvent('vdo:command_result', data, 'received');
-    };
-
-    // System events
-    const handleError = (error: any) => {
-      logEvent('error', error, 'system');
-    };
-
-    const handleConnect = () => {
-      logEvent('connected', { socketId: socket.id }, 'system');
-    };
-
-    const handleDisconnect = (reason: string) => {
-      logEvent('disconnected', { reason }, 'system');
-    };
-
-    const handleReconnect = () => {
-      logEvent('reconnected', null, 'system');
-    };
-
-    // Test events
-    const handleTestEchoReply = (data: any) => {
-      logEvent('test:echo:reply', data, 'received');
-    };
-
-    const handleTestBroadcastMessage = (data: any) => {
-      logEvent('test:broadcast:message', data, 'received');
-    };
-
-    const handleTestJoined = (data: any) => {
-      logEvent('test:joined', data, 'received');
-    };
-
-    const handleTestLeft = (data: any) => {
-      logEvent('test:left', data, 'received');
-    };
-
-    const handleTestUserJoined = (data: any) => {
-      logEvent('test:user-joined', data, 'received');
-    };
-
-    const handleTestUserLeft = (data: any) => {
-      logEvent('test:user-left', data, 'received');
-    };
-
-    // Register all listeners
-    socket.on('chat:message', handleMessage);
-    socket.on('chat:user_joined', handleUserJoined);
-    socket.on('chat:user_left', handleUserLeft);
-    socket.on('chat:room_info', handleRoomInfo);
-    socket.on('stream:started', handleStreamStarted);
-    socket.on('stream:ended', handleStreamEnded);
-    socket.on('stream:viewer_update', handleViewerUpdate);
-    socket.on('stream:stats', handleStreamStats);
-    socket.on('vdo:stats', handleVdoStats);
-    socket.on('vdo:command_result', handleVdoCommand);
-    socket.on('error', handleError);
-    socket.on('connect', handleConnect);
-    socket.on('disconnect', handleDisconnect);
-    socket.on('reconnect', handleReconnect);
-    
-    // Test events
-    socket.on('test:echo:reply', handleTestEchoReply);
-    socket.on('test:broadcast:message', handleTestBroadcastMessage);
-    socket.on('test:joined', handleTestJoined);
-    socket.on('test:left', handleTestLeft);
-    socket.on('test:user-joined', handleTestUserJoined);
-    socket.on('test:user-left', handleTestUserLeft);
-
-    // Cleanup
-    return () => {
-      socket.off('chat:message', handleMessage);
-      socket.off('chat:user_joined', handleUserJoined);
-      socket.off('chat:user_left', handleUserLeft);
-      socket.off('chat:room_info', handleRoomInfo);
-      socket.off('stream:started', handleStreamStarted);
-      socket.off('stream:ended', handleStreamEnded);
-      socket.off('stream:viewer_update', handleViewerUpdate);
-      socket.off('stream:stats', handleStreamStats);
-      socket.off('vdo:stats', handleVdoStats);
-      socket.off('vdo:command_result', handleVdoCommand);
-      socket.off('error', handleError);
-      socket.off('connect', handleConnect);
-      socket.off('disconnect', handleDisconnect);
-      socket.off('reconnect', handleReconnect);
-      // Test events
-      socket.off('test:echo:reply', handleTestEchoReply);
-      socket.off('test:broadcast:message', handleTestBroadcastMessage);
-      socket.off('test:joined', handleTestJoined);
-      socket.off('test:left', handleTestLeft);
-      socket.off('test:user-joined', handleTestUserJoined);
-      socket.off('test:user-left', handleTestUserLeft);
-    };
-  }, [socket]);
-
-  // Auto-scroll event log
-  useEffect(() => {
-    if (eventLogRef.current) {
-      eventLogRef.current.scrollTop = eventLogRef.current.scrollHeight;
-    }
+    if (!eventLogRef.current) return;
+    eventLogRef.current.scrollTop = eventLogRef.current.scrollHeight;
   }, [eventLog]);
 
-  // Connection handlers
-  const handleConnect = () => {
-    if (isConnected) {
-      disconnect();
-      logEvent('manual_disconnect', null, 'sent');
-    } else {
-      connect();
-      logEvent('manual_connect', null, 'sent');
-    }
-  };
-
-  // Room handlers (using stream events since that's what backend expects)
-  const handleJoinRoom = () => {
-    if (testRoomId && socket) {
-      socket.emit('stream:join', { streamId: testRoomId });
-      setCurrentRoom(testRoomId);
-      logEvent('stream:join', { streamId: testRoomId }, 'sent');
-    }
-  };
-
-  const handleLeaveRoom = () => {
-    if (currentRoom && socket) {
-      socket.emit('stream:leave', { streamId: currentRoom });
-      logEvent('stream:leave', { streamId: currentRoom }, 'sent');
-      setCurrentRoom(null);
-    }
-  };
-
-  // Message handler
-  const handleSendMessage = () => {
-    if (testMessage && currentRoom && socket) {
-      // Backend expects 'chat:send-message' with streamId and content
-      socket.emit('chat:send-message', { 
-        streamId: currentRoom,
-        content: testMessage 
+  useEffect(() => {
+    // Fetch streams for selection (public route)
+    axios
+      .get(`${backendBaseUrl}/v1/streams`)
+      .then(res => {
+        const items = (res.data?.data || res.data?.streams || res.data || []) as Array<{
+          id: string;
+          title?: string;
+          isLive?: boolean;
+          viewerCount?: number;
+          user?: { name?: string };
+        }>;
+        setStreams(items);
+        // Hydrate meta if selection exists
+        const found = items.find(s => s.id === selectedStreamId);
+        if (found) {
+          setStreamMeta({
+            title: found.title,
+            isLive: found.isLive,
+            viewerCount: found.viewerCount,
+            streamerName: found.user?.name,
+          });
+        }
+      })
+      .catch(err => {
+        console.warn('Failed to load streams', err);
+        setStreams([]);
       });
-      logEvent('chat:send-message', { 
-        streamId: currentRoom,
-        content: testMessage 
-      }, 'sent');
-      setTestMessage('');
-    }
-  };
+  }, [backendBaseUrl, selectedStreamId]);
 
-  // Custom event handler
-  const handleSendCustomEvent = () => {
-    if (customEvent && socket) {
-      try {
-        const data = customData ? JSON.parse(customData) : {};
-        socket.emit(customEvent, data);
-        logEvent(customEvent, data, 'sent');
-        setCustomEvent('');
-        setCustomData('');
-      } catch (error) {
-        logEvent('error', { message: 'Invalid JSON data' }, 'system');
+  const connectSocket = (): Promise<Socket> => {
+    return new Promise((resolve, reject) => {
+      // If already connected, return immediately
+      if (socketRef.current?.connected) {
+        console.log('✅ DEBUG: Socket already connected');
+        resolve(socketRef.current);
+        return;
       }
-    }
-  };
 
-  // Stream simulation handlers
-  const handleStartStream = () => {
-    if (socket && streamTestId) {
-      socket.emit('stream:start', { 
-        streamId: streamTestId,
-        title: 'Test Stream',
-        vdoRoomId: `vdo-${streamTestId}`
+      // If socket exists but not connected, wait for connection
+      if (socketRef.current) {
+        console.log('⏳ DEBUG: Socket exists, waiting for connection...');
+        socketRef.current.once('connect', () => {
+          console.log('✅ DEBUG: Existing socket connected');
+          resolve(socketRef.current!);
+        });
+        socketRef.current.once('connect_error', (err) => {
+          console.log('❌ DEBUG: Existing socket connection failed:', err);
+          reject(err);
+        });
+        return;
+      }
+
+      // Create new socket
+      console.log('🔌 DEBUG: Creating new socket connection...');
+      const socket = io(backendBaseUrl, {
+        withCredentials: true,
+        transports: ['websocket'],
       });
-      logEvent('stream:start', { streamId: streamTestId }, 'sent');
-    }
-  };
+      socketRef.current = socket;
 
-  const handleEndStream = () => {
-    if (socket && streamTestId) {
-      socket.emit('stream:end', { streamId: streamTestId });
-      logEvent('stream:end', { streamId: streamTestId }, 'sent');
-    }
-  };
-
-  const handleSimulateViewers = () => {
-    if (socket && streamTestId) {
-      const newCount = simulatedViewers + 1;
-      setSimulatedViewers(newCount);
-      socket.emit('stream:viewer_join', { streamId: streamTestId });
-      logEvent('stream:viewer_join', { streamId: streamTestId, count: newCount }, 'sent');
-    }
-  };
-
-  const handleRemoveViewer = () => {
-    if (socket && streamTestId && simulatedViewers > 0) {
-      const newCount = simulatedViewers - 1;
-      setSimulatedViewers(newCount);
-      socket.emit('stream:viewer_leave', { streamId: streamTestId });
-      logEvent('stream:viewer_leave', { streamId: streamTestId, count: newCount }, 'sent');
-    }
-  };
-
-  // VDO command test
-  const handleVdoCommand = (command: string) => {
-    if (socket) {
-      socket.emit('vdo:command', {
-        streamId: streamTestId,
-        command,
-        data: {}
+      socket.once('connect', () => {
+        setIsConnected(true);
+        setSocketId(socket.id || null);
+        setConnectionError(null);
+        // Detect current transport and upgrades (best effort)
+        try {
+          const sAny = socket as unknown as { io?: { engine?: { transport?: { name?: string }, on?: (evt: string, cb: (t: any) => void) => void } } };
+          const currentTransport = sAny.io?.engine?.transport?.name;
+          if (currentTransport) setTransportName(currentTransport);
+          sAny.io?.engine?.on?.('upgrade', (transport: any) => {
+            setTransportName(transport?.name || 'websocket');
+          });
+        } catch {}
+        logEvent('connected', { socketId: socket.id }, 'system');
+        console.log('✅ DEBUG: New socket connected successfully');
+        resolve(socket);
       });
-      logEvent('vdo:command', { command }, 'sent');
+
+      socket.once('connect_error', (err) => {
+        setConnectionError(err?.message || 'Connection error');
+        logEvent('connect_error', { message: err?.message }, 'system');
+        console.log('❌ DEBUG: New socket connection failed:', err);
+        reject(err);
+      });
+
+      socket.on('disconnect', reason => {
+        setIsConnected(false);
+        setSocketId(null);
+        setTransportName(null);
+        logEvent('disconnected', { reason }, 'system');
+      });
+
+      // Stream join confirmation
+      socket.on('stream:joined', data => {
+        logEvent('stream:joined', data, 'received');
+      });
+
+      // Viewer events
+      socket.on('stream:viewer:joined', data => {
+        logEvent('stream:viewer:joined', data, 'received');
+      });
+      socket.on('stream:viewer:left', data => {
+        logEvent('stream:viewer:left', data, 'received');
+      });
+
+      // Chat events
+      socket.on('chat:message', (msg: any) => {
+        setMessages(prev => [...prev, { user: msg?.user, content: msg?.content }].slice(-100));
+        logEvent('chat:message', msg, 'received');
+      });
+
+      socket.on('chat:message:sent', (msg: any) => {
+        logEvent('chat:message:sent', msg, 'received');
+      });
+
+      socket.on('chat:error', (err: any) => {
+        logEvent('chat:error', err, 'system');
+      });
+    });
+  };
+
+  const disconnectSocket = () => {
+    if (!socketRef.current) return;
+    try {
+      socketRef.current.disconnect();
+    } finally {
+      socketRef.current = null;
+      setIsConnected(false);
+      setSocketId(null);
+      setJoinedStreamId('');
+    }
+  };
+
+  // Connection lifecycle is automatic: connect after go-live or when joining a live stream.
+
+  const handleJoinStream = async () => {
+    console.log('🔍 DEBUG: handleJoinStream called with selectedStreamId:', selectedStreamId);
+    console.log('🔍 DEBUG: streamMeta:', streamMeta);
+    
+    if (!selectedStreamId) {
+      console.log('❌ DEBUG: No selectedStreamId, returning early');
+      return;
+    }
+    if (!streamMeta?.isLive) {
+      console.log('❌ DEBUG: Stream not live, blocking join');
+      logEvent('join_blocked:not_live', { streamId: selectedStreamId }, 'system');
+      return;
+    }
+    
+    try {
+      console.log('🔌 DEBUG: Ensuring socket connection...');
+      const socket = await connectSocket();
+      
+      const payload = { streamId: selectedStreamId };
+      console.log('📤 DEBUG: About to emit stream:join with payload:', payload);
+      console.log('📤 DEBUG: Payload validation - streamId type:', typeof payload.streamId);
+      console.log('📤 DEBUG: Payload validation - streamId value:', payload.streamId);
+      
+      socket.emit('stream:join', payload);
+      setJoinedStreamId(selectedStreamId);
+      logEvent('stream:join', { streamId: selectedStreamId }, 'sent');
+    } catch (error) {
+      console.error('❌ DEBUG: Failed to connect socket:', error);
+      logEvent('connection_failed', { error: (error as Error).message }, 'system');
+    }
+  };
+
+  const handleLeaveStream = () => {
+    if (!joinedStreamId || !socketRef.current) return;
+    socketRef.current.emit('stream:leave', { streamId: joinedStreamId });
+    logEvent('stream:leave', { streamId: joinedStreamId }, 'sent');
+    setJoinedStreamId('');
+    disconnectSocket();
+  };
+
+  const handleSendChat = () => {
+    if (!chatInput || !joinedStreamId || !socketRef.current) return;
+    socketRef.current.emit('chat:send-message', {
+      streamId: joinedStreamId,
+      content: chatInput,
+    });
+    logEvent('chat:send-message', { streamId: joinedStreamId, content: chatInput }, 'sent');
+    setChatInput('');
+  };
+
+  useEffect(() => {
+    if (messagesRef.current) {
+      messagesRef.current.scrollTop = messagesRef.current.scrollHeight;
+    }
+  }, [messages]);
+
+  const renderContentWithMentions = (text: string) => {
+    const parts = text.split(/(\@[A-Za-z0-9_]+)/g);
+    return (
+      <>
+        {parts.map((part, idx) =>
+          part.startsWith('@') ? (
+            <span key={idx} className="text-blue-600 dark:text-blue-400 font-medium">
+              {part}
+            </span>
+          ) : (
+            <span key={idx}>{part}</span>
+          ),
+        )}
+      </>
+    );
+  };
+
+  const handleGoLive = async () => {
+    if (!selectedStreamId) return;
+    try {
+      const res = await axios.post(
+        `${backendBaseUrl}/v1/streams/${selectedStreamId}/go-live`,
+        undefined,
+        { withCredentials: true }
+      );
+      const minimal = {
+        streamId: selectedStreamId,
+        viewerCount: (res.data?.data?.viewerCount as number) ?? undefined,
+        ok: true,
+      };
+      logEvent('rest:go-live:success', minimal, 'system');
+      
+      // Ensure socket connection and join
+      try {
+        console.log('🔌 DEBUG: Ensuring socket connection after go-live...');
+        const socket = await connectSocket();
+        
+        const payload = { streamId: selectedStreamId };
+        console.log('📤 DEBUG: (handleGoLive) About to emit stream:join with payload:', payload);
+        console.log('📤 DEBUG: (handleGoLive) Payload validation - streamId type:', typeof payload.streamId);
+        console.log('📤 DEBUG: (handleGoLive) Payload validation - streamId value:', payload.streamId);
+        
+        socket.emit('stream:join', payload);
+        setJoinedStreamId(selectedStreamId);
+        logEvent('stream:join', { streamId: selectedStreamId }, 'sent');
+      } catch (socketError) {
+        console.error('❌ DEBUG: Failed to connect socket after go-live:', socketError);
+        logEvent('post_golive_connection_failed', { error: (socketError as Error).message }, 'system');
+      }
+      // Update meta
+      const updated = streams.find(s => s.id === selectedStreamId);
+      setStreamMeta({
+        title: updated?.title,
+        isLive: true,
+        viewerCount: (res.data?.data?.viewerCount as number) ?? updated?.viewerCount,
+        streamerName: updated?.user?.name,
+      });
+    } catch (error: any) {
+      const status = error?.response?.status;
+      logEvent('rest:go-live:error', { message: error?.message, status }, 'system');
+    }
+  };
+
+  const handleEndStream = async () => {
+    const targetId = joinedStreamId || selectedStreamId;
+    if (!targetId) return;
+    try {
+      const res = await axios.post(
+        `${backendBaseUrl}/v1/streams/${targetId}/end`,
+        undefined,
+        { withCredentials: true }
+      );
+      const minimal = { streamId: targetId, ok: true };
+      logEvent('rest:end:success', minimal, 'system');
+      if (socketRef.current && joinedStreamId) {
+        socketRef.current.emit('stream:leave', { streamId: joinedStreamId });
+        logEvent('stream:leave', { streamId: joinedStreamId }, 'sent');
+      }
+      setJoinedStreamId('');
+      setStreamMeta(prev => ({ ...prev, isLive: false, viewerCount: 0 }));
+      disconnectSocket();
+    } catch (error: any) {
+      const status = error?.response?.status;
+      logEvent('rest:end:error', { message: error?.message, status }, 'system');
     }
   };
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4">
-      <div className="container mx-auto max-w-7xl">
-        <h1 className="text-3xl font-bold mb-6 text-gray-900 dark:text-white">
-          WebSocket Test Dashboard
-        </h1>
+      <div className="container mx-auto max-w-5xl">
+        <h1 className="text-3xl font-bold mb-6 text-gray-900 dark:text-white">WebSocket Test</h1>
 
         {/* Connection Status */}
         <Card className="mb-6 p-6">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-3">
             <h2 className="text-xl font-semibold flex items-center gap-2">
               {isConnected ? (
                 <>
@@ -354,271 +357,156 @@ export default function WebSocketTestPage() {
                 </>
               )}
             </h2>
-            <Button onClick={handleConnect} variant={isConnected ? 'danger' : 'primary'}>
-              {isConnected ? 'Disconnect' : 'Connect'}
-            </Button>
           </div>
-          
           {isAuthenticated && (
             <div className="text-sm text-gray-600 dark:text-gray-400">
               Logged in as: <span className="font-medium">{user?.email}</span>
             </div>
           )}
-          
-          {socketError && (
-            <div className="mt-2 text-sm text-red-600 dark:text-red-400">
-              Error: {socketError}
+          <div className="mt-2 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 text-xs text-gray-700 dark:text-gray-300">
+            <div>
+              <span className="font-medium">Room:</span>{' '}
+              {joinedStreamId ? (
+                <span className="text-green-600 dark:text-green-400">{joinedStreamId}</span>
+              ) : (
+                <span className="text-gray-500">Not joined</span>
+              )}
             </div>
-          )}
-          
-          {socket && (
-            <div className="mt-2 text-xs text-gray-500">
-              Socket ID: {socket.id}
+            <div>
+              <span className="font-medium">Stream:</span>{' '}
+              {streamMeta?.title || selectedStreamId || '—'}
             </div>
-          )}
+            <div>
+              <span className="font-medium">Live:</span>{' '}
+              {streamMeta?.isLive ? 'Yes' : 'No'}
+            </div>
+            <div>
+              <span className="font-medium">Transport:</span>{' '}
+              {transportName || '—'}
+            </div>
+            <div>
+              <span className="font-medium">Socket ID:</span>{' '}
+              {socketId || '—'}
+            </div>
+            {connectionError && (
+              <div className="md:col-span-2 lg:col-span-1 text-red-600 dark:text-red-400">
+                <span className="font-medium">Error:</span> {connectionError}
+              </div>
+            )}
+          </div>
         </Card>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Stream Selection & Join */}
+          <Card className="p-6">
+            <h2 className="text-xl font-semibold mb-4">Stream Selection</h2>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium mb-2">Select a stream</label>
+                <select
+                  value={selectedStreamId}
+                  onChange={e => {
+                    setSelectedStreamId(e.target.value);
+                    const found = streams.find(s => s.id === e.target.value);
+                    setStreamMeta({
+                      title: found?.title,
+                      isLive: found?.isLive,
+                      viewerCount: found?.viewerCount,
+                      streamerName: found?.user?.name,
+                    });
+                  }}
+                  className="w-full border rounded-lg px-3 py-2 dark:bg-gray-800 dark:border-gray-700"
+                >
+                  <option value="">-- Choose stream --</option>
+                  {streams.map(s => (
+                    <option key={s.id} value={s.id}>
+                      {s.title || s.id}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button onClick={handleJoinStream} disabled={!selectedStreamId || !streamMeta?.isLive}>
+                  Join Stream
+                </Button>
+                <Button
+                  onClick={handleLeaveStream}
+                  disabled={!joinedStreamId}
+                  variant="danger"
+                >
+                  Leave Stream
+                </Button>
+                <Button
+                  onClick={handleGoLive}
+                  disabled={!selectedStreamId || !!streamMeta?.isLive}
+                  variant="secondary"
+                >
+                  Start (REST go-live)
+                </Button>
+                <Button
+                  onClick={handleEndStream}
+                  disabled={!selectedStreamId || !streamMeta?.isLive}
+                  variant="danger"
+                >
+                  End (REST)
+                </Button>
+              </div>
+              {joinedStreamId && (
+                <div className="text-sm text-green-600 dark:text-green-400">
+                  Joined stream: {joinedStreamId}
+                </div>
+              )}
+              {streamMeta && (
+                <div className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
+                  <div>Title: {streamMeta.title || '—'}</div>
+                  <div>Live: {streamMeta.isLive ? 'Yes' : 'No'}</div>
+                  <div>Viewer Count: {streamMeta.viewerCount ?? '—'}</div>
+                  <div>Streamer: {streamMeta.streamerName || '—'}</div>
+                </div>
+              )}
+            </div>
+          </Card>
+
           {/* Chat Testing */}
           <Card className="p-6">
             <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-              <MessageSquare className="w-5 h-5" />
-              Chat Testing
+              <MessageSquare className="w-5 h-5" /> Chat
             </h2>
-            
-            <div className="space-y-4">
-              {/* Room Management */}
-              <div>
-                <label className="block text-sm font-medium mb-2">Room ID</label>
-                <div className="flex gap-2">
-                  <Input
-                    value={testRoomId}
-                    onChange={(e) => setTestRoomId(e.target.value)}
-                    placeholder="Enter room ID"
-                    disabled={!isConnected}
-                  />
-                  <Button 
-                    onClick={currentRoom ? handleLeaveRoom : handleJoinRoom}
-                    disabled={!isConnected}
-                    variant={currentRoom ? 'danger' : 'primary'}
-                  >
-                    {currentRoom ? 'Leave' : 'Join'}
-                  </Button>
-                </div>
-                {currentRoom && (
-                  <div className="mt-1 text-sm text-green-600 dark:text-green-400">
-                    Current room: {currentRoom}
-                  </div>
+            <div className="space-y-3">
+              <div className="flex gap-2">
+                <Input
+                  value={chatInput}
+                  onChange={e => setChatInput(e.target.value)}
+                  placeholder="Type a message"
+                  disabled={!joinedStreamId}
+                  onKeyDown={e => e.key === 'Enter' && handleSendChat()}
+                />
+                <Button onClick={handleSendChat} disabled={!joinedStreamId || !chatInput}>
+                  <Send className="w-4 h-4" />
+                </Button>
+              </div>
+              <div ref={messagesRef} className="border rounded-lg p-3 h-40 overflow-y-auto bg-white dark:bg-gray-800">
+                {messages.length === 0 ? (
+                  <div className="text-gray-400 text-sm">No messages yet</div>
+                ) : (
+                  messages.slice(-50).map((msg, idx) => (
+                    <div key={idx} className="text-sm mb-1 flex items-start gap-2">
+                      <span className="font-medium">{msg.user?.name || 'Unknown'}:</span>
+                      <span>{renderContentWithMentions(msg.content)}</span>
+                      <span className="ml-auto text-[10px] text-gray-500">{new Date().toLocaleTimeString()}</span>
+                    </div>
+                  ))
                 )}
               </div>
-
-              {/* Send Message */}
-              <div>
-                <label className="block text-sm font-medium mb-2">Send Message</label>
-                <div className="flex gap-2">
-                  <Input
-                    value={testMessage}
-                    onChange={(e) => setTestMessage(e.target.value)}
-                    placeholder="Type a message"
-                    disabled={!currentRoom}
-                    onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                  />
-                  <Button 
-                    onClick={handleSendMessage}
-                    disabled={!currentRoom || !testMessage}
-                  >
-                    <Send className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-
-              {/* Messages Display */}
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Recent Messages ({messages.length})
-                </label>
-                <div className="border rounded-lg p-3 h-40 overflow-y-auto bg-white dark:bg-gray-800">
-                  {messages.length === 0 ? (
-                    <div className="text-gray-400 text-sm">No messages yet</div>
-                  ) : (
-                    messages.slice(-10).map((msg, idx) => (
-                      <div key={idx} className="text-sm mb-1">
-                        <span className="font-medium">{msg.user?.name || 'Unknown'}:</span>{' '}
-                        {msg.content}
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-            </div>
-          </Card>
-
-          {/* Stream Testing */}
-          <Card className="p-6">
-            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-              <Radio className="w-5 h-5" />
-              Stream Testing
-            </h2>
-            
-            <div className="space-y-4">
-              {/* Stream ID */}
-              <div>
-                <label className="block text-sm font-medium mb-2">Stream ID</label>
-                <Input
-                  value={streamTestId}
-                  onChange={(e) => setStreamTestId(e.target.value)}
-                  placeholder="Enter stream ID"
-                  disabled={!isConnected}
-                />
-              </div>
-
-              {/* Stream Controls */}
-              <div className="flex gap-2">
-                <Button 
-                  onClick={handleStartStream}
-                  disabled={!isConnected || isStreaming}
-                  variant="primary"
-                >
-                  Start Stream
-                </Button>
-                <Button 
-                  onClick={handleEndStream}
-                  disabled={!isConnected || !isStreaming}
-                  variant="danger"
-                >
-                  End Stream
-                </Button>
-              </div>
-
-              {/* Viewer Simulation */}
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Simulate Viewers ({simulatedViewers})
-                </label>
-                <div className="flex gap-2">
-                  <Button 
-                    onClick={handleSimulateViewers}
-                    disabled={!isConnected}
-                    size="sm"
-                  >
-                    <UserPlus className="w-4 h-4 mr-1" />
-                    Add Viewer
-                  </Button>
-                  <Button 
-                    onClick={handleRemoveViewer}
-                    disabled={!isConnected || simulatedViewers === 0}
-                    size="sm"
-                    variant="danger"
-                  >
-                    <UserMinus className="w-4 h-4 mr-1" />
-                    Remove Viewer
-                  </Button>
-                </div>
-              </div>
-
-              {/* VDO Commands */}
-              <div>
-                <label className="block text-sm font-medium mb-2">VDO Commands</label>
-                <div className="grid grid-cols-2 gap-2">
-                  <Button 
-                    onClick={() => handleVdoCommand('muteAudio')}
-                    disabled={!isConnected}
-                    size="sm"
-                    variant="secondary"
-                  >
-                    Mute Audio
-                  </Button>
-                  <Button 
-                    onClick={() => handleVdoCommand('hideVideo')}
-                    disabled={!isConnected}
-                    size="sm"
-                    variant="secondary"
-                  >
-                    Hide Video
-                  </Button>
-                  <Button 
-                    onClick={() => handleVdoCommand('startRecording')}
-                    disabled={!isConnected}
-                    size="sm"
-                    variant="secondary"
-                  >
-                    Start Recording
-                  </Button>
-                  <Button 
-                    onClick={() => handleVdoCommand('getStats')}
-                    disabled={!isConnected}
-                    size="sm"
-                    variant="secondary"
-                  >
-                    Get Stats
-                  </Button>
-                </div>
-              </div>
-
-              {/* Stream Status */}
-              <div className="border rounded-lg p-3 bg-white dark:bg-gray-800">
-                <div className="text-sm space-y-1">
-                  <div>Stream Active: {isStreaming ? 'Yes' : 'No'}</div>
-                  <div>Viewer Count: {viewerCount}</div>
-                  {currentStream && (
-                    <>
-                      <div>Stream ID: {currentStream.id}</div>
-                      <div>Title: {currentStream.title}</div>
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>
-          </Card>
-
-          {/* Custom Events */}
-          <Card className="p-6">
-            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-              <Zap className="w-5 h-5" />
-              Custom Events
-            </h2>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">Event Name</label>
-                <Input
-                  value={customEvent}
-                  onChange={(e) => setCustomEvent(e.target.value)}
-                  placeholder="e.g., custom:test"
-                  disabled={!isConnected}
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium mb-2">Event Data (JSON)</label>
-                <textarea
-                  value={customData}
-                  onChange={(e) => setCustomData(e.target.value)}
-                  placeholder='{"key": "value"}'
-                  disabled={!isConnected}
-                  className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-700"
-                  rows={3}
-                />
-              </div>
-              
-              <Button 
-                onClick={handleSendCustomEvent}
-                disabled={!isConnected || !customEvent}
-                variant="primary"
-              >
-                Send Custom Event
-              </Button>
             </div>
           </Card>
 
           {/* Event Log */}
-          <Card className="p-6">
+          <Card className="p-6 lg:col-span-2">
             <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-              <Activity className="w-5 h-5" />
-              Event Log
+              <Activity className="w-5 h-5" /> Event Log
             </h2>
-            
-            <div 
+            <div
               ref={eventLogRef}
               className="border rounded-lg p-3 h-96 overflow-y-auto bg-white dark:bg-gray-800 font-mono text-xs"
             >
@@ -626,11 +514,11 @@ export default function WebSocketTestPage() {
                 <div className="text-gray-400">No events yet</div>
               ) : (
                 eventLog.map((log, idx) => (
-                  <div 
-                    key={idx} 
+                  <div
+                    key={idx}
                     className={`mb-2 p-2 rounded ${
-                      log.type === 'sent' 
-                        ? 'bg-blue-50 dark:bg-blue-900/20' 
+                      log.type === 'sent'
+                        ? 'bg-blue-50 dark:bg-blue-900/20'
                         : log.type === 'received'
                         ? 'bg-green-50 dark:bg-green-900/20'
                         : 'bg-gray-50 dark:bg-gray-800'
@@ -649,9 +537,7 @@ export default function WebSocketTestPage() {
                       <div className="flex-1">
                         <div className="flex justify-between items-start">
                           <span className="font-medium">{log.event}</span>
-                          <span className="text-gray-500">
-                            {log.timestamp.toLocaleTimeString()}
-                          </span>
+                          <span className="text-gray-500">{log.timestamp.toLocaleTimeString()}</span>
                         </div>
                         {log.data && (
                           <pre className="mt-1 text-gray-600 dark:text-gray-400 whitespace-pre-wrap">
@@ -666,148 +552,6 @@ export default function WebSocketTestPage() {
             </div>
           </Card>
         </div>
-
-        {/* Simple Test Section */}
-        <Card className="mt-6 p-6">
-          <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-            <Zap className="w-5 h-5" />
-            Simple Test (No Auth Required)
-          </h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <h3 className="font-medium mb-2">1. Test Echo (Single Client)</h3>
-              <Button
-                onClick={() => {
-                  if (socket) {
-                    socket.emit('test:echo', { message: 'Hello from echo test!' });
-                    logEvent('test:echo', { message: 'Hello from echo test!' }, 'sent');
-                  }
-                }}
-                disabled={!isConnected}
-                variant="primary"
-              >
-                Send Echo Test
-              </Button>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                Sends a message that echoes back to you only
-              </p>
-            </div>
-
-            <div>
-              <h3 className="font-medium mb-2">2. Test Room (Multi-Client)</h3>
-              <div className="space-y-2">
-                <Button
-                  onClick={() => {
-                    if (socket) {
-                      socket.emit('test:join-room', { room: 'test123' });
-                      logEvent('test:join-room', { room: 'test123' }, 'sent');
-                    }
-                  }}
-                  disabled={!isConnected}
-                  variant="primary"
-                  size="sm"
-                >
-                  Join Test Room
-                </Button>
-                <Button
-                  onClick={() => {
-                    if (socket) {
-                      socket.emit('test:broadcast', { 
-                        room: 'test123',
-                        message: `Hello from ${socket.id?.substring(0, 6)}!` 
-                      });
-                      logEvent('test:broadcast', { room: 'test123', message: 'Hello!' }, 'sent');
-                    }
-                  }}
-                  disabled={!isConnected}
-                  variant="secondary"
-                  size="sm"
-                >
-                  Broadcast to Room
-                </Button>
-                <Button
-                  onClick={() => {
-                    if (socket) {
-                      socket.emit('test:leave-room', { room: 'test123' });
-                      logEvent('test:leave-room', { room: 'test123' }, 'sent');
-                    }
-                  }}
-                  disabled={!isConnected}
-                  variant="danger"
-                  size="sm"
-                >
-                  Leave Test Room
-                </Button>
-              </div>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                Join room 'test123' in multiple tabs, then broadcast
-              </p>
-            </div>
-          </div>
-
-          <div className="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
-            <strong>How to test multi-client:</strong>
-            <ol className="list-decimal ml-5 mt-1 text-sm">
-              <li>Open this page in 2+ browser tabs</li>
-              <li>Click "Connect" in each tab</li>
-              <li>Click "Join Test Room" in each tab</li>
-              <li>Click "Broadcast to Room" in any tab</li>
-              <li>Message appears in ALL tabs!</li>
-            </ol>
-          </div>
-        </Card>
-
-        {/* Instructions */}
-        <Card className="mt-6 p-6">
-          <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-            <Bell className="w-5 h-5" />
-            Multi-User Testing Instructions
-          </h2>
-          
-          <div className="prose dark:prose-invert max-w-none text-sm">
-            <ol className="space-y-2">
-              <li>
-                <strong>Open multiple browser tabs/windows:</strong> Navigate to this same URL 
-                (<code>/websocket-test</code>) in multiple tabs or different browsers.
-              </li>
-              <li>
-                <strong>Login with different accounts:</strong> You can create test accounts or use 
-                existing ones. Each tab can have a different user.
-              </li>
-              <li>
-                <strong>Test real-time features:</strong>
-                <ul className="ml-4 mt-1">
-                  <li>Join the same room ID (UUID) in multiple tabs to test chat</li>
-                  <li>Send messages and watch them appear in all connected clients</li>
-                  <li>Start a stream in one tab and join as viewer in others</li>
-                  <li>Add/remove viewers and watch the count update everywhere</li>
-                </ul>
-              </li>
-              <li>
-                <strong>Monitor the Event Log:</strong> Each tab shows its own event log so you can 
-                see what events are being sent and received in real-time.
-              </li>
-              <li>
-                <strong>Test edge cases:</strong>
-                <ul className="ml-4 mt-1">
-                  <li>Disconnect and reconnect to test recovery</li>
-                  <li>Send rapid messages to test throttling</li>
-                  <li>Join/leave rooms quickly to test cleanup</li>
-                </ul>
-              </li>
-              <li>
-                <strong>Share with others:</strong> Send this URL to teammates or friends to test 
-                from different networks/devices: <code>{window.location.href}</code>
-              </li>
-            </ol>
-            
-            <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-              <strong>Pro Tip:</strong> Use Chrome DevTools Network tab to monitor WebSocket frames, 
-              or install a WebSocket debugging extension for more detailed inspection.
-            </div>
-          </div>
-        </Card>
       </div>
     </div>
   );

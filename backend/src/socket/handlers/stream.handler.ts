@@ -1,4 +1,5 @@
 import { PrismaService } from '../../config/prisma.config.js';
+import { logger } from '../../utils/logger.js';
 import { SocketWithAuth } from '../../config/socket/socket.config.js';
 import { SocketServer } from '../../config/socket/socket.config.js';
 import { RoomManager } from '../managers/room.manager.js';
@@ -51,10 +52,10 @@ export class StreamHandler {
       }
 
       // Join the room
-      console.log(`[STREAM JOIN] ${socket.username || 'anonymous'}(${socket.id}) joining stream room: ${data.streamId}`);
+      logger.stream(`JOIN: ${socket.username || 'anonymous'}(${socket.id}) joining stream room: ${data.streamId}`);
       await this.roomManager.joinRoom(socket, data.streamId);
       const viewerCount = this.roomManager.getViewerCount(data.streamId);
-      console.log(`[STREAM JOIN] Room ${data.streamId} now has ${viewerCount} viewers`);
+      logger.stream(`JOIN: Room ${data.streamId} now has ${viewerCount} viewers`);
 
       // Emit viewer joined event
       await streamEventEmitter.emitViewerJoined(data.streamId, {
@@ -85,6 +86,7 @@ export class StreamHandler {
           : null,
       });
     },
+    { label: 'stream:join' },
   );
 
   handleLeaveStream = createValidatedHandler(
@@ -122,6 +124,7 @@ export class StreamHandler {
 
       socket.emit('stream:left', { streamId: data.streamId });
     },
+    { label: 'stream:leave' },
   );
 
   handleStreamUpdate = createPermissionValidatedHandler(

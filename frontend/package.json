@@ -45,7 +45,9 @@
     "test:vdo:headed": "playwright test e2e/vdo-ninja-*.spec.ts --headed",
     "test:vdo:report": "playwright test e2e/vdo-ninja-*.spec.ts --reporter=html",
     "validate:ui": "node scripts/validate-ui-guidelines.js",
-    "precommit": "npm run validate:ui && npm run check:all"
+    "precommit": "npm run validate:ui && npm run check:all",
+    "ws:log": "node scripts/ws-pretty-log.mjs",
+    "backend:tail": "node scripts/backend-pretty-tail.mjs"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.17.9",

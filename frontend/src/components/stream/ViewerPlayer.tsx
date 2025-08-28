@@ -189,7 +189,7 @@ export const ViewerPlayer: React.FC<ViewerPlayerProps> = ({
     const socket = socketManager.getSocket();
     if (socket && isConnected && streamId) {
       // Join stream room
-      socketManager.emit('stream:join', streamId);
+      socketManager.emit('stream:join', { streamId });
       
       // Listen for stream events
       socketManager.on('stream:error', (error: string) => {
@@ -204,7 +204,7 @@ export const ViewerPlayer: React.FC<ViewerPlayerProps> = ({
       }
       
       return () => {
-        socketManager.emit('stream:leave', streamId);
+        socketManager.emit('stream:leave', { streamId });
         socketManager.off('stream:error');
       };
     }
