@@ -176,33 +176,6 @@ export class StreamService {
       });
     }
 
-    // Legacy socket emissions (to be removed once event system is fully integrated)
-    try {
-      const roomManager = RoomManager.getInstance();
-      
-      // Notify the streamer that their stream is ready
-      socketEmitters.emitToUser(userId, 'stream:started', {
-        streamId: liveStream.id,
-        title: liveStream.title,
-        vdoRoomId: liveStream.vdoRoomId,
-        timestamp: new Date().toISOString(),
-      });
-
-      // Notify all connected users that a new stream is live
-      socketEmitters.emitToAll('stream:live', {
-        streamId: liveStream.id,
-        title: liveStream.title,
-        streamer: {
-          id: liveStream.userId,
-          username: liveStream.user?.username,
-        },
-        isLive: true,
-        startedAt: liveStream.startedAt,
-      });
-    } catch (error) {
-      console.error('Failed to initialize WebSocket for stream:', error);
-      // Don't fail the stream start if WebSocket fails
-    }
 
     return unifiedResponse(true, 'Stream is now live', liveStream);
   }
@@ -224,31 +197,6 @@ export class StreamService {
 
     const liveStream = await this.streamRepository.goLive(stream.id);
 
-    // Initialize WebSocket room for the stream
-    try {
-      // Notify the streamer that their stream is ready
-      socketEmitters.emitToUser(userId, 'stream:started', {
-        streamId: liveStream.id,
-        title: liveStream.title,
-        vdoRoomId: liveStream.vdoRoomId,
-        timestamp: new Date().toISOString(),
-      });
-
-      // Notify all connected users that a new stream is live
-      socketEmitters.emitToAll('stream:live', {
-        streamId: liveStream.id,
-        title: liveStream.title,
-        streamer: {
-          id: liveStream.userId,
-          username: liveStream.user?.username,
-        },
-        isLive: true,
-        startedAt: liveStream.startedAt,
-      });
-    } catch (error) {
-      console.error('Failed to initialize WebSocket for stream:', error);
-      // Don't fail the stream start if WebSocket fails
-    }
 
     return unifiedResponse(true, 'Stream started successfully', liveStream);
   }

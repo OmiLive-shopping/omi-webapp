@@ -187,15 +187,7 @@ function setupEventListeners() {
     useSocketStore.setState({ connectionError: error });
   });
   
-  // Stream lifecycle events
-  socketManager.on('stream:started', (data) => {
-    console.log('Stream started:', data);
-    useSocketStore.getState().setStreamStatus({ isLive: true, streamId: data.streamId, startedAt: data.timestamp });
-  });
-  
-  socketManager.on('stream:live', (data) => {
-    console.log('Stream went live:', data);
-  });
+  // Stream lifecycle events handled by StreamSocketIntegration
   
   socketManager.on('stream:ended', (data) => {
     console.log('Stream ended:', data);
