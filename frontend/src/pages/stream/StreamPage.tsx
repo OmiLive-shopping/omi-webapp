@@ -6,6 +6,7 @@ import ProductCard from '@/components/products/ProductCard';
 import ViewerCount from '@/components/stream/ViewerCount';
 import { ChevronLeft, Share2, Heart, Bell, MoreVertical } from 'lucide-react';
 import clsx from 'clsx';
+import { socketManager } from '@/lib/socket';
 
 interface StreamData {
   id: string;
@@ -96,60 +97,108 @@ const StreamPage: React.FC = () => {
     }
   ];
 
-  // Initialize mock chat data
+  // Initialize real socket integration for stream viewing
   useEffect(() => {
-    // Mock viewers
-    const mockViewers = [
-      { id: '1', username: streamData.streamerName, role: 'streamer', isOnline: true },
-      { id: '2', username: 'ModeratorMike', role: 'moderator', isOnline: true },
-      { id: '3', username: 'ViewerVicky', role: 'viewer', isOnline: true },
-      { id: '4', username: 'ChatterChris', role: 'viewer', isOnline: true },
-      { id: '5', username: 'BeautyFan22', role: 'viewer', isOnline: true },
-      { id: 'current-user', username: 'You', role: 'viewer', isOnline: true }
-    ];
-    setViewers(mockViewers);
+    if (!id) return;
 
-    // Mock initial messages
-    const mockMessages = [
-      {
-        id: '1',
-        user: mockViewers[0],
-        content: 'Welcome everyone! Today we\'re talking about eco-friendly hair care 🌿',
-        timestamp: new Date(Date.now() - 10 * 60 * 1000),
-        isPinned: true
-      },
-      {
-        id: '2',
-        user: mockViewers[2],
-        content: 'So excited for this stream!',
-        timestamp: new Date(Date.now() - 8 * 60 * 1000)
-      },
-      {
-        id: '3',
-        user: mockViewers[4],
-        content: 'Can you show the bamboo brush up close?',
-        timestamp: new Date(Date.now() - 5 * 60 * 1000)
-      },
-      {
-        id: '4',
-        user: mockViewers[0],
-        content: 'Absolutely! Let me grab it',
-        timestamp: new Date(Date.now() - 4 * 60 * 1000)
+    const joinStreamAndSetupChat = async () => {
+      try {
+        console.log('🚀 Joining stream room as viewer:', id);
+        await socketManager.joinStreamRoomAsync(id);
+        console.log('✅ Successfully joined stream room:', id);
+
+        // Set up socket event listeners for real-time chat
+        const handleChatMessage = (message: any) => {
+          console.log('Received chat message:', message);
+          setMessages(prev => [...prev, {
+            id: message.id,
+            user: {
+              id: message.userId,
+              username: message.username || 'Anonymous',
+              role: message.role || 'viewer'
+            },
+            content: message.content,
+            timestamp: new Date(message.timestamp)
+          }]);
+        };
+
+        const handleViewerUpdate = (data: any) => {
+          console.log('Viewer count updated:', data.viewerCount || data);
+          // Update viewer count in real-time
+          if (typeof data === 'number') {
+            // Direct viewer count
+            setStreamData(prev => ({ ...prev, viewerCount: data }));
+          } else if (data.viewerCount !== undefined) {
+            setStreamData(prev => ({ ...prev, viewerCount: data.viewerCount }));
+          }
+        };
+
+        const handleStreamEnded = (data: any) => {
+          console.log('Stream has ended:', data);
+          setStreamData(prev => ({ ...prev, isLive: false }));
+        };
+
+        // Set up event listeners
+        socketManager.on('chat:message', handleChatMessage);
+        socketManager.on('chat:message:sent', handleChatMessage);
+        socketManager.on('stream:viewer-count', handleViewerUpdate);
+        socketManager.on('stream:viewers:update', handleViewerUpdate);
+        socketManager.on('stream:ended', handleStreamEnded);
+        socketManager.on('stream:offline', handleStreamEnded);
+
+        // Initialize with basic viewer (just current user for now)
+        setViewers([
+          { id: 'current-user', username: 'You', role: 'viewer', isOnline: true }
+        ]);
+
+        // Cleanup function
+        return () => {
+          console.log('🧹 Cleaning up stream room listeners for:', id);
+          socketManager.off('chat:message', handleChatMessage);
+          socketManager.off('chat:message:sent', handleChatMessage);
+          socketManager.off('stream:viewer-count', handleViewerUpdate);
+          socketManager.off('stream:viewers:update', handleViewerUpdate);
+          socketManager.off('stream:ended', handleStreamEnded);
+          socketManager.off('stream:offline', handleStreamEnded);
+          socketManager.leaveStreamRoom(id);
+        };
+
+      } catch (error) {
+        console.error('❌ Failed to join stream room:', id, error);
+        // Fallback - still allow viewing but without real-time features
+        setViewers([
+          { id: 'current-user', username: 'You', role: 'viewer', isOnline: true }
+        ]);
       }
-    ];
-    setMessages(mockMessages);
+    };
+
+    const cleanup = joinStreamAndSetupChat();
+    
+    // Return cleanup function
+    return () => {
+      if (cleanup instanceof Promise) {
+        cleanup.then(cleanupFn => {
+          if (cleanupFn) cleanupFn();
+        });
+      }
+    };
   }, [id]);
 
-  // Handle sending message
+  // Handle sending real chat message via socket
   const handleSendMessage = (content: string, mentions?: string[]) => {
-    const newMessage = {
-      id: Date.now().toString(),
-      user: viewers.find(v => v.id === 'current-user'),
-      content,
-      timestamp: new Date(),
-      mentions
-    };
-    setMessages(prev => [...prev, newMessage]);
+    if (!id) {
+      console.error('❌ No stream ID available for chat message');
+      return;
+    }
+
+    if (!socketManager.isConnected()) {
+      console.error('❌ Socket not connected, cannot send message');
+      return;
+    }
+
+    console.log('💬 Sending chat message to stream:', id, content);
+    socketManager.sendChatMessage(id, content, mentions);
+    // Don't add message locally - wait for server echo via socket event
   };
 
   const handleAddToCart = (productId: string) => {
