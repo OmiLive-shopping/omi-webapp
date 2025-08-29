@@ -10,7 +10,7 @@ import { RoomManager } from './managers/room.manager.js';
 import { socketAuthMiddleware } from './middleware/auth.middleware.js';
 import { StreamSocketIntegration } from '../features/stream/events/socket-integration.js';
 import RealtimeAnalyticsService from '../features/analytics/services/realtime-analytics.service.js';
-import { SecurityManager, createSecurityMiddleware, createEventValidationWrapper } from './managers/security.manager.js';
+// Security manager removed - using direct handlers only
 
 export async function initializeSocketServer(httpServer: HTTPServer): Promise<void> {
   console.log(`[SOCKET] Initializing Socket Server`);
@@ -20,10 +20,7 @@ export async function initializeSocketServer(httpServer: HTTPServer): Promise<vo
   
   console.log(`[SOCKET] Socket.IO server listening on HTTP server`);
 
-  // Initialize security manager
-  const securityManager = SecurityManager.getInstance();
-  const securityMiddleware = createSecurityMiddleware(securityManager);
-  const validateEvent = createEventValidationWrapper(securityManager);
+  // Security manager removed - direct handlers with Zod validation are sufficient
 
   // Initialize stream event socket integration with the HTTP server
   const streamSocketIntegration = StreamSocketIntegration.getInstance();
@@ -42,8 +39,7 @@ export async function initializeSocketServer(httpServer: HTTPServer): Promise<vo
   const chatHandler = new ChatHandler();
   const streamHandler = new StreamHandler();
 
-  // Apply security middleware first
-  io.use(securityMiddleware);
+  // Security middleware removed - authentication middleware is sufficient
   
   // Apply authentication middleware
   io.use(socketAuthMiddleware);
@@ -98,18 +94,14 @@ export async function initializeSocketServer(httpServer: HTTPServer): Promise<vo
       socket.join(`user:${socket.userId}`);
     }
 
-    // Stream events - SIMPLIFIED: bypassing security validation wrapper for testing
-    // socket.on('stream:join', validateEvent('stream:join', data => streamHandler.handleJoinStreamEnhanced(socket, data)));
-    // socket.on('stream:leave', validateEvent('stream:leave', data => streamHandler.handleLeaveStreamEnhanced(socket, data)));
-    
-    // Direct handlers for testing
+    // Stream events - using direct handlers with individual Zod validation
     socket.on('stream:join', (data) => streamHandler.handleJoinStream(socket, data));
     socket.on('stream:leave', (data) => streamHandler.handleLeaveStream(socket, data));
-    socket.on('stream:update', validateEvent('stream:update', data => streamHandler.handleStreamUpdate(socket, data)));
-    socket.on('stream:feature-product', validateEvent('stream:feature-product', data => streamHandler.handleFeatureProduct(socket, data)));
-    socket.on('stream:get-analytics', validateEvent('stream:get-analytics', data => streamHandler.handleGetAnalytics(socket, data)));
-    socket.on('stream:stats:update', validateEvent('stream:stats:update', data => streamHandler.handleStreamStats(socket, data)));
-    socket.on('stream:stats:get', validateEvent('stream:stats:get', data => streamHandler.handleGetStreamStatsEnhanced(socket, data)));
+    socket.on('stream:update', (data) => streamHandler.handleStreamUpdate(socket, data));
+    socket.on('stream:feature-product', (data) => streamHandler.handleFeatureProduct(socket, data));
+    socket.on('stream:get-analytics', (data) => streamHandler.handleGetAnalytics(socket, data));
+    socket.on('stream:stats:update', (data) => streamHandler.handleStreamStats(socket, data));
+    socket.on('stream:stats:get', (data) => streamHandler.handleGetStreamStatsEnhanced(socket, data));
 
     // Register VDO.Ninja event handlers
     streamHandler.registerVdoHandlers(socket);
@@ -117,17 +109,7 @@ export async function initializeSocketServer(httpServer: HTTPServer): Promise<vo
     // Register VDO.Ninja analytics handlers
     vdoAnalyticsHandler.registerHandlers(socket);
 
-    // Chat events - SIMPLIFIED: bypassing security validation wrapper for testing
-    // socket.on('chat:send-message', validateEvent('chat:send-message', data => chatHandler.handleSendMessageEnhanced(socket, data)));
-    // socket.on('chat:delete-message', validateEvent('chat:delete-message', data => chatHandler.handleDeleteMessageEnhanced(socket, data)));
-    // socket.on('chat:moderate-user', validateEvent('chat:moderate-user', data => chatHandler.handleModerateUserEnhanced(socket, data)));
-    // socket.on('chat:typing', validateEvent('chat:typing', data => chatHandler.handleTypingEnhanced(socket, data)));
-    // socket.on('chat:get-history', validateEvent('chat:get-history', data => chatHandler.handleGetHistory(socket, data)));
-    // socket.on('chat:react', validateEvent('chat:react', data => chatHandler.handleReactToMessageEnhanced(socket, data)));
-    // socket.on('chat:pin-message', validateEvent('chat:pin-message', data => chatHandler.handlePinMessage(socket, data)));
-    // socket.on('chat:slowmode', validateEvent('chat:slowmode', data => chatHandler.handleSlowMode(socket, data)));
-    
-    // Direct handlers for testing
+    // Chat events - using direct handlers with individual Zod validation
     socket.on('chat:send-message', (data) => chatHandler.handleSendMessage(socket, data));
     socket.on('chat:delete-message', (data) => chatHandler.handleDeleteMessage(socket, data));
     socket.on('chat:moderate-user', (data) => chatHandler.handleModerateUser(socket, data));

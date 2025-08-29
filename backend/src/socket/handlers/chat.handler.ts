@@ -260,7 +260,7 @@ export class ChatHandler {
 
   handleModerateUser = async (socket: SocketWithAuth, data: any) => {
     try {
-      const validated = moderateUserSchema.parse(data);
+      const validated = chatModerateUserSchema.parse(data);
 
       // Check if user is moderator
       if (!this.roomManager.isModerator(validated.streamId, socket.userId!)) {
@@ -437,7 +437,7 @@ export class ChatHandler {
   // Handle message reactions
   handleReactToMessage = async (socket: SocketWithAuth, data: any) => {
     try {
-      const validated = reactToMessageSchema.parse(data);
+      const validated = chatReactSchema.parse(data);
 
       if (!socket.userId) {
         socket.emit('error', { message: 'Authentication required to react to messages' });
@@ -519,7 +519,7 @@ export class ChatHandler {
   // Handle message pinning
   handlePinMessage = async (socket: SocketWithAuth, data: any) => {
     try {
-      const validated = pinMessageSchema.parse(data);
+      const validated = chatPinMessageSchema.parse(data);
 
       // Check if user is moderator or stream owner
       if (!this.roomManager.isModerator(validated.streamId, socket.userId!)) {
@@ -1041,7 +1041,7 @@ export class ChatHandler {
       // Find the product
       const product = await this.prisma.product.findUnique({
         where: { id: productId },
-        select: { id: true, name: true, title: true }
+        select: { id: true, name: true }
       });
 
       if (!product) {
@@ -1055,8 +1055,8 @@ export class ChatHandler {
       // For now, just send a system message
       return {
         success: true,
-        message: `Now featuring: ${product.name || product.title}`,
-        data: { productId, productName: product.name || product.title }
+        message: `Now featuring: ${product.name}`,
+        data: { productId, productName: product.name }
       };
     } catch (error) {
       return {
@@ -1141,7 +1141,7 @@ export class ChatHandler {
   // Handle slow mode toggle
   handleSlowMode = async (socket: SocketWithAuth, data: any) => {
     try {
-      const validated = slowModeSchema.parse(data);
+      const validated = chatSlowModeSchema.parse(data);
 
       // Check if user is moderator or stream owner
       const stream = await this.prisma.stream.findUnique({
