@@ -31,7 +31,7 @@ import clsx from 'clsx';
 import { SimpleStreamControls } from './SimpleStreamControls';
 import { useAuthState, isStreamer } from '@/lib/auth-client';
 import { useNavigate } from 'react-router-dom';
-import { useStreamSocket } from '@/hooks/useAuthenticatedSocket';
+// useStreamSocket removed - now using socketManager.connectAsync() directly
 import { socketManager } from '@/lib/socket';
 
 // VDO.Ninja Integration
@@ -77,7 +77,7 @@ export const StreamerStudio: React.FC<StreamerStudioProps> = ({
   const canStream = isStreamer(user);
   
   // Initialize authenticated WebSocket connection
-  const { isConnected: isSocketConnected, connectWithAuth } = useStreamSocket();
+  // Socket connection now handled by socketManager.connectAsync()
 
   // VDO Stream Store
   const { streamState, isStreaming: isVdoStreaming, viewerCount, connectionQuality } = useVdoStream();
@@ -392,40 +392,16 @@ export const StreamerStudio: React.FC<StreamerStudioProps> = ({
                 currentStreamId={currentStreamId || undefined}
                 onStreamStart={handleStreamStart}
                 onStreamEnd={handleStreamEnd}
-                onStreamCreated={(streamId, actualVdoRoomId) => {
+                onStreamCreated={async (streamId, actualVdoRoomId) => {
                   setCurrentStreamId(streamId);
                   
-                  // Ensure socket is connected before joining room
-                  const joinStreamRoom = () => {
-                    if (socketManager.isConnected()) {
-                      console.log('Socket is connected, joining WebSocket room for stream:', streamId);
-                      socketManager.joinStreamRoom(streamId);
-                    } else {
-                      console.log('Socket not connected yet, retrying in 1 second...');
-                      setTimeout(() => {
-                        if (socketManager.isConnected()) {
-                          console.log('Socket connected on retry, joining WebSocket room for stream:', streamId);
-                          socketManager.joinStreamRoom(streamId);
-                        } else {
-                          console.warn('Socket still not connected after retry. Stream room join may fail.');
-                          socketManager.joinStreamRoom(streamId); // Try anyway
-                        }
-                      }, 1000);
-                    }
-                  };
-                  
-                  // Ensure socket is connected with authentication first
-                  if (!isSocketConnected) {
-                    console.log('Socket not connected, connecting with auth before joining stream room');
-                    connectWithAuth().then((connected) => {
-                      if (connected) {
-                        setTimeout(joinStreamRoom, 500); // Small delay to ensure connection is fully established
-                      } else {
-                        console.error('Failed to establish authenticated WebSocket connection for stream');
-                      }
-                    });
-                  } else {
-                    joinStreamRoom();
+                  // Use clean Promise-based connection and room joining
+                  try {
+                    console.log('🚀 Stream created, joining WebSocket room:', streamId);
+                    await socketManager.joinStreamRoomAsync(streamId);
+                    console.log('✅ Successfully joined WebSocket room for stream:', streamId);
+                  } catch (error) {
+                    console.error('❌ Failed to join WebSocket room for stream:', streamId, error);
                   }
                   
                   // If we got an actual room ID from the backend, update the iframe

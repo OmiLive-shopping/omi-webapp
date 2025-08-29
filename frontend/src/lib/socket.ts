@@ -251,6 +251,67 @@ class SocketManager {
     return this.socket?.connected ?? false;
   }
 
+  /**
+   * Promise-based connection method for reliable connection handling
+   * Returns a promise that resolves when connected or rejects on error
+   */
+  connectAsync(url?: string, token?: string): Promise<Socket<ServerToClientEvents, ClientToServerEvents>> {
+    return new Promise((resolve, reject) => {
+      // If already connected, return immediately
+      if (this.socket?.connected) {
+        console.log('✅ SocketManager: Already connected');
+        resolve(this.socket);
+        return;
+      }
+
+      // If socket exists but not connected, wait for connection
+      if (this.socket && !this.socket.connected) {
+        console.log('⏳ SocketManager: Socket exists, waiting for connection...');
+        const timeout = setTimeout(() => {
+          reject(new Error('Connection timeout'));
+        }, 10000);
+
+        this.socket.once('connect', () => {
+          clearTimeout(timeout);
+          console.log('✅ SocketManager: Existing socket connected');
+          resolve(this.socket!);
+        });
+        
+        this.socket.once('connect_error', (err) => {
+          clearTimeout(timeout);
+          console.log('❌ SocketManager: Existing socket connection failed:', err);
+          reject(err);
+        });
+        return;
+      }
+
+      // Create new socket connection
+      console.log('🔌 SocketManager: Creating new socket connection...');
+      const socket = this.connect(url, token);
+      
+      if (!socket) {
+        reject(new Error('Failed to create socket'));
+        return;
+      }
+
+      const timeout = setTimeout(() => {
+        reject(new Error('Connection timeout'));
+      }, 10000);
+
+      socket.once('connect', () => {
+        clearTimeout(timeout);
+        console.log('✅ SocketManager: New socket connected successfully');
+        resolve(socket);
+      });
+
+      socket.once('connect_error', (err) => {
+        clearTimeout(timeout);
+        console.log('❌ SocketManager: New socket connection failed:', err);
+        reject(err);
+      });
+    });
+  }
+
   // Helper method to send chat messages with proper format
   sendChatMessage(streamId: string, content: string, mentions?: string[]) {
     if (!this.socket?.connected) {
@@ -287,6 +348,22 @@ class SocketManager {
 
     console.log('Joining stream room:', streamId);
     this.socket.emit('stream:join', { streamId });
+  }
+
+  /**
+   * Promise-based stream room joining with proper connection handling
+   */
+  async joinStreamRoomAsync(streamId: string): Promise<void> {
+    try {
+      // Ensure we have a connected socket
+      await this.connectAsync();
+      
+      console.log('✅ Joining stream room:', streamId);
+      this.socket!.emit('stream:join', { streamId });
+    } catch (error) {
+      console.error('❌ Failed to join stream room:', error);
+      throw error;
+    }
   }
 
   // Helper method to leave a stream room
