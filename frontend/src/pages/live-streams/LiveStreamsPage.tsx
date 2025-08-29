@@ -5,7 +5,6 @@ import EnhancedChatContainer from '@/components/chat/EnhancedChatContainer';
 import { useStreams, useStream } from '@/hooks/queries/useStreamQueries';
 import { Loader2 } from 'lucide-react';
 import { socketManager } from '@/lib/socket';
-import { useSocketStore } from '@/stores/socket-store';
 
 // type ViewingMode = 'regular' | 'theatre' | 'fullwidth';
 
@@ -19,26 +18,17 @@ const LiveStreamsPage = () => {
   const { data: streams = [], isLoading, error } = useStreams('all');
   const { data: selectedStream } = useStream(selectedStreamId);
   
-  // Get socket store methods, but don't connect globally
-  const { connect, disconnect, isConnected } = useSocketStore();
-
   // Handle socket connection and stream room joining
   useEffect(() => {
     let cleanup: (() => void) | null = null;
     
     if (selectedStreamId) {
-      // Connect to socket if not already connected
-      if (!isConnected) {
-        console.log('Connecting to socket for stream:', selectedStreamId);
-        connect();
-      }
-      
-      // Function to join room and set up listeners
-      const joinRoom = () => {
-        if (socketManager.isConnected()) {
-          // Join the stream room
-          socketManager.emit('stream:join', { streamId: selectedStreamId });
-          console.log('Joined stream room:', selectedStreamId);
+      // Use clean Promise-based connection and room joining
+      const joinStreamRoom = async () => {
+        try {
+          console.log('🚀 Connecting and joining stream room:', selectedStreamId);
+          await socketManager.joinStreamRoomAsync(selectedStreamId);
+          console.log('✅ Successfully joined stream room:', selectedStreamId);
 
           // Listen for chat messages
           const handleChatMessage = (message: any) => {
@@ -85,23 +75,12 @@ const LiveStreamsPage = () => {
             socketManager.off('stream:viewers:update', handleViewerUpdate);
             socketManager.off('test:chat:message', handleChatMessage);
           };
+        } catch (error) {
+          console.error('❌ Failed to join stream room:', selectedStreamId, error);
         }
       };
 
-      // If already connected, join immediately
-      if (isConnected && socketManager.isConnected()) {
-        joinRoom();
-      } else {
-        // Wait for connection with a small delay
-        const timer = setTimeout(joinRoom, 100);
-        cleanup = () => clearTimeout(timer);
-      }
-    } else {
-      // No stream selected - disconnect socket to save resources
-      if (isConnected) {
-        console.log('No stream selected, disconnecting socket');
-        disconnect();
-      }
+      joinStreamRoom();
     }
 
     // Return cleanup function
@@ -110,22 +89,22 @@ const LiveStreamsPage = () => {
         cleanup();
       }
     };
-  }, [selectedStreamId, isConnected, connect, disconnect]);
+  }, [selectedStreamId]);
 
   // Handle sending message
   const handleSendMessage = (content: string, mentions?: string[]) => {
-    if (selectedStreamId && isConnected) {
+    if (selectedStreamId && socketManager.isConnected()) {
       const messageData = {
         streamId: selectedStreamId,
         content,
         mentions
       };
       
-      // Emit to backend with correct event name
+      console.log('💬 Sending chat message:', messageData);
       socketManager.emit('chat:send-message', messageData);
       // Don't add message locally - wait for server echo
-    } else if (!isConnected) {
-      console.error('Socket not connected, cannot send message');
+    } else if (!socketManager.isConnected()) {
+      console.error('❌ Socket not connected, cannot send message');
     }
   };
   
