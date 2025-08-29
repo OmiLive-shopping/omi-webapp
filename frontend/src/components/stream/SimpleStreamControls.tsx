@@ -19,7 +19,6 @@ import { useNavigate } from 'react-router-dom';
 import { EnhancedChatContainer } from '@/components/chat/EnhancedChatContainer';
 import { ChatMessage, Viewer } from '@/types';
 import { socketManager } from '@/lib/socket';
-import { useSocketStore } from '@/stores/socket-store';
 
 interface SimpleStreamControlsProps {
   vdoRoomId: string;  // The actual VDO.Ninja room ID being used
@@ -47,21 +46,45 @@ export const SimpleStreamControls: React.FC<SimpleStreamControlsProps> = ({
   const [activeTab, setActiveTab] = useState<'stream' | 'chat' | 'viewers' | 'stats'>('stream');
   const navigate = useNavigate();
   
-  // Use global socket store for messages
-  const { messages: socketMessages } = useSocketStore();
+  // Use local state for chat and viewers
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [viewers, setViewers] = useState<Viewer[]>([]);
 
-  // Convert socket messages to ChatMessage format
-  const messages: ChatMessage[] = socketMessages.map(msg => ({
-    id: msg.id,
-    user: {
-      id: msg.userId,
-      username: msg.username,
-      role: msg.role || 'viewer'
-    },
-    content: msg.content || msg.message || '',
-    timestamp: new Date(msg.timestamp)
-  }));
+  // Set up socket listeners for chat messages
+  React.useEffect(() => {
+    if (!streamId) return;
+
+    const handleChatMessage = (message: any) => {
+      setMessages(prev => [...prev, {
+        id: message.id,
+        user: {
+          id: message.userId,
+          username: message.username || 'Anonymous',
+          role: message.role || 'viewer'
+        },
+        content: message.content,
+        timestamp: new Date(message.timestamp)
+      }]);
+    };
+
+    const handleViewerUpdate = (data: any) => {
+      if (data.viewerCount !== undefined) {
+        // Update viewer count if needed
+      }
+    };
+
+    // Set up event listeners
+    socketManager.on('chat:message', handleChatMessage);
+    socketManager.on('chat:message:sent', handleChatMessage);
+    socketManager.on('stream:viewers:update', handleViewerUpdate);
+
+    // Cleanup listeners
+    return () => {
+      socketManager.off('chat:message', handleChatMessage);
+      socketManager.off('chat:message:sent', handleChatMessage);
+      socketManager.off('stream:viewers:update', handleViewerUpdate);
+    };
+  }, [streamId]);
   
   const handleSendMessage = (content: string) => {
     if (streamId) {
@@ -304,6 +327,14 @@ export const SimpleStreamControls: React.FC<SimpleStreamControlsProps> = ({
                       const actualRoomId = goLiveResponse.data?.vdoRoomId || vdoRoomId;
                       console.log('VDO Room ID for streaming:', actualRoomId);
                       
+                      // Join socket room for real-time communication
+                      try {
+                        await socketManager.joinStreamRoomAsync(streamId);
+                        console.log('✅ Joined socket room for stream:', streamId);
+                      } catch (error) {
+                        console.error('❌ Failed to join socket room:', error);
+                      }
+                      
                       // Pass the actual room ID back to the parent
                       onStreamCreated?.(streamId, actualRoomId);
                       onStreamStart();
@@ -342,6 +373,10 @@ export const SimpleStreamControls: React.FC<SimpleStreamControlsProps> = ({
               if (streamId) {
                 try {
                   await apiClient.post(`/streams/${streamId}/end`);
+                  
+                  // Leave socket room
+                  socketManager.leaveStreamRoom(streamId);
+                  console.log('✅ Left socket room for stream:', streamId);
                 } catch (error) {
                   console.error('Failed to end stream in DB:', error);
                 }
