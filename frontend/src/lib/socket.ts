@@ -35,18 +35,8 @@ export interface ClientToServerEvents {
   'stream:leave': (data: { streamId: string }) => void;
 }
 
-export interface ChatMessage {
-  id: string;
-  username: string;
-  message?: string; // Optional for compatibility
-  content?: string; // New field name
-  timestamp: string;
-  userId: string;
-  type?: 'message' | 'announcement' | 'donation' | 'subscription' | 'system';
-  role?: string;
-  avatarUrl?: string | null;
-  metadata?: Record<string, any>;
-}
+// Import ChatMessage from canonical source
+export { ChatMessage } from '@/types/chat';
 
 export interface VdoSystemMessage {
   id: string;

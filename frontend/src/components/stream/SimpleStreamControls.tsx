@@ -9,7 +9,6 @@ import {
   Loader,
   Eye,
   MessageSquare,
-  Settings,
   Users,
   Activity
 } from 'lucide-react';
@@ -17,7 +16,7 @@ import clsx from 'clsx';
 import { apiClient } from '@/lib/api-client';
 import { useNavigate } from 'react-router-dom';
 import { EnhancedChatContainer } from '@/components/chat/EnhancedChatContainer';
-import { ChatMessage, Viewer } from '@/types';
+import { ChatMessage, Viewer } from '@/types/chat';
 import { socketManager } from '@/lib/socket';
 
 interface SimpleStreamControlsProps {
@@ -48,10 +47,10 @@ export const SimpleStreamControls: React.FC<SimpleStreamControlsProps> = ({
   
   // Use local state for chat and viewers
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [viewers, setViewers] = useState<Viewer[]>([]);
+  const [viewers] = useState<Viewer[]>([]);
 
   // Set up socket listeners for chat messages
-  React.useEffect(() => {
+  useEffect(() => {
     if (!streamId) {
       console.log('\x1b[35m[ STREAMER-CHAT DEBUG ]\x1b[0m No streamId, skipping socket setup');
       return;
@@ -64,17 +63,16 @@ export const SimpleStreamControls: React.FC<SimpleStreamControlsProps> = ({
         console.log('\x1b[35m[ STREAMER-CHAT DEBUG ]\x1b[0m ✅ Successfully joined socket room, now setting up listeners');
 
         // Set up socket event listeners after successful join
-        const handleChatMessage = (message: any) => {
+        const handleChatMessage = (message: ChatMessage) => {
           console.log('\x1b[35m[ STREAMER-CHAT DEBUG ]\x1b[0m Received chat:message event:', message);
           
-          const newMessage = {
+          const newMessage: ChatMessage = {
             id: message.id,
-            user: {
-              id: message.userId,
-              username: message.username || 'Anonymous',
-              role: message.role || 'viewer'
-            },
+            userId: message.userId,
+            username: message.username,
+            role: message.role || 'viewer',
             content: message.content,
+            streamId: streamId,
             timestamp: new Date(message.timestamp)
           };
           
@@ -96,18 +94,17 @@ export const SimpleStreamControls: React.FC<SimpleStreamControlsProps> = ({
         console.log('\x1b[35m[ STREAMER-CHAT DEBUG ]\x1b[0m Setting up socket event listeners');
         
         socketManager.on('chat:message', handleChatMessage);
-        socketManager.on('chat:message:sent', (message: any) => {
+        socketManager.on('chat:message:sent', (message: ChatMessage) => {
           console.log('\x1b[35m[ STREAMER-CHAT DEBUG ]\x1b[0m Received chat:message:sent event:', message);
           
           // Add our own sent message to the chat
-          const newMessage = {
+          const newMessage: ChatMessage = {
             id: message.id,
-            user: {
-              id: message.userId,
-              username: message.username || 'Anonymous',
-              role: message.role || 'viewer'
-            },
+            userId: message.userId,
+            username: message.username,
+            role: message.role || 'viewer',
             content: message.content,
+            streamId: streamId,
             timestamp: new Date(message.timestamp)
           };
           

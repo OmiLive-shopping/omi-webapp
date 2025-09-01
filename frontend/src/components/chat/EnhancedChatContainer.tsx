@@ -9,27 +9,11 @@ import {
 } from 'lucide-react';
 import MessageListV2 from './MessageListV2';
 import ChatInput from './ChatInput';
+import { ChatMessage, Viewer } from '@/types/chat';
 
-interface ChatUser {
-  id: string;
-  username: string;
-  avatar?: string;
-  role?: 'viewer' | 'moderator' | 'streamer';
-  isOnline?: boolean;
-  isBanned?: boolean;
-  timeoutUntil?: Date;
-}
+// Using Viewer from @/types/chat as our unified user type
 
-interface ChatMessage {
-  id: string;
-  user: ChatUser;
-  content: string;
-  timestamp: Date;
-  isHighlighted?: boolean;
-  isPinned?: boolean;
-  isDeleted?: boolean;
-  mentions?: string[];
-}
+// Using ChatMessage from @/types/chat - our canonical source
 
 interface RateLimitState {
   messageCount: number;
@@ -45,8 +29,8 @@ interface ChatContainerProps {
   onBanUser?: (userId: string) => void;
   onTimeoutUser?: (userId: string, duration: number) => void;
   messages: ChatMessage[];
-  viewers?: ChatUser[];
-  currentUser?: ChatUser;
+  viewers?: Viewer[];
+  currentUser?: Viewer;
   maxMessagesPerMinute?: number;
   showViewerList?: boolean;
 }

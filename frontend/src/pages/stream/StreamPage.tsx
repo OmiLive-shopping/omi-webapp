@@ -7,6 +7,7 @@ import ViewerCount from '@/components/stream/ViewerCount';
 import { ChevronLeft, Share2, Heart, Bell, MoreVertical } from 'lucide-react';
 import clsx from 'clsx';
 import { socketManager } from '@/lib/socket';
+import { ChatMessage } from '@/types/chat';
 
 interface StreamData {
   id: string;
@@ -109,7 +110,7 @@ const StreamPage: React.FC = () => {
         console.log('✅ Successfully joined stream room:', id);
 
         // Set up socket event listeners for real-time chat
-        const handleChatMessage = (message: any) => {
+        const handleChatMessage = (message: ChatMessage) => {
           console.log('Received chat message:', message);
           setMessages(prev => [...prev, {
             id: message.id,
@@ -141,7 +142,7 @@ const StreamPage: React.FC = () => {
 
         // Set up event listeners
         socketManager.on('chat:message', handleChatMessage);
-        socketManager.on('chat:message:sent', (message: any) => {
+        socketManager.on('chat:message:sent', (message: ChatMessage) => {
           console.log('Message sent confirmation:', message);
           // Add our own sent message to the chat
           setMessages(prev => [...prev, {

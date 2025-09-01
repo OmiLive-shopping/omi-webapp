@@ -19,14 +19,8 @@ export interface AuthState {
   checkAuth: () => Promise<void>;
 }
 
-export interface ChatMessage {
-  id: string;
-  content: string;
-  userId: string;
-  username: string;
-  streamId: string;
-  createdAt: string;
-}
+// Import ChatMessage from canonical source  
+export { ChatMessage } from './chat';
 
 export interface ViewerState {
   count: number;
