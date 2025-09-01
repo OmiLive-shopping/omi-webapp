@@ -384,8 +384,7 @@ export const StreamerStudio: React.FC<StreamerStudioProps> = ({
         {/* Controls Sidebar */}
         <div className="col-span-12 lg:col-span-4 lg:h-full">
           {/* Stream Controls - Full Height */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg h-full flex flex-col">
-            <div className="flex-1 flex flex-col">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg h-[calc(100vh-8rem)]">
               <SimpleStreamControls
                 vdoRoomId={vdoRoomId}  // Use the locally generated vdoRoomId
                 isStreaming={isStreaming}
@@ -414,7 +413,6 @@ export const StreamerStudio: React.FC<StreamerStudioProps> = ({
                 }}
                 isPreviewMode={isPreviewMode}
               />
-            </div>
           </div>
         </div>
       </div>

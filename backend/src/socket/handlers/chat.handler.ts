@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { PrismaService } from '../../config/prisma.config.js';
 import { SocketWithAuth } from '../../config/socket/socket.config.js';
+import { ChatMessage } from '@omi-live/shared-types';
 import { ChatRateLimiter, SlowModeManager } from '../managers/rate-limiter.js';
 import { EnhancedRateLimiter, createRateLimitedHandler as createEnhancedRateLimitedHandler } from '../managers/enhanced-rate-limiter.js';
 import { RoomManager } from '../managers/room.manager.js';
@@ -46,9 +47,12 @@ export class ChatHandler {
 
       // Check if user is authenticated
       if (!socket.userId) {
+        console.log(`[CHAT DEBUG] ❌ No socket.userId for socket ${socket.id}, username: ${socket.username}`);
         socket.emit('error', { message: 'Authentication required to send messages' });
         return;
       }
+      
+      console.log(`[CHAT DEBUG] ✅ Socket authenticated - userId: ${socket.userId}, username: ${socket.username}`);
 
       // Check if user is in the room
       const room = this.roomManager.getRoomInfo(validated.streamId);
@@ -161,28 +165,34 @@ export class ChatHandler {
             role: true,
           },
         });
+        
+        console.log(`[CHAT DEBUG] 🔍 User lookup result for userId ${socket.userId}:`, user);
 
         // Format message for broadcast
         chatMessage = {
           id: message.id,
           content: message.content,
           userId: user?.id || socket.userId,
-          username: user?.username || socket.username || 'Anonymous',
+          username: user?.username || socket.username || 'omi-live chatter',
           avatarUrl: user?.avatarUrl || null,
           role: user?.role || 'viewer',
+          streamId: validated.streamId,
           timestamp: message.createdAt,
           replyTo: validated.replyTo,
           type: 'message' as const,
         };
+        
+        console.log(`[CHAT DEBUG] 📤 Sending message with username: "${chatMessage.username}" (from user.username: "${user?.username}", socket.username: "${socket.username}")`);
       } else {
         // For anonymous users, create message without database
         chatMessage = {
           id: `anon-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
           content: validated.content,
           userId: `anon-${socket.id}`,
-          username: socket.username || 'Anonymous',
+          username: socket.username || 'omi-live chatter',
           avatarUrl: null,
           role: 'viewer',
+          streamId: validated.streamId,
           timestamp: new Date(),
           replyTo: validated.replyTo,
           type: 'message' as const,

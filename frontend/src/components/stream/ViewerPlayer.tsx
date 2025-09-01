@@ -68,7 +68,7 @@ export const ViewerPlayer: React.FC<ViewerPlayerProps> = ({
   viewerCount: initialViewerCount,
   isLive: initialIsLive,
   streamTitle = 'Untitled Stream',
-  streamerName = 'Anonymous',
+  streamerName = 'omi-live chatter',
   showStats = true,
   showChat = false,
   autoplay = true,
@@ -153,7 +153,7 @@ export const ViewerPlayer: React.FC<ViewerPlayerProps> = ({
         const viewerId = `viewer-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
         addViewer({
           id: viewerId,
-          username: 'Anonymous Viewer',
+          username: 'omi-live chatter',
           connectionQuality: connectionQuality || 'good',
           joinTime: new Date(),
           lastActivity: new Date(),

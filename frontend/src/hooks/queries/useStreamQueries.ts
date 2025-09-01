@@ -1,7 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import axios from 'axios';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:9000';
+import { apiClient } from '@/lib/api-client';
 
 export interface Stream {
   id: string;
@@ -29,10 +27,10 @@ export const useStreams = (filter?: 'live' | 'all') => {
   return useQuery({
     queryKey: ['streams', filter],
     queryFn: async () => {
-      const params = filter === 'live' ? '?isLive=true' : '';
-      const { data } = await axios.get(`${API_URL}/v1/streams${params}`);
+      const params = filter === 'live' ? { isLive: true } : {};
+      const response = await apiClient.get<any>('/streams', { params });
       // The backend returns { success, message, data: [...] }
-      return data.data || data || [];
+      return response.data || response || [];
     },
     refetchInterval: 10000, // Refetch every 10 seconds for live updates
   });
@@ -44,9 +42,9 @@ export const useStream = (streamId: string | null) => {
     queryKey: ['stream', streamId],
     queryFn: async () => {
       if (!streamId) return null;
-      const { data } = await axios.get(`${API_URL}/v1/streams/${streamId}`);
+      const response = await apiClient.get<any>(`/streams/${streamId}`);
       // The backend returns { success, message, data: {...} }
-      return data.data || data || null;
+      return response.data || response || null;
     },
     enabled: !!streamId,
     refetchInterval: 5000, // Refetch every 5 seconds for live stream
@@ -58,9 +56,9 @@ export const useCreateStream = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async (streamData: { title: string; description?: string }) => {
-      const { data } = await axios.post<Stream>(`${API_URL}/v1/streams`, streamData);
-      return data;
+    mutationFn: async (streamData: { title: string; description?: string; vdoRoomId?: string }) => {
+      const response = await apiClient.post<any>('/streams', streamData);
+      return response;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['streams'] });
@@ -80,12 +78,27 @@ export const useUpdateStream = () => {
       streamId: string; 
       data: Partial<Stream> 
     }) => {
-      const response = await axios.patch<Stream>(`${API_URL}/v1/streams/${streamId}`, data);
-      return response.data;
+      const response = await apiClient.patch<any>(`/streams/${streamId}`, data);
+      return response;
     },
-    onSuccess: (data) => {
+    onSuccess: (response) => {
       queryClient.invalidateQueries({ queryKey: ['streams'] });
-      queryClient.invalidateQueries({ queryKey: ['stream', data.id] });
+      queryClient.invalidateQueries({ queryKey: ['stream', response.data?.id || response.id] });
+    },
+  });
+};
+
+// Go live with stream
+export const useGoLive = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (streamId: string) => {
+      const response = await apiClient.post<any>(`/streams/${streamId}/go-live`);
+      return response;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['streams'] });
     },
   });
 };
@@ -96,8 +109,8 @@ export const useEndStream = () => {
   
   return useMutation({
     mutationFn: async (streamId: string) => {
-      const { data } = await axios.post(`${API_URL}/v1/streams/${streamId}/end`);
-      return data;
+      const response = await apiClient.post<any>(`/streams/${streamId}/end`);
+      return response;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['streams'] });

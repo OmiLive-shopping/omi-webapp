@@ -13,8 +13,8 @@ import {
   Activity
 } from 'lucide-react';
 import clsx from 'clsx';
-import { apiClient } from '@/lib/api-client';
 import { useNavigate } from 'react-router-dom';
+import { useCreateStream, useGoLive, useEndStream } from '@/hooks/queries/useStreamQueries';
 import { EnhancedChatContainer } from '@/components/chat/EnhancedChatContainer';
 import { ChatMessage, Viewer } from '@/types/chat';
 import { socketManager } from '@/lib/socket';
@@ -44,6 +44,11 @@ export const SimpleStreamControls: React.FC<SimpleStreamControlsProps> = ({
   const [streamId, setStreamId] = React.useState<string | null>(currentStreamId || null);
   const [activeTab, setActiveTab] = useState<'stream' | 'chat' | 'viewers' | 'stats'>('stream');
   const navigate = useNavigate();
+  
+  // React Query hooks
+  const createStreamMutation = useCreateStream();
+  const goLiveMutation = useGoLive();
+  const endStreamMutation = useEndStream();
   
   // Use local state for chat and viewers
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -228,7 +233,7 @@ export const SimpleStreamControls: React.FC<SimpleStreamControlsProps> = ({
       </div>
 
       {/* Tab Content */}
-      <div className="flex-1 p-6 overflow-y-auto">
+      <div className={clsx("flex-1 flex flex-col", activeTab === 'chat' ? 'p-0' : 'p-6 overflow-y-auto')}>
         {activeTab === 'stream' && (
           <div className="space-y-6">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
@@ -364,22 +369,20 @@ export const SimpleStreamControls: React.FC<SimpleStreamControlsProps> = ({
             onClick={async () => {
               setIsCreatingStream(true);
               try {
-                // Create a stream in the database
-                const response = await apiClient.post<any>('/streams', {
+                // Create a stream in the database using React Query
+                const streamResponse = await createStreamMutation.mutateAsync({
                   title: `Live Stream ${new Date().toLocaleDateString()}`,
                   description: 'Live streaming now!',
                   vdoRoomId: vdoRoomId
                 });
                 
-                if (response?.success && response?.data?.id) {
-                  const streamId = response.data.id;
-                  setStreamId(streamId);
+                if (streamResponse?.success && streamResponse?.data?.id) {
+                  const newStreamId = streamResponse.data.id;
+                  setStreamId(newStreamId);
                   
-                  // Now make the stream go live
+                  // Now make the stream go live using React Query
                   try {
-                    const goLiveResponse = await apiClient.post<any>(`/streams/${streamId}/go-live`, {
-                      streamKey: vdoRoomId // Use vdoRoomId as streamKey
-                    });
+                    const goLiveResponse = await goLiveMutation.mutateAsync(newStreamId);
                     
                     if (goLiveResponse?.success) {
                       console.log('Stream is now live!', goLiveResponse.data);
@@ -390,7 +393,7 @@ export const SimpleStreamControls: React.FC<SimpleStreamControlsProps> = ({
                       // Room join now handled in useEffect when streamId is set
                       
                       // Pass the actual room ID back to the parent
-                      onStreamCreated?.(streamId, actualRoomId);
+                      onStreamCreated?.(newStreamId, actualRoomId);
                       onStreamStart();
                       return; // Exit early since we handled it
                     }
@@ -400,7 +403,7 @@ export const SimpleStreamControls: React.FC<SimpleStreamControlsProps> = ({
                   }
                   
                   // Fallback if go-live failed
-                  onStreamCreated?.(streamId, vdoRoomId);
+                  onStreamCreated?.(newStreamId, vdoRoomId);
                   onStreamStart();
                 }
               } catch (error) {
@@ -411,22 +414,22 @@ export const SimpleStreamControls: React.FC<SimpleStreamControlsProps> = ({
                 setIsCreatingStream(false);
               }
             }}
-            disabled={isCreatingStream}
+            disabled={isCreatingStream || createStreamMutation.isPending || goLiveMutation.isPending}
             className="w-full py-3 px-4 bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isCreatingStream ? (
+            {(isCreatingStream || createStreamMutation.isPending || goLiveMutation.isPending) ? (
               <Loader className="w-5 h-5 animate-spin" />
             ) : (
               <Video className="w-5 h-5" />
             )}
-            {isCreatingStream ? 'Creating Stream...' : (isPreviewMode ? 'Go Live' : 'Create Stream Page')}
+            {(isCreatingStream || createStreamMutation.isPending || goLiveMutation.isPending) ? 'Creating Stream...' : (isPreviewMode ? 'Go Live' : 'Create Stream Page')}
           </button>
         ) : (
           <button
             onClick={async () => {
               if (streamId) {
                 try {
-                  await apiClient.post(`/streams/${streamId}/end`);
+                  await endStreamMutation.mutateAsync(streamId);
                   
                   // Leave socket room
                   socketManager.leaveStreamRoom(streamId);
@@ -438,7 +441,8 @@ export const SimpleStreamControls: React.FC<SimpleStreamControlsProps> = ({
               onStreamEnd();
               setStreamId(null);
             }}
-            className="w-full py-3 px-4 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition-colors flex items-center justify-center gap-2"
+            disabled={endStreamMutation.isPending}
+            className="w-full py-3 px-4 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <StopCircle className="w-5 h-5" />
             End Stream Page
@@ -463,7 +467,7 @@ export const SimpleStreamControls: React.FC<SimpleStreamControlsProps> = ({
         )}
 
         {activeTab === 'chat' && (
-          <div className="h-full flex flex-col">
+          <div className="flex-1 flex flex-col">
             {isStreaming && streamId ? (
               <EnhancedChatContainer
                 streamId={streamId}
@@ -508,7 +512,7 @@ export const SimpleStreamControls: React.FC<SimpleStreamControlsProps> = ({
                         {viewer.username?.charAt(0).toUpperCase() || '?'}
                       </div>
                       <span className="text-sm font-medium text-gray-900 dark:text-white">
-                        {viewer.username || 'Anonymous'}
+                        {viewer.username || 'omi-live chatter'}
                       </span>
                     </div>
                     <span className="text-xs text-gray-500 dark:text-gray-400">

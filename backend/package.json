@@ -76,6 +76,7 @@
     "vitest": "^3.0.8"
   },
   "dependencies": {
+    "@omi-live/shared-types": "file:../shared-types",
     "@prisma/client": "^6.4.1",
     "@types/dompurify": "^3.0.5",
     "@types/morgan": "^1.9.10",

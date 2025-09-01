@@ -36,7 +36,7 @@ interface Product {
 const StreamPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [messages, setMessages] = useState<any[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [viewers, setViewers] = useState<any[]>([]);
   const [isFollowing, setIsFollowing] = useState(false);
   const [isSubscribed, setIsSubscribed] = useState(false);
@@ -111,15 +111,11 @@ const StreamPage: React.FC = () => {
 
         // Set up socket event listeners for real-time chat
         const handleChatMessage = (message: ChatMessage) => {
-          console.log('Received chat message:', message);
+          console.log('🎯 [VIEWER CHAT DEBUG] Received chat message:', message);
+          console.log('🎯 [VIEWER CHAT DEBUG] message.username:', message.username);
+          console.log('🎯 [VIEWER CHAT DEBUG] message.userId:', message.userId);
           setMessages(prev => [...prev, {
-            id: message.id,
-            user: {
-              id: message.userId,
-              username: message.username || 'Anonymous',
-              role: message.role || 'viewer'
-            },
-            content: message.content,
+            ...message,
             timestamp: new Date(message.timestamp)
           }]);
         };
@@ -146,13 +142,7 @@ const StreamPage: React.FC = () => {
           console.log('Message sent confirmation:', message);
           // Add our own sent message to the chat
           setMessages(prev => [...prev, {
-            id: message.id,
-            user: {
-              id: message.userId,
-              username: message.username || 'Anonymous',
-              role: message.role || 'viewer'
-            },
-            content: message.content,
+            ...message,
             timestamp: new Date(message.timestamp)
           }]);
         });

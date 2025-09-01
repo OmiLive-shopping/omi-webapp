@@ -50,6 +50,7 @@
     "backend:tail": "node scripts/backend-pretty-tail.mjs"
   },
   "dependencies": {
+    "@omi-live/shared-types": "file:../shared-types",
     "@tanstack/react-query": "^5.17.9",
     "@tanstack/react-virtual": "^3.13.12",
     "axios": "^1.10.0",

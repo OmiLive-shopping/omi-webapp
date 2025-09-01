@@ -212,13 +212,13 @@ export const MessageList: React.FC<MessageListProps> = ({
                             return messageViewer?.avatarUrl ? (
                               <img 
                                 src={messageViewer.avatarUrl} 
-                                alt={message.username}
+                                alt={message.username || 'omi-live chatter'}
                               className="w-8 h-8 rounded-full"
                             />
                           ) : (
                             <div className="w-8 h-8 rounded-full bg-gray-300 dark:bg-gray-700 flex items-center justify-center">
                               <span className="text-sm font-semibold text-gray-600 dark:text-gray-400">
-                                {message.username[0].toUpperCase()}
+                                {(message.username || 'omi-live chatter')[0].toUpperCase()}
                               </span>
                             </div>
                             );
@@ -232,7 +232,7 @@ export const MessageList: React.FC<MessageListProps> = ({
                       {showAvatar && (
                         <div className="flex items-baseline gap-2 mb-1">
                           <span className="font-semibold text-sm text-gray-900 dark:text-white">
-                            {message.username}
+                            {message.username || 'omi-live chatter'}
                           </span>
                           {getRoleBadge(message.role)}
                           <span className="text-xs text-gray-500 dark:text-gray-400">

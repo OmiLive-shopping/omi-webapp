@@ -19,8 +19,8 @@ export interface AuthState {
   checkAuth: () => Promise<void>;
 }
 
-// Import ChatMessage from canonical source  
-export { ChatMessage } from './chat';
+// Import ChatMessage from shared types
+export type { ChatMessage } from '@omi-live/shared-types';
 
 export interface ViewerState {
   count: number;
