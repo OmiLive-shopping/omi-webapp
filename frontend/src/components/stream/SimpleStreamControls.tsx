@@ -52,44 +52,107 @@ export const SimpleStreamControls: React.FC<SimpleStreamControlsProps> = ({
 
   // Set up socket listeners for chat messages
   React.useEffect(() => {
-    if (!streamId) return;
+    if (!streamId) {
+      console.log('\x1b[35m[ STREAMER-CHAT DEBUG ]\x1b[0m No streamId, skipping socket setup');
+      return;
+    }
 
-    const handleChatMessage = (message: any) => {
-      setMessages(prev => [...prev, {
-        id: message.id,
-        user: {
-          id: message.userId,
-          username: message.username || 'Anonymous',
-          role: message.role || 'viewer'
-        },
-        content: message.content,
-        timestamp: new Date(message.timestamp)
-      }]);
-    };
+    const joinRoomAndSetupChat = async () => {
+      try {
+        console.log('\x1b[35m[ STREAMER-CHAT DEBUG ]\x1b[0m Joining stream room for streamId:', streamId);
+        await socketManager.joinStreamRoomAsync(streamId);
+        console.log('\x1b[35m[ STREAMER-CHAT DEBUG ]\x1b[0m ✅ Successfully joined socket room, now setting up listeners');
 
-    const handleViewerUpdate = (data: any) => {
-      if (data.viewerCount !== undefined) {
-        // Update viewer count if needed
+        // Set up socket event listeners after successful join
+        const handleChatMessage = (message: any) => {
+          console.log('\x1b[35m[ STREAMER-CHAT DEBUG ]\x1b[0m Received chat:message event:', message);
+          
+          const newMessage = {
+            id: message.id,
+            user: {
+              id: message.userId,
+              username: message.username || 'Anonymous',
+              role: message.role || 'viewer'
+            },
+            content: message.content,
+            timestamp: new Date(message.timestamp)
+          };
+          
+          console.log('\x1b[35m[ STREAMER-CHAT DEBUG ]\x1b[0m Adding message to state:', newMessage);
+          
+          setMessages(prev => {
+            const updated = [...prev, newMessage];
+            console.log('\x1b[35m[ STREAMER-CHAT DEBUG ]\x1b[0m Messages array updated, length:', updated.length);
+            return updated;
+          });
+        };
+
+        const handleViewerUpdate = (data: any) => {
+          if (data.viewerCount !== undefined) {
+            // Update viewer count if needed
+          }
+        };
+
+        console.log('\x1b[35m[ STREAMER-CHAT DEBUG ]\x1b[0m Setting up socket event listeners');
+        
+        socketManager.on('chat:message', handleChatMessage);
+        socketManager.on('chat:message:sent', (message: any) => {
+          console.log('\x1b[35m[ STREAMER-CHAT DEBUG ]\x1b[0m Received chat:message:sent event:', message);
+          
+          // Add our own sent message to the chat
+          const newMessage = {
+            id: message.id,
+            user: {
+              id: message.userId,
+              username: message.username || 'Anonymous',
+              role: message.role || 'viewer'
+            },
+            content: message.content,
+            timestamp: new Date(message.timestamp)
+          };
+          
+          console.log('\x1b[35m[ STREAMER-CHAT DEBUG ]\x1b[0m Adding sent message to state:', newMessage);
+          
+          setMessages(prev => {
+            const updated = [...prev, newMessage];
+            console.log('\x1b[35m[ STREAMER-CHAT DEBUG ]\x1b[0m Messages array updated (sent), length:', updated.length);
+            return updated;
+          });
+        });
+        socketManager.on('stream:viewers:update', handleViewerUpdate);
+
+        // Return cleanup function
+        return () => {
+          console.log('\x1b[35m[ STREAMER-CHAT DEBUG ]\x1b[0m Cleaning up socket listeners for streamId:', streamId);
+          socketManager.off('chat:message', handleChatMessage);
+          socketManager.off('chat:message:sent');
+          socketManager.off('stream:viewers:update', handleViewerUpdate);
+          socketManager.leaveStreamRoom(streamId);
+        };
+      } catch (error) {
+        console.log('\x1b[35m[ STREAMER-CHAT DEBUG ]\x1b[0m ❌ Failed to join stream room:', error);
       }
     };
 
-    // Set up event listeners
-    socketManager.on('chat:message', handleChatMessage);
-    socketManager.on('chat:message:sent', handleChatMessage);
-    socketManager.on('stream:viewers:update', handleViewerUpdate);
-
-    // Cleanup listeners
+    const cleanup = joinRoomAndSetupChat();
+    
+    // Return cleanup function
     return () => {
-      socketManager.off('chat:message', handleChatMessage);
-      socketManager.off('chat:message:sent', handleChatMessage);
-      socketManager.off('stream:viewers:update', handleViewerUpdate);
+      if (cleanup instanceof Promise) {
+        cleanup.then(cleanupFn => {
+          if (cleanupFn) cleanupFn();
+        });
+      }
     };
   }, [streamId]);
   
   const handleSendMessage = (content: string) => {
     if (streamId) {
+      console.log('\x1b[35m[ STREAMER-CHAT DEBUG ]\x1b[0m Sending chat message:', { streamId, content });
       // Use the global socket manager instead of local socket
       socketManager.sendChatMessage(streamId, content);
+    } else {
+      console.log('\x1b[35m[ STREAMER-CHAT DEBUG ]\x1b[0m Cannot send message - no streamId');
     }
   };
 
@@ -327,13 +390,7 @@ export const SimpleStreamControls: React.FC<SimpleStreamControlsProps> = ({
                       const actualRoomId = goLiveResponse.data?.vdoRoomId || vdoRoomId;
                       console.log('VDO Room ID for streaming:', actualRoomId);
                       
-                      // Join socket room for real-time communication
-                      try {
-                        await socketManager.joinStreamRoomAsync(streamId);
-                        console.log('✅ Joined socket room for stream:', streamId);
-                      } catch (error) {
-                        console.error('❌ Failed to join socket room:', error);
-                      }
+                      // Room join now handled in useEffect when streamId is set
                       
                       // Pass the actual room ID back to the parent
                       onStreamCreated?.(streamId, actualRoomId);
@@ -414,7 +471,10 @@ export const SimpleStreamControls: React.FC<SimpleStreamControlsProps> = ({
               <EnhancedChatContainer
                 streamId={streamId}
                 viewerCount={viewers.length}
-                messages={messages}
+                messages={(() => {
+                  console.log('\x1b[35m[ STREAMER-CHAT DEBUG ]\x1b[0m Rendering EnhancedChatContainer with messages:', messages.length, messages);
+                  return messages;
+                })()}
                 viewers={viewers}
                 currentUser={viewers.find(v => v.id === 'streamer') || {
                   id: 'streamer',

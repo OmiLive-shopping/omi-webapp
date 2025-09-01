@@ -189,7 +189,7 @@ export class ChatHandler {
         };
       }
 
-      // Broadcast to all users in the stream
+      // Broadcast to all users in the stream (excluding sender)
       console.log(`[CHAT] ${socket.username || 'anonymous'}(${socket.id}) sending to room stream:${validated.streamId}: "${validated.content}"`);
       socket.to(`stream:${validated.streamId}`).emit('chat:message', chatMessage);
       socket.emit('chat:message:sent', chatMessage);

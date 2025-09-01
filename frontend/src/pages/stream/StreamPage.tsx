@@ -41,9 +41,10 @@ const StreamPage: React.FC = () => {
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [wishlistItems, setWishlistItems] = useState<string[]>([]);
   const [showDescription, setShowDescription] = useState(false);
+  const [viewingMode, setViewingMode] = useState<'theater' | 'standard'>('theater');
 
   // Mock stream data - replace with real API call
-  const streamData: StreamData = {
+  const [streamData, setStreamData] = useState<StreamData>({
     id: id || '1',
     title: 'My Eco-Friendly Hair Care Faves this Spring',
     streamerName: 'Maria Salvidar',
@@ -54,7 +55,7 @@ const StreamPage: React.FC = () => {
     startedAt: new Date(Date.now() - 45 * 60 * 1000),
     description: 'Join me as I share my favorite eco-friendly hair care products that have transformed my hair routine! I\'ll be demonstrating techniques and answering your questions live.',
     tags: ['Hair Care', 'Eco-Friendly', 'Natural Products', 'Spring Beauty']
-  };
+  });
 
   // Mock products data
   const featuredProducts: Product[] = [
@@ -140,7 +141,20 @@ const StreamPage: React.FC = () => {
 
         // Set up event listeners
         socketManager.on('chat:message', handleChatMessage);
-        socketManager.on('chat:message:sent', handleChatMessage);
+        socketManager.on('chat:message:sent', (message: any) => {
+          console.log('Message sent confirmation:', message);
+          // Add our own sent message to the chat
+          setMessages(prev => [...prev, {
+            id: message.id,
+            user: {
+              id: message.userId,
+              username: message.username || 'Anonymous',
+              role: message.role || 'viewer'
+            },
+            content: message.content,
+            timestamp: new Date(message.timestamp)
+          }]);
+        });
         socketManager.on('stream:viewer-count', handleViewerUpdate);
         socketManager.on('stream:viewers:update', handleViewerUpdate);
         socketManager.on('stream:ended', handleStreamEnded);
@@ -155,7 +169,7 @@ const StreamPage: React.FC = () => {
         return () => {
           console.log('🧹 Cleaning up stream room listeners for:', id);
           socketManager.off('chat:message', handleChatMessage);
-          socketManager.off('chat:message:sent', handleChatMessage);
+          socketManager.off('chat:message:sent');
           socketManager.off('stream:viewer-count', handleViewerUpdate);
           socketManager.off('stream:viewers:update', handleViewerUpdate);
           socketManager.off('stream:ended', handleStreamEnded);
@@ -215,7 +229,7 @@ const StreamPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      {/* Header */}
+      {/* Header - Commented out for minimal theater experience, can be restored later
       <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-[1920px] mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
@@ -288,13 +302,14 @@ const StreamPage: React.FC = () => {
           </div>
         </div>
       </div>
+      */}
 
       {/* Main Content */}
-      <div className="max-w-[1920px] mx-auto px-4 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Video and Info Section */}
-          <div className="lg:col-span-2 space-y-4">
-            {/* Video Player */}
+      {viewingMode === 'theater' ? (
+        /* Theater Mode - Full screen video + chat sidebar */
+        <div className="h-screen flex bg-black">
+          {/* Video Player - Takes all remaining space */}
+          <div className="flex-1 bg-black relative">
             <ViewerPlayer 
               streamId={streamData.id}
               viewerCount={streamData.viewerCount}
@@ -302,9 +317,64 @@ const StreamPage: React.FC = () => {
               streamTitle={streamData.title}
               streamerName={streamData.streamerName}
             />
+            {/* Toggle Button Overlay */}
+            <button
+              onClick={() => setViewingMode('standard')}
+              className="absolute bottom-4 right-4 p-3 bg-black/50 hover:bg-black/70 text-white rounded-lg transition-all"
+              title="Switch to Standard Mode"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4m-4 0l5.657 5.657M20 20h-4m4 0v-4m0 4l-5.657-5.657M4 16v4m0 0h4m-4 0l5.657-5.657M20 4h-4m4 0v4m0-4l-5.657 5.657" />
+              </svg>
+            </button>
+          </div>
+          
+          {/* Chat - Fixed width sidebar */}
+          <div className="w-[340px] h-full bg-white dark:bg-gray-800 border-l border-gray-300 dark:border-gray-700 flex flex-col">
+            <EnhancedChatContainer
+              streamId={streamData.id}
+              viewerCount={streamData.viewerCount}
+              messages={messages}
+              viewers={viewers}
+              currentUser={viewers.find(v => v.id === 'current-user')}
+              onSendMessage={handleSendMessage}
+              showViewerList={false}
+              maxMessagesPerMinute={10}
+            />
+          </div>
+        </div>
+      ) : (
+        /* Standard Mode - Normal layout with everything */
+        <div className="max-w-[1920px] mx-auto px-4 py-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Video and Info Section */}
+            <div className="lg:col-span-2 space-y-4 relative">
+              {/* Video Player */}
+              <div className="relative">
+                <ViewerPlayer 
+                  streamId={streamData.id}
+                  viewerCount={streamData.viewerCount}
+                  isLive={streamData.isLive}
+                  streamTitle={streamData.title}
+                  streamerName={streamData.streamerName}
+                />
+                {/* Toggle Button Overlay */}
+                <button
+                  onClick={() => setViewingMode('theater')}
+                  className="absolute bottom-4 right-4 p-3 bg-black/50 hover:bg-black/70 text-white rounded-lg transition-all"
+                  title="Switch to Theater Mode"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 4V2a1 1 0 011-1h8a1 1 0 011 1v2m0 0V3a1 1 0 011 1v12a1 1 0 01-1 1H8a1 1 0 01-1-1V4h0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14l-1 8H6L5 8z" />
+                  </svg>
+                </button>
+              </div>
 
-            {/* Stream Info */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+              {/* All extra sections commented out for minimal experience
+              
+              Stream Info Section:
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
               <div className="flex items-start justify-between mb-4">
                 <div className="flex-1">
                   <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
@@ -413,25 +483,29 @@ const StreamPage: React.FC = () => {
                 ))}
               </div>
             </div>
-          </div>
+            
+            Related Streams section and all other sections...
+            
+            End of commented sections */
 
-          {/* Chat Section */}
-          <div className="lg:col-span-1">
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg h-[calc(100vh-200px)] sticky top-20 flex flex-col">
-              <EnhancedChatContainer
-                streamId={streamData.id}
-                viewerCount={streamData.viewerCount}
-                messages={messages}
-                viewers={viewers}
-                currentUser={viewers.find(v => v.id === 'current-user')}
-                onSendMessage={handleSendMessage}
-                showViewerList={false}
-                maxMessagesPerMinute={10}
-              />
+            {/* Chat Section */}
+            <div className="lg:col-span-1">
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg h-[calc(100vh-200px)] sticky top-20 flex flex-col">
+                <EnhancedChatContainer
+                  streamId={streamData.id}
+                  viewerCount={streamData.viewerCount}
+                  messages={messages}
+                  viewers={viewers}
+                  currentUser={viewers.find(v => v.id === 'current-user')}
+                  onSendMessage={handleSendMessage}
+                  showViewerList={false}
+                  maxMessagesPerMinute={10}
+                />
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

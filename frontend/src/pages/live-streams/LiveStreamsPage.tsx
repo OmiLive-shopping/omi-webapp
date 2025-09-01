@@ -1,186 +1,32 @@
-import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import clsx from 'clsx';
-import { ViewerPlayer } from '@/components/stream/ViewerPlayer';
-import EnhancedChatContainer from '@/components/chat/EnhancedChatContainer';
-import { useStreams, useStream } from '@/hooks/queries/useStreamQueries';
+import { useStreams } from '@/hooks/queries/useStreamQueries';
 import { Loader2 } from 'lucide-react';
-import { socketManager } from '@/lib/socket';
 
 // type ViewingMode = 'regular' | 'theatre' | 'fullwidth';
 
 const LiveStreamsPage = () => {
-  const [selectedStreamId, setSelectedStreamId] = useState<string | null>(null);
-  const [messages, setMessages] = useState<any[]>([]);
-  const [viewers, setViewers] = useState<any[]>([]);
-  // const [viewingMode, setViewingMode] = useState<ViewingMode>('regular');
+  const navigate = useNavigate();
   
   // Fetch all streams from backend (not just live ones)
   const { data: streams = [], isLoading, error } = useStreams('all');
-  const { data: selectedStream } = useStream(selectedStreamId);
   
-  // Handle socket connection and stream room joining
-  useEffect(() => {
-    let cleanup: (() => void) | null = null;
-    
-    if (selectedStreamId) {
-      // Use clean Promise-based connection and room joining
-      const joinStreamRoom = async () => {
-        try {
-          console.log('🚀 Connecting and joining stream room:', selectedStreamId);
-          await socketManager.joinStreamRoomAsync(selectedStreamId);
-          console.log('✅ Successfully joined stream room:', selectedStreamId);
-
-          // Listen for chat messages
-          const handleChatMessage = (message: any) => {
-            console.log('Received chat message:', message);
-            setMessages(prev => [...prev, {
-              id: message.id,
-              user: {
-                id: message.userId,
-                username: message.username || 'Anonymous',
-                role: message.role || 'viewer'
-              },
-              content: message.content,
-              timestamp: new Date(message.timestamp)
-            }]);
-          };
-
-          // Listen for viewer updates
-          const handleViewerUpdate = (data: any) => {
-            console.log('Viewer count updated:', data.viewerCount);
-            // Update viewer count if needed
-          };
-
-          // Set up event listeners using type-safe events
-          socketManager.on('chat:message', handleChatMessage);
-          socketManager.on('chat:message:sent', handleChatMessage);
-          socketManager.on('stream:viewers:update', handleViewerUpdate);
-          socketManager.on('test:chat:message', handleChatMessage);
-
-          // Initialize with some viewers
-          const mockViewers = [
-            { id: 'current-user', username: 'You', role: 'viewer', isOnline: true },
-            { id: 'streamer', username: 'Streamer', role: 'streamer', isOnline: true }
-          ];
-          setViewers(mockViewers);
-
-          // Clear messages when switching streams
-          setMessages([]);
-
-          // Set up cleanup function
-          cleanup = () => {
-            socketManager.emit('stream:leave', { streamId: selectedStreamId });
-            socketManager.off('chat:message', handleChatMessage);
-            socketManager.off('chat:message:sent', handleChatMessage);
-            socketManager.off('stream:viewers:update', handleViewerUpdate);
-            socketManager.off('test:chat:message', handleChatMessage);
-          };
-        } catch (error) {
-          console.error('❌ Failed to join stream room:', selectedStreamId, error);
-        }
-      };
-
-      joinStreamRoom();
-    }
-
-    // Return cleanup function
-    return () => {
-      if (cleanup) {
-        cleanup();
-      }
-    };
-  }, [selectedStreamId]);
-
-  // Handle sending message
-  const handleSendMessage = (content: string, mentions?: string[]) => {
-    if (selectedStreamId && socketManager.isConnected()) {
-      const messageData = {
-        streamId: selectedStreamId,
-        content,
-        mentions
-      };
-      
-      console.log('💬 Sending chat message:', messageData);
-      socketManager.emit('chat:send-message', messageData);
-      // Don't add message locally - wait for server echo
-    } else if (!socketManager.isConnected()) {
-      console.error('❌ Socket not connected, cannot send message');
-    }
-  };
   
-  // Mock products data (commented out for now)
-  /* const mockProducts = [
-    {
-      id: '1',
-      name: 'Pantene Gold Series: Moisture Boost Conditioner',
-      price: 12.99,
-      currency: 'USD',
-      image: 'https://via.placeholder.com/200x200?text=Pantene+Gold',
-      description: 'Professional hair care for moisture and shine',
-      stock: 15
-    },
-    {
-      id: '2',
-      name: 'Gold Series: Moisture Boost Conditioner',
-      price: 14.99,
-      currency: 'USD',
-      image: 'https://via.placeholder.com/200x200?text=Gold+Series',
-      description: 'Intensive moisture for dry and damaged hair',
-      stock: 8
-    },
-    {
-      id: '3',
-      name: 'White Tea Shampoo and Conditioner',
-      price: 18.99,
-      currency: 'USD',
-      image: 'https://via.placeholder.com/200x200?text=White+Tea',
-      description: 'Gentle cleansing with white tea extract',
-      stock: 12
-    },
-    {
-      id: '4',
-      name: 'The Ordinary Shampoo and Conditioner',
-      price: 16.99,
-      currency: 'USD',
-      image: 'https://via.placeholder.com/200x200?text=The+Ordinary',
-      description: 'Clean, simple ingredients for everyday use',
-      stock: 20
-    },
-    {
-      id: '5',
-      name: 'Westin Hotels Signature Collection',
-      price: 24.99,
-      currency: 'USD',
-      image: 'https://via.placeholder.com/200x200?text=Westin',
-      description: 'Luxury hotel-quality hair care',
-      stock: 6
-    },
-    {
-      id: '6',
-      name: 'Professional Hair Mask Treatment',
-      price: 22.99,
-      currency: 'USD',
-      image: 'https://via.placeholder.com/200x200?text=Hair+Mask',
-      description: 'Deep conditioning treatment for all hair types',
-      stock: 10
-    }
-  ]; */
 
   return (
     <div className="h-full flex flex-col">
       
       <div className="flex-1 flex flex-col">
-        {!selectedStreamId && (
-          <div className="flex items-center justify-between p-4 flex-shrink-0">
+        <div className="flex items-center justify-between p-4 flex-shrink-0">
           {/* Development buttons */}
-          {process.env.NODE_ENV === 'development' && !selectedStreamId && (
+          {process.env.NODE_ENV === 'development' && (
             <div className="flex items-center gap-2">
               {/* Direct dev mode button */}
               <button
                 onClick={() => {
-                  // Just directly go to the first stream for development
+                  // Navigate directly to the first stream for development
                   if (streams.length > 0) {
-                    setSelectedStreamId(streams[0].id);
+                    navigate(`/stream/${streams[0].id}`);
                   }
                 }}
                 className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors flex items-center gap-2"
@@ -238,8 +84,7 @@ const LiveStreamsPage = () => {
               </button>
             </div>
           )}
-          </div>
-        )}
+        </div>
 
         {isLoading ? (
           <div className="flex items-center justify-center h-64">
@@ -250,37 +95,6 @@ const LiveStreamsPage = () => {
           <div className="text-center py-8">
             <p className="text-red-600 dark:text-red-400">Failed to load streams</p>
             <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">Please try again later</p>
-          </div>
-        ) : selectedStreamId ? (
-          /* Main content area - Video and Chat - Takes full remaining height */
-          <div className="flex-1 flex gap-0 min-h-0 bg-black">
-            {/* Video Container - takes remaining space */}
-            <div className="flex-1 flex items-center justify-center bg-black min-h-0">
-              {/* Video Player - fills container while maintaining aspect ratio */}
-              <div className="w-full h-full">
-                <ViewerPlayer 
-                  streamId={selectedStreamId}
-                  viewerCount={selectedStream?.viewerCount || 0}
-                  isLive={selectedStream?.isLive || false}
-                  streamTitle={selectedStream?.title}
-                  streamerName={selectedStream?.streamer?.username || 'Unknown'}
-                />
-              </div>
-            </div>
-
-            {/* Chat Section - Fixed width, full height */}
-            <div className="w-[340px] h-full bg-white dark:bg-gray-800 border-l border-gray-300 dark:border-gray-700 flex flex-col min-h-0">
-              <EnhancedChatContainer
-                streamId={selectedStreamId}
-                viewerCount={selectedStream?.viewerCount || 0}
-                messages={messages}
-                viewers={viewers}
-                currentUser={viewers.find(v => v.id === 'current-user')}
-                onSendMessage={handleSendMessage}
-                showViewerList={false}
-                maxMessagesPerMinute={10}
-              />
-            </div>
           </div>
         ) : streams.length === 0 ? (
           <div className="text-center py-12">
@@ -303,7 +117,7 @@ const LiveStreamsPage = () => {
             {streams.map((stream: any) => (
               <div
                 key={stream.id}
-                onClick={() => stream.isLive && setSelectedStreamId(stream.id)}
+                onClick={() => stream.isLive && navigate(`/stream/${stream.id}`)}
                 className={clsx(
                   'bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden',
                   'transition-all duration-200',
