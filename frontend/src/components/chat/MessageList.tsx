@@ -11,29 +11,12 @@ import {
   ChevronDown
 } from 'lucide-react';
 import clsx from 'clsx';
-
-export interface ChatUser {
-  id: string;
-  username: string;
-  avatar?: string;
-  role?: 'viewer' | 'moderator' | 'streamer';
-}
-
-export interface ChatMessage {
-  id: string;
-  user: ChatUser;
-  content: string;
-  timestamp: Date;
-  isHighlighted?: boolean;
-  isPinned?: boolean;
-  isDeleted?: boolean;
-  mentions?: string[];
-}
-
+import { ChatMessage, Viewer } from '@/types/chat';
 
 interface MessageListProps {
   messages: ChatMessage[];
-  currentUser?: ChatUser;
+  currentUser?: Viewer;
+  viewers?: Viewer[];
   onDeleteMessage?: (messageId: string) => void;
   onReportMessage?: (messageId: string) => void;
   onTimeoutUser?: (userId: string, duration: number) => void;
@@ -44,6 +27,7 @@ interface MessageListProps {
 export const MessageList: React.FC<MessageListProps> = ({
   messages,
   currentUser,
+  viewers = [],
   onDeleteMessage,
   onReportMessage,
   onTimeoutUser,
@@ -58,20 +42,29 @@ export const MessageList: React.FC<MessageListProps> = ({
   // Check if current user is moderator or streamer
   const isModerator = currentUser?.role === 'moderator' || currentUser?.role === 'streamer';
 
-
   // Calculate total items (messages) for virtualizer
   const totalMessages = messages.length;
 
-  // Virtual scrolling setup
+  // Check if this is the first message in a group
+  const isFirstInGroup = useCallback((index: number) => {
+    if (index === 0) return true;
+    return messages[index].userId !== messages[index - 1].userId;
+  }, [messages]);
+
+  // Virtual scrolling setup with proper sizing
   const virtualizer = useVirtualizer({
     count: totalMessages,
     getScrollElement: () => scrollContainerRef.current,
-    estimateSize: (index) => {
-      // Add extra space for the first message in a group (new user)
-      const isFirst = isFirstInGroup(index);
-      // Include spacing: base height + optional spacing for new speaker
-      return isFirst && index > 0 ? 95 : (isFirst ? 80 : 50);
-    },
+    estimateSize: useCallback((index) => {
+      // Base message height
+      const baseHeight = 60;
+      // Add extra height for messages with header (username, timestamp, etc)
+      const headerHeight = isFirstInGroup(index) ? 30 : 0;
+      // Add spacing between different users (except for first message)
+      const spacing = isFirstInGroup(index) && index > 0 ? 16 : 0;
+      
+      return baseHeight + headerHeight + spacing;
+    }, [isFirstInGroup]),
     overscan: 5,
   });
 
@@ -133,15 +126,9 @@ export const MessageList: React.FC<MessageListProps> = ({
     }
   }, []);
 
-  // Find which group a message index belongs to
+  // Get message from index
   const getMessageFromIndex = useCallback((index: number) => {
     return messages[index];
-  }, [messages]);
-
-  // Check if this is the first message in a group
-  const isFirstInGroup = useCallback((index: number) => {
-    if (index === 0) return true;
-    return messages[index].user.id !== messages[index - 1].user.id;
   }, [messages]);
 
   // Render message content with mention highlighting
@@ -178,7 +165,7 @@ export const MessageList: React.FC<MessageListProps> = ({
       <div
         ref={scrollContainerRef}
         onScroll={handleScroll}
-        className="flex-1 min-h-0 overflow-y-auto px-4 py-4"
+        className="flex-1 min-h-0 overflow-y-auto px-4"
       >
         <div
           style={{
@@ -190,6 +177,7 @@ export const MessageList: React.FC<MessageListProps> = ({
           {virtualItems.map((virtualItem) => {
             const message = getMessageFromIndex(virtualItem.index);
             const showAvatar = isFirstInGroup(virtualItem.index);
+            const needsSpacing = showAvatar && virtualItem.index > 0;
 
             return (
               <div
@@ -203,138 +191,132 @@ export const MessageList: React.FC<MessageListProps> = ({
                   transform: `translateY(${virtualItem.start}px)`,
                 }}
               >
-                {/* Add spacing before messages from different users */}
-                {showAvatar && virtualItem.index > 0 && (
-                  <div className="h-3" />
-                )}
-                <div
-                  className={clsx(
-                    "flex gap-3 p-2 rounded-lg transition-colors group relative",
-                    message.isHighlighted && "bg-yellow-50 dark:bg-yellow-900/20",
-                    message.isPinned && "border-l-4 border-primary-500",
-                    message.isDeleted && "opacity-50",
-                    message.user.id === currentUser?.id && "bg-primary-50 dark:bg-primary-900/10",
-                    "hover:bg-gray-50 dark:hover:bg-gray-800"
-                  )}
-                >
-                  {/* Avatar */}
-                  <div className="flex-shrink-0 w-8">
-                    {showAvatar && (
-                      <>
-                        {message.user.avatar ? (
-                          <img 
-                            src={message.user.avatar} 
-                            alt={message.user.username}
-                            className="w-8 h-8 rounded-full"
-                          />
-                        ) : (
-                          <div className="w-8 h-8 rounded-full bg-gray-300 dark:bg-gray-700 flex items-center justify-center">
-                            <span className="text-sm font-semibold text-gray-600 dark:text-gray-400">
-                              {message.user.username[0].toUpperCase()}
-                            </span>
-                          </div>
-                        )}
-                      </>
-                    )}
-                  </div>
+                <div className="h-full flex flex-col">
+                  {/* Spacing between different users */}
+                  {needsSpacing && <div className="flex-shrink-0 h-4" />}
                   
-                  {/* Message Content */}
-                  <div className="flex-1 min-w-0">
-                    {showAvatar && (
-                      <div className="flex items-baseline gap-2 mb-1">
-                        <span className="font-semibold text-sm text-gray-900 dark:text-white">
-                          {message.user.username}
-                        </span>
-                        {getRoleBadge(message.user.role)}
-                        <span className="text-xs text-gray-500 dark:text-gray-400">
-                          {formatTimestamp(message.timestamp)}
-                        </span>
-                      </div>
+                  {/* Message container */}
+                  <div
+                    className={clsx(
+                      "flex gap-3 p-2 rounded-lg transition-colors group relative flex-1",
+                      message.userId === currentUser?.id && "bg-primary-50 dark:bg-primary-900/10",
+                      "hover:bg-gray-50 dark:hover:bg-gray-800"
                     )}
-                    {message.isDeleted ? (
-                      <p className="text-sm italic text-gray-500 dark:text-gray-400">
-                        [Message deleted]
-                      </p>
-                    ) : (
+                  >
+                    {/* Avatar */}
+                    <div className="flex-shrink-0 w-8">
+                      {showAvatar && (
+                        <>
+                          {(() => {
+                            const messageViewer = viewers.find(v => v.id === message.userId);
+                            return messageViewer?.avatarUrl ? (
+                              <img 
+                                src={messageViewer.avatarUrl} 
+                                alt={message.username}
+                              className="w-8 h-8 rounded-full"
+                            />
+                          ) : (
+                            <div className="w-8 h-8 rounded-full bg-gray-300 dark:bg-gray-700 flex items-center justify-center">
+                              <span className="text-sm font-semibold text-gray-600 dark:text-gray-400">
+                                {message.username[0].toUpperCase()}
+                              </span>
+                            </div>
+                            );
+                          })()}
+                        </>
+                      )}
+                    </div>
+                    
+                    {/* Message Content */}
+                    <div className="flex-1 min-w-0">
+                      {showAvatar && (
+                        <div className="flex items-baseline gap-2 mb-1">
+                          <span className="font-semibold text-sm text-gray-900 dark:text-white">
+                            {message.username}
+                          </span>
+                          {getRoleBadge(message.role)}
+                          <span className="text-xs text-gray-500 dark:text-gray-400">
+                            {formatTimestamp(message.timestamp)}
+                          </span>
+                        </div>
+                      )}
                       <p className="text-sm break-words whitespace-pre-wrap text-gray-800 dark:text-gray-200">
                         {renderMessageContent(message.content)}
                       </p>
-                    )}
-                  </div>
-                  
-                  {/* Message Actions */}
-                  {!message.isDeleted && (
+                    </div>
+                    
+                    {/* Message Actions */}
                     <div className="opacity-0 group-hover:opacity-100 transition-opacity message-actions">
-                      <div className="relative">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedMessageId(message.id === selectedMessageId ? null : message.id);
-                          }}
-                          className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded"
-                        >
-                          <MoreHorizontal className="w-4 h-4 text-gray-500" />
-                        </button>
-                        {selectedMessageId === message.id && (
-                          <div className="absolute right-0 top-full mt-1 w-40 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50">
-                            {/* Report option for all users */}
-                            {message.user.id !== currentUser?.id && (
-                              <button
-                                onClick={() => {
-                                  onReportMessage?.(message.id);
-                                  setSelectedMessageId(null);
-                                }}
-                                className="w-full px-3 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 text-sm"
-                              >
-                                <Flag className="w-4 h-4" />
-                                Report message
-                              </button>
-                            )}
-                            
-                            {/* Delete option for own messages or moderators */}
-                            {(isModerator || currentUser?.id === message.user.id) && (
-                              <button
-                                onClick={() => {
-                                  onDeleteMessage?.(message.id);
-                                  setSelectedMessageId(null);
-                                }}
-                                className="w-full px-3 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 text-sm text-red-600 dark:text-red-400"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                                Delete message
-                              </button>
-                            )}
-                            
-                            {/* Moderation options */}
-                            {isModerator && message.user.id !== currentUser?.id && (
-                              <>
+                        <div className="relative">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedMessageId(message.id === selectedMessageId ? null : message.id);
+                            }}
+                            className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded"
+                          >
+                            <MoreHorizontal className="w-4 h-4 text-gray-500" />
+                          </button>
+                          {selectedMessageId === message.id && (
+                            <div className="absolute right-0 top-full mt-1 w-40 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50">
+                              {/* Report option for all users */}
+                              {message.userId !== currentUser?.id && (
                                 <button
                                   onClick={() => {
-                                    onTimeoutUser?.(message.user.id, 5 * 60 * 1000); // 5 min timeout
+                                    onReportMessage?.(message.id);
                                     setSelectedMessageId(null);
                                   }}
-                                  className="w-full px-3 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 text-sm text-orange-600 dark:text-orange-400"
+                                  className="w-full px-3 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 text-sm"
                                 >
-                                  <Clock className="w-4 h-4" />
-                                  Timeout 5 min
+                                  <Flag className="w-4 h-4" />
+                                  Report message
                                 </button>
+                              )}
+                              
+                              {/* Delete option for own messages or moderators */}
+                              {(isModerator || currentUser?.id === message.userId) && (
                                 <button
                                   onClick={() => {
-                                    onBanUser?.(message.user.id);
+                                    onDeleteMessage?.(message.id);
                                     setSelectedMessageId(null);
                                   }}
                                   className="w-full px-3 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 text-sm text-red-600 dark:text-red-400"
                                 >
-                                  <Ban className="w-4 h-4" />
-                                  Ban user
+                                  <Trash2 className="w-4 h-4" />
+                                  Delete message
                                 </button>
-                              </>
-                            )}
-                          </div>
-                        )}
+                              )}
+                              
+                              {/* Moderation options */}
+                              {isModerator && message.userId !== currentUser?.id && (
+                                <>
+                                  <button
+                                    onClick={() => {
+                                      onTimeoutUser?.(message.userId, 5 * 60 * 1000); // 5 min timeout
+                                      setSelectedMessageId(null);
+                                    }}
+                                    className="w-full px-3 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 text-sm text-orange-600 dark:text-orange-400"
+                                  >
+                                    <Clock className="w-4 h-4" />
+                                    Timeout 5 min
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      onBanUser?.(message.userId);
+                                      setSelectedMessageId(null);
+                                    }}
+                                    className="w-full px-3 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 text-sm text-red-600 dark:text-red-400"
+                                  >
+                                    <Ban className="w-4 h-4" />
+                                    Ban user
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  )}
+                  </div>
                 </div>
               </div>
             );

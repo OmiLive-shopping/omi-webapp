@@ -7,7 +7,7 @@ import {
   X,
   Crown
 } from 'lucide-react';
-import MessageListV2 from './MessageListV2';
+import MessageList from './MessageList';
 import ChatInput from './ChatInput';
 import { ChatMessage, Viewer } from '@/types/chat';
 
@@ -142,7 +142,7 @@ export const EnhancedChatContainer: React.FC<ChatContainerProps> = ({
         </div>
         
         {/* Messages Area */}
-        <MessageListV2
+        <MessageList
           messages={messages}
           currentUser={currentUser}
           viewers={viewers}
