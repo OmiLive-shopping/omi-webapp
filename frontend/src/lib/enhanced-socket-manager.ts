@@ -48,8 +48,6 @@ export interface ClientToServerEvents {
   'connection:ping': (timestamp: number) => void;
 }
 
-// Import ChatMessage from canonical source
-export { ChatMessage } from '@/types/chat';
 
 export interface VdoSystemMessage {
   id: string;

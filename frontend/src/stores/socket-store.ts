@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import { socketManager, ChatMessage, StreamStatus } from '@/lib/socket';
+import { socketManager, StreamStatus } from '@/lib/socket';
+import { ChatMessage } from '@/types/chat';
 import { useChatStore } from './chat-store';
 
 interface SocketState {

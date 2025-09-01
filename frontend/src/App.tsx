@@ -22,11 +22,7 @@ import {
   LiveStreamsPage,
   AboutPage
 } from '@/pages';
-import MessageListDemo from '@/components/chat/MessageListDemo';
 import ChatInputDemo from '@/components/chat/ChatInputDemo';
-import MessageListTest from '@/components/chat/MessageListTest';
-import ChatLayoutComparison from '@/components/chat/ChatLayoutComparison';
-import MessageListComparison from '@/components/chat/MessageListComparison';
 import ViewerCountDemo from '@/components/stream/ViewerCountDemo';
 import ChatInputDebug from '@/components/chat/ChatInputDebug';
 import StreamLayoutDemo from '@/components/stream/StreamLayoutDemo';
@@ -67,11 +63,7 @@ function App() {
               <Route path="product/:id" element={<ProductDetailPage />} />
               <Route path="stream/:id" element={<StreamPage />} />
               <Route path="schedule" element={<SchedulePage />} />
-              <Route path="message-list-demo" element={<MessageListDemo />} />
               <Route path="chat-input-demo" element={<ChatInputDemo />} />
-              <Route path="message-list-test" element={<MessageListTest />} />
-              <Route path="chat-layout-comparison" element={<ChatLayoutComparison />} />
-              <Route path="message-list-comparison" element={<MessageListComparison />} />
               <Route path="viewer-count-demo" element={<ViewerCountDemo />} />
               <Route path="chat-input-debug" element={<ChatInputDebug />} />
               <Route path="stream-layout-demo" element={<StreamLayoutDemo />} />

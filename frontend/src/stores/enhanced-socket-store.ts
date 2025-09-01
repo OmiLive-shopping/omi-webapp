@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
-import { enhancedSocketManager, type ChatMessage, type StreamStatus } from '@/lib/enhanced-socket-manager';
+import { enhancedSocketManager, type StreamStatus } from '@/lib/enhanced-socket-manager';
 import { type ConnectionMetrics, type ConnectionQuality } from '@/lib/connection-health-monitor';
+import { type ChatMessage } from '@/types/chat';
 import { useChatStore } from './chat-store';
 import { authClient } from '@/lib/auth-client';
 

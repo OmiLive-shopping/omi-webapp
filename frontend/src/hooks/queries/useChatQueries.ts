@@ -1,7 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient, API_ENDPOINTS, PaginatedResponse, ApiResponse } from '@/lib/api';
 import { queryKeys, queryUtils } from '@/lib/query-client';
-import { ChatMessage, ChatEmote, useChatStore } from '@/stores/chat-store';
+import { ChatEmote, useChatStore } from '@/stores/chat-store';
+import { ChatMessage } from '@/types/chat';
 import { useUIStore } from '@/stores/ui-store';
 
 // Types

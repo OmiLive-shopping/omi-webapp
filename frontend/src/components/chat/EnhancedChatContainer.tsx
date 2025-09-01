@@ -145,6 +145,7 @@ export const EnhancedChatContainer: React.FC<ChatContainerProps> = ({
         <MessageListV2
           messages={messages}
           currentUser={currentUser}
+          viewers={viewers}
           onDeleteMessage={onDeleteMessage}
           onReportMessage={onReportMessage}
           onTimeoutUser={onTimeoutUser}
@@ -191,8 +192,8 @@ export const EnhancedChatContainer: React.FC<ChatContainerProps> = ({
                   className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                 >
                   <div className="relative">
-                    {viewer.avatar ? (
-                      <img src={viewer.avatar} alt="" className="w-8 h-8 rounded-full" />
+                    {viewer.avatarUrl ? (
+                      <img src={viewer.avatarUrl} alt="" className="w-8 h-8 rounded-full" />
                     ) : (
                       <div className="w-8 h-8 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center">
                         <span className="text-xs font-semibold text-gray-600 dark:text-gray-400">

@@ -11,28 +11,12 @@ import {
   ChevronDown
 } from 'lucide-react';
 import clsx from 'clsx';
-
-export interface ChatUser {
-  id: string;
-  username: string;
-  avatar?: string;
-  role?: 'viewer' | 'moderator' | 'streamer';
-}
-
-export interface ChatMessage {
-  id: string;
-  user: ChatUser;
-  content: string;
-  timestamp: Date;
-  isHighlighted?: boolean;
-  isPinned?: boolean;
-  isDeleted?: boolean;
-  mentions?: string[];
-}
+import { ChatMessage, Viewer } from '@/types/chat';
 
 interface MessageListProps {
   messages: ChatMessage[];
-  currentUser?: ChatUser;
+  currentUser?: Viewer;
+  viewers?: Viewer[];
   onDeleteMessage?: (messageId: string) => void;
   onReportMessage?: (messageId: string) => void;
   onTimeoutUser?: (userId: string, duration: number) => void;
@@ -43,6 +27,7 @@ interface MessageListProps {
 export const MessageListV2: React.FC<MessageListProps> = ({
   messages,
   currentUser,
+  viewers = [],
   onDeleteMessage,
   onReportMessage,
   onTimeoutUser,
@@ -63,7 +48,7 @@ export const MessageListV2: React.FC<MessageListProps> = ({
   // Check if this is the first message in a group
   const isFirstInGroup = useCallback((index: number) => {
     if (index === 0) return true;
-    return messages[index].user.id !== messages[index - 1].user.id;
+    return messages[index].userId !== messages[index - 1].userId;
   }, [messages]);
 
   // Virtual scrolling setup with proper sizing
@@ -214,10 +199,7 @@ export const MessageListV2: React.FC<MessageListProps> = ({
                   <div
                     className={clsx(
                       "flex gap-3 p-2 rounded-lg transition-colors group relative flex-1",
-                      message.isHighlighted && "bg-yellow-50 dark:bg-yellow-900/20",
-                      message.isPinned && "border-l-4 border-primary-500",
-                      message.isDeleted && "opacity-50",
-                      message.user.id === currentUser?.id && "bg-primary-50 dark:bg-primary-900/10",
+                      message.userId === currentUser?.id && "bg-primary-50 dark:bg-primary-900/10",
                       "hover:bg-gray-50 dark:hover:bg-gray-800"
                     )}
                   >
@@ -225,19 +207,22 @@ export const MessageListV2: React.FC<MessageListProps> = ({
                     <div className="flex-shrink-0 w-8">
                       {showAvatar && (
                         <>
-                          {message.user.avatar ? (
-                            <img 
-                              src={message.user.avatar} 
-                              alt={message.user.username}
+                          {(() => {
+                            const messageViewer = viewers.find(v => v.id === message.userId);
+                            return messageViewer?.avatarUrl ? (
+                              <img 
+                                src={messageViewer.avatarUrl} 
+                                alt={message.username}
                               className="w-8 h-8 rounded-full"
                             />
                           ) : (
                             <div className="w-8 h-8 rounded-full bg-gray-300 dark:bg-gray-700 flex items-center justify-center">
                               <span className="text-sm font-semibold text-gray-600 dark:text-gray-400">
-                                {message.user.username[0].toUpperCase()}
+                                {message.username[0].toUpperCase()}
                               </span>
                             </div>
-                          )}
+                            );
+                          })()}
                         </>
                       )}
                     </div>
@@ -247,28 +232,21 @@ export const MessageListV2: React.FC<MessageListProps> = ({
                       {showAvatar && (
                         <div className="flex items-baseline gap-2 mb-1">
                           <span className="font-semibold text-sm text-gray-900 dark:text-white">
-                            {message.user.username}
+                            {message.username}
                           </span>
-                          {getRoleBadge(message.user.role)}
+                          {getRoleBadge(message.role)}
                           <span className="text-xs text-gray-500 dark:text-gray-400">
                             {formatTimestamp(message.timestamp)}
                           </span>
                         </div>
                       )}
-                      {message.isDeleted ? (
-                        <p className="text-sm italic text-gray-500 dark:text-gray-400">
-                          [Message deleted]
-                        </p>
-                      ) : (
-                        <p className="text-sm break-words whitespace-pre-wrap text-gray-800 dark:text-gray-200">
-                          {renderMessageContent(message.content)}
-                        </p>
-                      )}
+                      <p className="text-sm break-words whitespace-pre-wrap text-gray-800 dark:text-gray-200">
+                        {renderMessageContent(message.content)}
+                      </p>
                     </div>
                     
                     {/* Message Actions */}
-                    {!message.isDeleted && (
-                      <div className="opacity-0 group-hover:opacity-100 transition-opacity message-actions">
+                    <div className="opacity-0 group-hover:opacity-100 transition-opacity message-actions">
                         <div className="relative">
                           <button
                             onClick={(e) => {
@@ -282,7 +260,7 @@ export const MessageListV2: React.FC<MessageListProps> = ({
                           {selectedMessageId === message.id && (
                             <div className="absolute right-0 top-full mt-1 w-40 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50">
                               {/* Report option for all users */}
-                              {message.user.id !== currentUser?.id && (
+                              {message.userId !== currentUser?.id && (
                                 <button
                                   onClick={() => {
                                     onReportMessage?.(message.id);
@@ -296,7 +274,7 @@ export const MessageListV2: React.FC<MessageListProps> = ({
                               )}
                               
                               {/* Delete option for own messages or moderators */}
-                              {(isModerator || currentUser?.id === message.user.id) && (
+                              {(isModerator || currentUser?.id === message.userId) && (
                                 <button
                                   onClick={() => {
                                     onDeleteMessage?.(message.id);
@@ -310,11 +288,11 @@ export const MessageListV2: React.FC<MessageListProps> = ({
                               )}
                               
                               {/* Moderation options */}
-                              {isModerator && message.user.id !== currentUser?.id && (
+                              {isModerator && message.userId !== currentUser?.id && (
                                 <>
                                   <button
                                     onClick={() => {
-                                      onTimeoutUser?.(message.user.id, 5 * 60 * 1000); // 5 min timeout
+                                      onTimeoutUser?.(message.userId, 5 * 60 * 1000); // 5 min timeout
                                       setSelectedMessageId(null);
                                     }}
                                     className="w-full px-3 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 text-sm text-orange-600 dark:text-orange-400"
@@ -324,7 +302,7 @@ export const MessageListV2: React.FC<MessageListProps> = ({
                                   </button>
                                   <button
                                     onClick={() => {
-                                      onBanUser?.(message.user.id);
+                                      onBanUser?.(message.userId);
                                       setSelectedMessageId(null);
                                     }}
                                     className="w-full px-3 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 text-sm text-red-600 dark:text-red-400"
@@ -338,7 +316,6 @@ export const MessageListV2: React.FC<MessageListProps> = ({
                           )}
                         </div>
                       </div>
-                    )}
                   </div>
                 </div>
               </div>
