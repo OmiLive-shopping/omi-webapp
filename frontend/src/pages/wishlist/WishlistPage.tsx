@@ -1,3 +1,62 @@
+import React from 'react';
+// import { useState } from 'react';
+// import { useNavigate } from 'react-router-dom';
+import { 
+  Heart, 
+  // ShoppingCart, 
+  // Trash2, 
+  // Star, 
+  // Filter,
+  // ChevronDown,
+  // Share2,
+  // Bell,
+  // BellOff,
+  // Play,
+  Sparkles
+} from 'lucide-react';
+
+// interface WishlistItem {
+//   id: number;
+//   title: string;
+//   price: number;
+//   originalPrice?: number;
+//   image: string;
+//   rating: number;
+//   reviews: number;
+//   inStock: boolean;
+//   addedDate: string;
+//   category: string;
+//   priceAlert: boolean;
+//   streamer?: {
+//     id: number;
+//     name: string;
+//     isLive: boolean;
+//   };
+// }
+
+const WishlistPage: React.FC = () => {
+  // Coming soon version
+  return (
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+      <div className="text-center px-4">
+        <div className="relative inline-block">
+          <Heart className="w-20 h-20 text-gray-300 dark:text-gray-700 mb-6 mx-auto" />
+          <Sparkles className="w-8 h-8 text-primary-500 absolute -top-2 -right-2 animate-pulse" />
+        </div>
+        <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
+          Wishlist Coming Soon
+        </h1>
+        <p className="text-lg text-gray-600 dark:text-gray-400 max-w-md mx-auto">
+          We're building something special for you to save and track your favorite items.
+        </p>
+      </div>
+    </div>
+  );
+};
+
+export default WishlistPage;
+
+/* ORIGINAL IMPLEMENTATION - COMMENTED OUT FOR LATER USE
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -32,7 +91,7 @@ interface WishlistItem {
   };
 }
 
-const WishlistPage: React.FC = () => {
+const WishlistPageOriginal: React.FC = () => {
   const navigate = useNavigate();
   const [filterCategory, setFilterCategory] = useState('all');
   const [sortBy, setSortBy] = useState('newest');
@@ -151,13 +210,11 @@ const WishlistPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2 text-gray-900 dark:text-white">My Wishlist</h1>
           <p className="text-gray-600 dark:text-gray-400">{filteredItems.length} items saved</p>
         </div>
 
-        {/* Stats Bar */}
         <div className="bg-white dark:bg-gray-800 rounded-xl p-6 mb-8 shadow-sm">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <div>
@@ -179,10 +236,8 @@ const WishlistPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Actions Bar */}
         <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
           <div className="flex items-center gap-4">
-            {/* Select All */}
             <label className="flex items-center gap-2 cursor-pointer">
               <input 
                 type="checkbox" 
@@ -193,7 +248,6 @@ const WishlistPage: React.FC = () => {
               <span className="text-sm text-gray-700 dark:text-gray-300">Select All</span>
             </label>
 
-            {/* Bulk Actions */}
             {selectedItems.length > 0 && (
               <div className="flex items-center gap-2">
                 <button 
@@ -207,7 +261,6 @@ const WishlistPage: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-4">
-            {/* Filter */}
             <div className="relative">
               <button 
                 onClick={() => setShowFilters(!showFilters)}
@@ -236,7 +289,6 @@ const WishlistPage: React.FC = () => {
               )}
             </div>
 
-            {/* Sort */}
             <select 
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
@@ -248,7 +300,6 @@ const WishlistPage: React.FC = () => {
               <option value="price-high">Price: High to Low</option>
             </select>
 
-            {/* Add All to Cart */}
             <button 
               onClick={handleAddAllToCart}
               className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 flex items-center gap-2"
@@ -259,7 +310,6 @@ const WishlistPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Wishlist Items */}
         {filteredItems.length > 0 ? (
           <div className="space-y-4">
             {filteredItems.map((item) => (
@@ -267,7 +317,6 @@ const WishlistPage: React.FC = () => {
                 key={item.id} 
                 className="bg-white dark:bg-gray-800 rounded-xl p-6 flex flex-col md:flex-row gap-6 shadow-sm"
               >
-                {/* Checkbox */}
                 <div className="flex items-start">
                   <input 
                     type="checkbox"
@@ -277,7 +326,6 @@ const WishlistPage: React.FC = () => {
                   />
                 </div>
 
-                {/* Product Image */}
                 <div className="relative w-full md:w-32 h-32 flex-shrink-0">
                   <img 
                     src={item.image} 
@@ -293,13 +341,11 @@ const WishlistPage: React.FC = () => {
                   )}
                 </div>
 
-                {/* Product Info */}
                 <div className="flex-1">
                   <div className="mb-2">
                     <h3 
                       className="text-lg font-semibold mb-1 text-gray-900 dark:text-white cursor-pointer hover:text-primary-600 dark:hover:text-primary-400"
-                      onClick={() => navigate(`/products/${item.id}`)}
-                    >
+                      onClick={() => navigate(`/products/${item.id}`)}>
                       {item.title}
                     </h3>
                     <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
@@ -318,7 +364,6 @@ const WishlistPage: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Price */}
                   <div className="flex items-baseline gap-3 mb-3">
                     <span className="text-xl font-bold text-gray-900 dark:text-white">${item.price}</span>
                     {item.originalPrice && (
@@ -331,7 +376,6 @@ const WishlistPage: React.FC = () => {
                     )}
                   </div>
 
-                  {/* Stock Status */}
                   <div className="flex items-center gap-4 mb-3">
                     {item.inStock ? (
                       <span className="text-green-400 text-sm">✓ In Stock</span>
@@ -349,7 +393,6 @@ const WishlistPage: React.FC = () => {
                     )}
                   </div>
 
-                  {/* Actions */}
                   <div className="flex flex-wrap items-center gap-3">
                     <button 
                       onClick={() => handleAddToCart(item)}
@@ -414,7 +457,6 @@ const WishlistPage: React.FC = () => {
           </div>
         )}
 
-        {/* Recommendations */}
         {filteredItems.length > 0 && (
           <div className="mt-12">
             <h2 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white">You May Also Like</h2>
@@ -454,5 +496,4 @@ const WishlistPage: React.FC = () => {
     </div>
   );
 };
-
-export default WishlistPage;
+*/
