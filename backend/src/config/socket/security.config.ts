@@ -67,7 +67,7 @@ export type SecurityConfig = z.infer<typeof securityConfigSchema>;
 // Default security configuration
 export const defaultSecurityConfig: SecurityConfig = {
   cors: {
-    allowedOrigins: ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:3000'],
+    allowedOrigins: ['http://localhost:8888', 'http://localhost:5173', 'http://localhost:5174', 'http://localhost:3000'],
     allowCredentials: true,
     allowedMethods: ['GET', 'POST'],
     allowedHeaders: ['Authorization', 'Content-Type'],

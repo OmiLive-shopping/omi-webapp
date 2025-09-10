@@ -20,9 +20,11 @@ const getAllowedOrigins = (): string[] => {
   if (env.NODE_ENV === 'development') {
     origins.push(
       'http://localhost:3000',
+      'http://localhost:8888',
       'http://localhost:5173',
       'http://localhost:5174',
       'http://127.0.0.1:3000',
+      'http://127.0.0.1:8888',
       'http://127.0.0.1:5173',
       'http://127.0.0.1:5174',
     );

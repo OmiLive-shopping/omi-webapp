@@ -81,6 +81,7 @@ export const auth = betterAuth({
 
   trustedOrigins: [
     'http://localhost:3000', // Frontend development (if using 3000)
+    'http://localhost:8888', // Frontend development (current port)
     'http://localhost:9000', // Backend development
     'http://localhost:5173', // Frontend development (Vite)
     'https://omi.live', // Production

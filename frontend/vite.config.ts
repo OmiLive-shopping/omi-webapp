@@ -173,7 +173,7 @@ export default defineConfig({
     // Enable HMR
     hmr: true,
     // Port configuration
-    port: 3000,
+    port: 8888,
     // Open browser on start
     open: false,
   },
