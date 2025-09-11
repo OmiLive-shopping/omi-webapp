@@ -53,7 +53,7 @@ interface Address {
   phone: string;
   isDefault: boolean;
 }
-
+// TODO: these have to be real
 const ProfilePage: React.FC = () => {
   const navigate = useNavigate();
   const { profile, loading, error, updateProfile } = useProfile();

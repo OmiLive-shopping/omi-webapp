@@ -15,7 +15,6 @@ import {
   ChevronRight,
   ZoomIn
 } from 'lucide-react';
-import Layout from '@/components/layouts/Layout';
 
 interface Review {
   id: number;
@@ -155,15 +154,14 @@ const ProductDetailPage: React.FC = () => {
   };
 
   return (
-    <Layout>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Breadcrumb */}
-        <nav className="flex mb-8 text-sm">
-          <a href="/" className="text-gray-400 hover:text-white">Home</a>
-          <span className="mx-2 text-gray-400">/</span>
-          <a href="/products" className="text-gray-400 hover:text-white">Products</a>
-          <span className="mx-2 text-gray-400">/</span>
-          <span className="text-white">{product.title}</span>
+        <nav className="flex items-center mb-8 text-sm text-gray-500 dark:text-gray-400">
+          <a href="/" className="hover:text-gray-700 dark:hover:text-gray-200 transition-colors">Home</a>
+          <span className="mx-2">/</span>
+          <a href="/products" className="hover:text-gray-700 dark:hover:text-gray-200 transition-colors">Products</a>
+          <span className="mx-2">/</span>
+          <span className="text-gray-900 dark:text-white font-medium">{product.title}</span>
         </nav>
 
         {/* Product Main Section */}
@@ -558,7 +556,6 @@ const ProductDetailPage: React.FC = () => {
           </div>
         </div>
       </div>
-    </Layout>
   );
 };
 

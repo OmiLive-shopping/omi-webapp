@@ -8,6 +8,7 @@ import { HomePageCarousel } from '@/components/carousel/HomePageCarousel';
 import { ExpandableSection } from '@/components/common/ExpandableSection';
 
 // Live and upcoming streams data
+// TODO: Products need to come from the backend
 const liveStreams = [
   {
     id: '1',

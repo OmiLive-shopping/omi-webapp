@@ -197,9 +197,12 @@ export const BrandDashboard: React.FC = () => {
       // Clean up the data
       const productData = {
         ...formData,
+        description: formData.description && formData.description.trim() !== '' ? formData.description : undefined,
         originalPrice: formData.originalPrice || undefined,
         stockCount: formData.inStock ? formData.stockCount : undefined,
-        images: formData.imageUrl ? [formData.imageUrl, ...formData.images] : formData.images
+        imageUrl: formData.imageUrl && formData.imageUrl.trim() !== '' ? formData.imageUrl : undefined,
+        images: formData.imageUrl && formData.imageUrl.trim() !== '' ? [formData.imageUrl, ...formData.images] : formData.images,
+        categoryId: formData.categoryId && formData.categoryId.trim() !== '' ? formData.categoryId : undefined
       };
 
       const response = await fetch('/v1/brands/products', {
@@ -245,9 +248,12 @@ export const BrandDashboard: React.FC = () => {
       // Clean up the data
       const productData = {
         ...formData,
+        description: formData.description && formData.description.trim() !== '' ? formData.description : undefined,
         originalPrice: formData.originalPrice || undefined,
         stockCount: formData.inStock ? formData.stockCount : undefined,
-        images: formData.imageUrl ? [formData.imageUrl, ...formData.images] : formData.images
+        imageUrl: formData.imageUrl && formData.imageUrl.trim() !== '' ? formData.imageUrl : undefined,
+        images: formData.imageUrl && formData.imageUrl.trim() !== '' ? [formData.imageUrl, ...formData.images] : formData.images,
+        categoryId: formData.categoryId && formData.categoryId.trim() !== '' ? formData.categoryId : undefined
       };
 
       const response = await fetch(`/v1/brands/products/${editingProduct.id}`, {
