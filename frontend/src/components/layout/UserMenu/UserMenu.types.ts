@@ -5,6 +5,7 @@ export interface UserMenuProps {
     email: string;
     avatar?: string;
     role?: string;
+    isAdmin?: boolean;
   };
   onLogout?: () => void;
   className?: string;

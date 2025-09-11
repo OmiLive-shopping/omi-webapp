@@ -73,6 +73,14 @@ export class ProductRepository {
       where.tags = { hasSome: filters.tags };
     }
 
+    if (filters.brandId) {
+      where.brandId = filters.brandId;
+    }
+
+    if (filters.approvalStatus) {
+      where.approvalStatus = filters.approvalStatus;
+    }
+
     // Pagination
     const page = filters.page || 1;
     const limit = filters.limit || 20;

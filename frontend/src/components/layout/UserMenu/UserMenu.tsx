@@ -5,7 +5,9 @@ import {
   LogOut, 
   Settings, 
   Package, 
-  Video 
+  Video,
+  Store,
+  Crown
 } from 'lucide-react';
 import clsx from 'clsx';
 import { UserMenuProps } from './UserMenu.types';
@@ -18,6 +20,12 @@ export const UserMenu: React.FC<UserMenuProps> = ({
 }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Helper function to check user roles
+  const hasRole = (role: string) => user?.role === role;
+  const isAdmin = user?.isAdmin || hasRole('admin');
+  const isBrand = hasRole('brand');
+  const isStreamer = hasRole('streamer');
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -75,7 +83,32 @@ export const UserMenu: React.FC<UserMenuProps> = ({
                 Profile
               </Link>
               
-              {user?.role === 'streamer' && (
+              {/* Admin Dashboard - Only for admins */}
+              {isAdmin && (
+                <Link
+                  to="/admin"
+                  onClick={() => setIsDropdownOpen(false)}
+                  className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                >
+                  <Crown className="w-4 h-4" />
+                  Admin Dashboard
+                </Link>
+              )}
+              
+              {/* Brand Management - Only for brands */}
+              {isBrand && (
+                <Link
+                  to="/brand"
+                  onClick={() => setIsDropdownOpen(false)}
+                  className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                >
+                  <Store className="w-4 h-4" />
+                  My Brand
+                </Link>
+              )}
+              
+              {/* Creator Studio - Only for streamers */}
+              {isStreamer && (
                 <Link
                   to="/studio"
                   onClick={() => setIsDropdownOpen(false)}
@@ -86,6 +119,7 @@ export const UserMenu: React.FC<UserMenuProps> = ({
                 </Link>
               )}
               
+              {/* Orders - Available for all authenticated users */}
               <Link
                 to="/orders"
                 onClick={() => setIsDropdownOpen(false)}

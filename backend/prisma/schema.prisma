@@ -31,6 +31,7 @@ model User {
   username             String              @unique
   avatarUrl            String?
   bio                  String?
+  
   streamMessages       StreamMessage[]
   streams              Stream[]
   roleRelation         Roles?              @relation(fields: [roleId], references: [id])
@@ -49,10 +50,13 @@ model User {
   sessions             Session[]
   accounts             Account[]
   viewerAnalytics      ViewerAnalytics[]
+  brand                Brand?
+  productAudits        ProductAudit[]
 
   @@index([email])
   @@index([username])
   @@index([streamKey])
+  @@index([role])
 }
 
 model Roles {
@@ -60,6 +64,32 @@ model Roles {
   name   String
   active Int    @default(1) @db.SmallInt
   user   User[]
+}
+
+model Brand {
+  id                  String    @id @default(uuid())
+  userId              String    @unique
+  companyName         String
+  companyDescription  String?
+  websiteUrl          String?
+  businessEmail       String
+  businessPhone       String?
+  verified            Boolean   @default(false)
+  approvalStatus      String    @default("pending") // pending, approved, rejected
+  appliedAt           DateTime  @default(now())
+  approvedAt          DateTime?
+  rejectedAt          DateTime?
+  rejectionReason     String?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @default(now()) @updatedAt
+  
+  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  products            Product[] @relation("BrandProducts")
+
+  @@index([userId])
+  @@index([approvalStatus])
+  @@index([verified])
+  @@index([approvalStatus, verified])
 }
 
 model Category {
@@ -98,19 +128,54 @@ model Product {
   tags             String[]        @default([])
   rating           Float?
   reviewCount      Int             @default(0)
+  
+  // Brand ownership and approval
+  brandId          String?
+  approvalStatus   String          @default("pending") // pending, approved, rejected
+  approvedAt       DateTime?
+  rejectedAt       DateTime?
+  rejectionReason  String?
+  deletedAt        DateTime?       // Soft delete support
+  
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @default(now()) @updatedAt
   category         Category?       @relation(fields: [categoryId], references: [id])
+  brand            Brand?          @relation("BrandProducts", fields: [brandId], references: [id])
   streams          StreamProduct[]
   wishlistedBy     User[]          @relation("UserWishlist")
   cartItems        CartItem[]
   orderItems       OrderItem[]
+  audits           ProductAudit[]
 
   @@index([public])
   @@index([active])
   @@index([categoryId])
   @@index([featured])
   @@index([inStock])
+  @@index([brandId, approvalStatus, active])
+  @@index([approvalStatus])
+  @@index([deletedAt])
+}
+
+model ProductAudit {
+  id            String   @id @default(uuid())
+  productId     String
+  userId        String   // User who made the change
+  action        String   // created, updated, approved, rejected, deleted
+  fieldName     String?  // Field that was changed (e.g., "price", "name", "description")
+  previousValue String?  // Previous value (as JSON string for flexibility)
+  newValue      String?  // New value (as JSON string for flexibility)
+  reason        String?  // Reason for change (e.g., rejection reason)
+  metadata      Json?    // Additional context if needed
+  createdAt     DateTime @default(now())
+  
+  product       Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user          User     @relation(fields: [userId], references: [id])
+
+  @@index([productId])
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
 }
 
 model Stream {

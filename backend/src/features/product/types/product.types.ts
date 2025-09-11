@@ -15,6 +15,8 @@ export interface CreateProductInput {
   featured?: boolean;
   categoryId?: string;
   tags?: string[];
+  brandId?: string;
+  approvalStatus?: string;
 }
 
 export interface UpdateProductInput {
@@ -51,6 +53,8 @@ export interface ProductFilters {
   limit?: number;
   sortBy?: 'price' | 'name' | 'createdAt' | 'rating';
   sortOrder?: 'asc' | 'desc';
+  brandId?: string;
+  approvalStatus?: string;
 }
 
 export interface WishlistInput {

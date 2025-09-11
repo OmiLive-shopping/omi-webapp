@@ -86,4 +86,24 @@ export class ProductService {
     const results = await this.productRepository.searchProducts(searchQuery, filters);
     return unifiedResponse(true, 'Search results retrieved successfully', results);
   }
+
+  // Brand-specific methods
+  async getBrandProducts(brandId: string, filters: ProductFilters = {}) {
+    // Add brandId to filters to ensure we only get this brand's products
+    const brandFilters = { ...filters, brandId };
+    const products = await this.productRepository.findProducts(brandFilters);
+    return unifiedResponse(true, 'Brand products retrieved successfully', products);
+  }
+
+  async createBrandProduct(input: CreateProductInput, brandId: string) {
+    // Auto-assign the brandId and set initial approval status
+    const brandProductInput = {
+      ...input,
+      brandId,
+      approvalStatus: 'pending',
+    };
+    
+    const product = await this.productRepository.createProduct(brandProductInput);
+    return unifiedResponse(true, 'Brand product created successfully', product);
+  }
 }

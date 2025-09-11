@@ -8,6 +8,7 @@ import { env } from './config/env-config.js';
 import analyticsRoutes from './features/analytics/routes/analytics.routes.js';
 import apiKeyRoutes from './features/api-key/routes/api-key.routes.js';
 import productRoutes from './features/product/routes/product.routes.js';
+import brandProductRoutes from './features/product/routes/brand-product.routes.js';
 import streamRoutes from './features/stream/routes/stream.routes.js';
 import streamTestRoutes from './features/stream/routes/stream-test.routes.js';
 import userRoutes from './features/user/routes/user.routes.js';
@@ -99,6 +100,7 @@ app.get('/', hostWhitelist(allowedURLs), (_req: Request, res: Response): void =>
 // API Routes
 app.use('/v1/users', userRoutes);
 app.use('/v1/products', productRoutes);
+app.use('/v1/brands/products', brandProductRoutes); // Brand-specific product management
 app.use('/v1/streams/test', streamTestRoutes); // Test/simulation endpoints (before main stream routes)
 app.use('/v1/streams', streamRoutes);
 app.use('/v1/api-keys', apiKeyRoutes);
@@ -108,6 +110,7 @@ app.use('/v1/analytics', analyticsRoutes);
 app.use('/api/v1', validateApiKey(true), [
   express.Router().use('/users', userRoutes),
   express.Router().use('/products', productRoutes),
+  express.Router().use('/brands/products', brandProductRoutes),
   express.Router().use('/streams', streamRoutes),
   express.Router().use('/analytics', analyticsRoutes),
 ]);

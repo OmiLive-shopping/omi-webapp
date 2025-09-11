@@ -1,22 +1,10 @@
 import { NextFunction, Request, Response } from 'express';
 import { unifiedResponse } from 'uni-response';
 
+import { PrismaService } from '../config/prisma.config.js';
 import { Permission, Role, ROLE_PERMISSIONS, ROLES } from '../constants/roles.js';
 
-// Extend the Request interface to include user with role
-declare global {
-  namespace Express {
-    interface Request {
-      user?: {
-        id: string;
-        email: string;
-        username: string;
-        role?: string;
-        isAdmin?: boolean;
-      };
-    }
-  }
-}
+// Note: Request interface extension is handled by auth-enhanced.middleware.ts
 
 /**
  * Middleware to check if user has a specific role
@@ -67,7 +55,7 @@ export const requirePermission = (...requiredPermissions: Permission[]) => {
 
     // Check if user has all required permissions
     const hasAllPermissions = requiredPermissions.every(permission =>
-      userPermissions.includes(permission as any),
+      (userPermissions as readonly string[]).includes(permission),
     );
 
     if (hasAllPermissions) {
@@ -138,5 +126,63 @@ export const requireOwnerOrAdmin = (userIdParam: string = 'userId') => {
     }
 
     res.status(403).json(unifiedResponse(false, 'Access denied'));
+  };
+};
+
+/**
+ * Middleware to check if user's brand owns the product
+ * @param productIdParam - The request parameter that contains the product ID to check
+ */
+export const requireBrandOwnership = (productIdParam: string = 'id') => {
+  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    if (!req.user) {
+      res.status(401).json(unifiedResponse(false, 'Authentication required'));
+      return;
+    }
+
+    // Admin can access any resource
+    if (req.user.isAdmin || req.user.role === ROLES.ADMIN) {
+      next();
+      return;
+    }
+
+    // Get product ID from params
+    const productId = req.params[productIdParam];
+    if (!productId) {
+      res.status(400).json(unifiedResponse(false, 'Product ID is required'));
+      return;
+    }
+
+    try {
+      // Get Prisma client
+      const prismaService = PrismaService.getInstance();
+      const prisma = prismaService.client;
+
+      // Check if product exists and get brand ownership
+      const product = await prisma.product.findUnique({
+        where: { id: productId },
+        include: {
+          brand: {
+            select: { userId: true }
+          }
+        }
+      });
+
+      if (!product) {
+        res.status(404).json(unifiedResponse(false, 'Product not found'));
+        return;
+      }
+
+      // Check if user's brand owns this product
+      if (!product.brand || product.brand.userId !== req.user.id) {
+        res.status(403).json(unifiedResponse(false, 'You can only manage your own brand\'s products'));
+        return;
+      }
+
+      next();
+    } catch (error) {
+      console.error('Error checking brand ownership:', error);
+      res.status(500).json(unifiedResponse(false, 'Internal server error'));
+    }
   };
 };

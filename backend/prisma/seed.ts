@@ -234,39 +234,19 @@ async function main() {
 
   console.log('✅ Products assigned to streams');
 
-  // Add comments to live stream
-  const comments = await Promise.all([
-    prisma.comment.create({
-      data: {
-        content: 'Great stream! Love the content 🎉',
-        userId: regularUsers[0].id,
-        streamId: liveStream.id,
-      },
-    }),
-    prisma.comment.create({
-      data: {
-        content: 'Can you explain more about the Socket.io setup?',
-        userId: regularUsers[1].id,
-        streamId: liveStream.id,
-      },
-    }),
-    prisma.comment.create({
-      data: {
-        content: 'Thanks for watching everyone! Feel free to ask questions',
-        userId: streamerUser.id,
-        streamId: liveStream.id,
-      },
-    }),
-    prisma.comment.create({
-      data: {
-        content: 'Just joined, what did I miss?',
-        userId: adminUser.id,
-        streamId: liveStream.id,
-      },
-    }),
-  ]);
+  // TODO: Add comments when Comment model is implemented
+  // const comments = await Promise.all([
+  //   prisma.comment.create({
+  //     data: {
+  //       content: 'Great stream! Love the content 🎉',
+  //       userId: regularUsers[0].id,
+  //       streamId: liveStream.id,
+  //     },
+  //   }),
+  //   // ... more comments
+  // ]);
 
-  console.log('✅ Comments added to live stream');
+  console.log('✅ Comments setup skipped (Comment model not implemented yet)');
 
   // Summary
   console.log('\n📊 Seed Summary:');
@@ -275,7 +255,7 @@ async function main() {
   console.log(`- Products: ${await prisma.product.count()} (4 active, 1 inactive)`);
   console.log(`- Streams: ${await prisma.stream.count()} (1 past, 1 live, 3 upcoming)`);
   console.log(`- Stream Products: ${await prisma.streamProduct.count()}`);
-  console.log(`- Comments: ${await prisma.comment.count()}`);
+  // console.log(`- Comments: ${await prisma.comment.count()}`); // TODO: When Comment model is added
 
   console.log('\n🎉 Database seed completed successfully!');
   console.log('\n📝 Test Credentials:');
@@ -287,11 +267,12 @@ async function cleanup() {
   console.log('🧹 Cleaning up existing data...');
   
   // Delete in correct order to respect foreign key constraints
-  await prisma.comment.deleteMany();
+  await prisma.productAudit.deleteMany();
   await prisma.streamProduct.deleteMany();
   await prisma.stream.deleteMany();
   await prisma.$executeRaw`DELETE FROM "_UserWishlist"`;
   await prisma.product.deleteMany();
+  await prisma.brand.deleteMany();
   await prisma.user.deleteMany();
   await prisma.roles.deleteMany();
   
