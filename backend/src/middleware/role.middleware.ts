@@ -97,6 +97,23 @@ export const requireAdmin = (req: Request, res: Response, next: NextFunction): v
 };
 
 /**
+ * Middleware to check if user has brand role or higher (admin)
+ */
+export const requireBrand = (req: Request, res: Response, next: NextFunction): void => {
+  if (!req.user) {
+    res.status(401).json(unifiedResponse(false, 'Authentication required'));
+    return;
+  }
+
+  if (req.user.isAdmin || req.user.role === ROLES.ADMIN || req.user.role === ROLES.BRAND) {
+    next();
+    return;
+  }
+
+  res.status(403).json(unifiedResponse(false, 'Brand access required'));
+};
+
+/**
  * Middleware to check if user owns the resource or is admin
  * @param userIdParam - The request parameter that contains the user ID to check
  */

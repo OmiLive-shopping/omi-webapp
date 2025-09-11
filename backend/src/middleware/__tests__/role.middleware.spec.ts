@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ROLES } from '../../constants/roles.js';
 import {
   requireAdmin,
+  requireBrand,
   requireOwnerOrAdmin,
   requirePermission,
   requireRole,
@@ -190,6 +191,54 @@ describe('Role Middleware', () => {
       expect(mockNext).toHaveBeenCalled();
       expect(statusMock).not.toHaveBeenCalled();
     });
+
+    it('should allow brand users with product permissions', () => {
+      mockReq.user = {
+        id: '123',
+        email: 'brand@test.com',
+        username: 'brand',
+        role: ROLES.BRAND,
+      };
+
+      const middleware = requirePermission('products.create');
+
+      middleware(mockReq as Request, mockRes as Response, mockNext);
+
+      expect(mockNext).toHaveBeenCalled();
+      expect(statusMock).not.toHaveBeenCalled();
+    });
+
+    it('should allow brand users with streaming permissions', () => {
+      mockReq.user = {
+        id: '123',
+        email: 'brand@test.com',
+        username: 'brand',
+        role: ROLES.BRAND,
+      };
+
+      const middleware = requirePermission('streams.create', 'streams.moderate');
+
+      middleware(mockReq as Request, mockRes as Response, mockNext);
+
+      expect(mockNext).toHaveBeenCalled();
+      expect(statusMock).not.toHaveBeenCalled();
+    });
+
+    it('should allow brand users with brand-specific permissions', () => {
+      mockReq.user = {
+        id: '123',
+        email: 'brand@test.com',
+        username: 'brand',
+        role: ROLES.BRAND,
+      };
+
+      const middleware = requirePermission('brand.profile.update', 'brand.analytics.view');
+
+      middleware(mockReq as Request, mockRes as Response, mockNext);
+
+      expect(mockNext).toHaveBeenCalled();
+      expect(statusMock).not.toHaveBeenCalled();
+    });
   });
 
   describe('requireAdmin', () => {
@@ -249,6 +298,103 @@ describe('Role Middleware', () => {
         expect.objectContaining({
           success: false,
           message: 'Admin access required',
+        }),
+      );
+      expect(mockNext).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('requireBrand', () => {
+    it('should reject if no user is authenticated', () => {
+      requireBrand(mockReq as Request, mockRes as Response, mockNext);
+
+      expect(statusMock).toHaveBeenCalledWith(401);
+      expect(jsonMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: false,
+          message: 'Authentication required',
+        }),
+      );
+      expect(mockNext).not.toHaveBeenCalled();
+    });
+
+    it('should allow users with isAdmin flag', () => {
+      mockReq.user = {
+        id: '123',
+        email: 'admin@test.com',
+        username: 'admin',
+        isAdmin: true,
+      };
+
+      requireBrand(mockReq as Request, mockRes as Response, mockNext);
+
+      expect(mockNext).toHaveBeenCalled();
+      expect(statusMock).not.toHaveBeenCalled();
+    });
+
+    it('should allow users with admin role', () => {
+      mockReq.user = {
+        id: '123',
+        email: 'admin@test.com',
+        username: 'admin',
+        role: ROLES.ADMIN,
+      };
+
+      requireBrand(mockReq as Request, mockRes as Response, mockNext);
+
+      expect(mockNext).toHaveBeenCalled();
+      expect(statusMock).not.toHaveBeenCalled();
+    });
+
+    it('should allow users with brand role', () => {
+      mockReq.user = {
+        id: '123',
+        email: 'brand@test.com',
+        username: 'brand',
+        role: ROLES.BRAND,
+      };
+
+      requireBrand(mockReq as Request, mockRes as Response, mockNext);
+
+      expect(mockNext).toHaveBeenCalled();
+      expect(statusMock).not.toHaveBeenCalled();
+    });
+
+    it('should reject users without brand or admin role', () => {
+      mockReq.user = {
+        id: '123',
+        email: 'user@test.com',
+        username: 'user',
+        role: ROLES.USER,
+      };
+
+      requireBrand(mockReq as Request, mockRes as Response, mockNext);
+
+      expect(statusMock).toHaveBeenCalledWith(403);
+      expect(jsonMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: false,
+          message: 'Brand access required',
+        }),
+      );
+      expect(mockNext).not.toHaveBeenCalled();
+    });
+
+    it('should reject streamer users without brand role', () => {
+      mockReq.user = {
+        id: '123',
+        email: 'streamer@test.com',
+        username: 'streamer',
+        role: ROLES.STREAMER,
+      };
+
+      requireBrand(mockReq as Request, mockRes as Response, mockNext);
+
+      expect(statusMock).toHaveBeenCalledWith(403);
+      expect(jsonMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: false,
+          message: 'Brand access required',
         }),
       );
       expect(mockNext).not.toHaveBeenCalled();

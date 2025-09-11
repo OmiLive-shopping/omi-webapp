@@ -1,5 +1,6 @@
 export const ROLES = {
   ADMIN: 'admin',
+  BRAND: 'brand',
   STREAMER: 'streamer',
   USER: 'user',
 } as const;
@@ -22,6 +23,18 @@ export const ROLE_PERMISSIONS = {
     'users.update',
     'users.delete',
     'api-keys.manage',
+  ],
+  [ROLES.BRAND]: [
+    'products.create',
+    'products.update',
+    'products.delete',
+    'products.view',
+    'streams.create',
+    'streams.update',
+    'streams.delete',
+    'streams.moderate',
+    'brand.profile.update',
+    'brand.analytics.view',
   ],
   [ROLES.STREAMER]: [
     'streams.create',
