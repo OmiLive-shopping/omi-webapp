@@ -13,6 +13,7 @@ import {
   Clock,
   DollarSign
 } from 'lucide-react';
+import { CreateProductModal, EditProductModal, ProductFormData } from '../../components/modals';
 
 interface Product {
   id: string;
@@ -40,6 +41,7 @@ interface BrandStats {
   totalRevenue: number;
 }
 
+
 export const BrandDashboard: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [stats, setStats] = useState<BrandStats>({
@@ -51,7 +53,26 @@ export const BrandDashboard: React.FC = () => {
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [formData, setFormData] = useState<ProductFormData>({
+    name: '',
+    description: '',
+    price: 0,
+    originalPrice: undefined,
+    imageUrl: '',
+    images: [],
+    active: true,
+    public: true,
+    inStock: true,
+    stockCount: 0,
+    featured: false,
+    categoryId: '',
+    tags: []
+  });
 
   // Test API endpoints
   const fetchProducts = async () => {
@@ -104,23 +125,81 @@ export const BrandDashboard: React.FC = () => {
     };
   };
 
-  const createTestProduct = async () => {
+  const handleInputChange = (field: keyof ProductFormData, value: any) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleTagsChange = (tagsString: string) => {
+    const tags = tagsString.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
+    setFormData(prev => ({
+      ...prev,
+      tags
+    }));
+  };
+
+  const resetForm = () => {
+    setFormData({
+      name: '',
+      description: '',
+      price: 0,
+      originalPrice: undefined,
+      imageUrl: '',
+      images: [],
+      active: true,
+      public: true,
+      inStock: true,
+      stockCount: 0,
+      featured: false,
+      categoryId: '',
+      tags: []
+    });
+  };
+
+  const populateForm = (product: Product) => {
+    setFormData({
+      name: product.name,
+      description: product.description || '',
+      price: product.price,
+      originalPrice: product.originalPrice,
+      imageUrl: product.imageUrl || '',
+      images: product.images || [],
+      active: product.active,
+      public: product.public,
+      inStock: product.inStock,
+      stockCount: product.stockCount,
+      featured: product.featured,
+      categoryId: '',
+      tags: [] // Product interface doesn't have tags, but we'll include it for consistency
+    });
+  };
+
+  const openEditModal = (product: Product) => {
+    setEditingProduct(product);
+    populateForm(product);
+    setShowEditModal(true);
+  };
+
+  const closeEditModal = () => {
+    setShowEditModal(false);
+    setEditingProduct(null);
+    resetForm();
+  };
+
+  const createProduct = async () => {
     try {
-      console.log('🔄 Testing POST /v1/brands/products...');
+      setIsCreating(true);
+      setError(null);
+      console.log('🔄 Creating product:', formData);
       
-      const testProduct = {
-        name: `Test Product ${Date.now()}`,
-        description: 'A test product created from the brand dashboard',
-        price: 29.99,
-        originalPrice: 39.99,
-        imageUrl: 'https://via.placeholder.com/300x300?text=Test+Product',
-        images: ['https://via.placeholder.com/300x300?text=Image+1'],
-        active: true,
-        public: true,
-        inStock: true,
-        stockCount: 50,
-        featured: false,
-        tags: ['test', 'brand', 'dashboard']
+      // Clean up the data
+      const productData = {
+        ...formData,
+        originalPrice: formData.originalPrice || undefined,
+        stockCount: formData.inStock ? formData.stockCount : undefined,
+        images: formData.imageUrl ? [formData.imageUrl, ...formData.images] : formData.images
       };
 
       const response = await fetch('/v1/brands/products', {
@@ -129,7 +208,7 @@ export const BrandDashboard: React.FC = () => {
           'Content-Type': 'application/json',
         },
         credentials: 'include',
-        body: JSON.stringify(testProduct)
+        body: JSON.stringify(productData)
       });
 
       console.log('📊 Create response status:', response.status);
@@ -143,12 +222,62 @@ export const BrandDashboard: React.FC = () => {
       const data = await response.json();
       console.log('✅ Product created:', data);
       
-      // Refresh the product list
+      // Refresh the product list and close modal
       fetchProducts();
-      setShowCreateForm(false);
+      setShowCreateModal(false);
+      resetForm();
     } catch (err) {
       console.error('💥 Create error:', err);
       setError(err instanceof Error ? err.message : 'Failed to create product');
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  const updateProduct = async () => {
+    if (!editingProduct) return;
+
+    try {
+      setIsUpdating(true);
+      setError(null);
+      console.log('🔄 Updating product:', editingProduct.id, formData);
+      
+      // Clean up the data
+      const productData = {
+        ...formData,
+        originalPrice: formData.originalPrice || undefined,
+        stockCount: formData.inStock ? formData.stockCount : undefined,
+        images: formData.imageUrl ? [formData.imageUrl, ...formData.images] : formData.images
+      };
+
+      const response = await fetch(`/v1/brands/products/${editingProduct.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify(productData)
+      });
+
+      console.log('📊 Update response status:', response.status);
+
+      if (!response.ok) {
+        const errorData = await response.text();
+        console.error('❌ Update error:', errorData);
+        throw new Error(`HTTP ${response.status}: ${errorData}`);
+      }
+
+      const data = await response.json();
+      console.log('✅ Product updated:', data);
+      
+      // Refresh the product list and close modal
+      fetchProducts();
+      closeEditModal();
+    } catch (err) {
+      console.error('💥 Update error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to update product');
+    } finally {
+      setIsUpdating(false);
     }
   };
 
@@ -271,11 +400,11 @@ export const BrandDashboard: React.FC = () => {
         <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between mb-6">
           <div className="flex gap-3">
             <button
-              onClick={() => setShowCreateForm(true)}
+              onClick={() => setShowCreateModal(true)}
               className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
               <Plus className="w-4 h-4" />
-              Test Create Product
+              Add Product
             </button>
             <button
               onClick={fetchProducts}
@@ -293,26 +422,31 @@ export const BrandDashboard: React.FC = () => {
           )}
         </div>
 
-        {/* Create Product Form */}
-        {showCreateForm && (
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Create Test Product</h3>
-            <div className="flex gap-3">
-              <button
-                onClick={createTestProduct}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-              >
-                Create Test Product
-              </button>
-              <button
-                onClick={() => setShowCreateForm(false)}
-                className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        )}
+        {/* Create Product Modal */}
+        <CreateProductModal
+          isOpen={showCreateModal}
+          onClose={() => {
+            setShowCreateModal(false);
+            resetForm();
+          }}
+          formData={formData}
+          onInputChange={handleInputChange}
+          onTagsChange={handleTagsChange}
+          onSubmit={createProduct}
+          isCreating={isCreating}
+        />
+
+        {/* Edit Product Modal */}
+        <EditProductModal
+          isOpen={showEditModal}
+          onClose={closeEditModal}
+          product={editingProduct}
+          formData={formData}
+          onInputChange={handleInputChange}
+          onTagsChange={handleTagsChange}
+          onSubmit={updateProduct}
+          isUpdating={isUpdating}
+        />
 
         {/* Products Table */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
@@ -415,7 +549,11 @@ export const BrandDashboard: React.FC = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <div className="flex items-center gap-2">
-                          <button className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300">
+                          <button 
+                            onClick={() => openEditModal(product)}
+                            className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
+                            title="Edit product"
+                          >
                             <Edit className="w-4 h-4" />
                           </button>
                           <button 
