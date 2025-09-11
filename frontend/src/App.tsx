@@ -22,6 +22,7 @@ import {
   LiveStreamsPage,
   AboutPage
 } from '@/pages';
+import BrandDashboard from '@/pages/brand/BrandDashboard';
 import ChatInputDemo from '@/components/chat/ChatInputDemo';
 import ViewerCountDemo from '@/components/stream/ViewerCountDemo';
 import ChatInputDebug from '@/components/chat/ChatInputDebug';
@@ -86,6 +87,11 @@ function App() {
               <Route path="wishlist" element={
                 <ProtectedRoute>
                   <WishlistPage />
+                </ProtectedRoute>
+              } />
+              <Route path="brand" element={
+                <ProtectedRoute>
+                  <BrandDashboard />
                 </ProtectedRoute>
               } />
               
