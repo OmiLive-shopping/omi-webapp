@@ -176,6 +176,23 @@ export default defineConfig({
     port: 8888,
     // Open browser on start
     open: false,
+    // Proxy API requests to backend
+    proxy: {
+      '/v1': {
+        target: 'http://localhost:9000',
+        changeOrigin: true,
+        secure: false,
+        cookieDomainRewrite: 'localhost',
+        cookiePathRewrite: '/',
+      },
+      '/api': {
+        target: 'http://localhost:9000',
+        changeOrigin: true,
+        secure: false,
+        cookieDomainRewrite: 'localhost',
+        cookiePathRewrite: '/',
+      }
+    }
   },
   
   // Preview server configuration

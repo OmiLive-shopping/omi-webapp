@@ -2,7 +2,7 @@ import { Router } from 'express';
 
 import { PrismaService } from '../../../config/prisma.config.js';
 import { ROLES } from '../../../constants/roles.js';
-import { authMiddleware } from '../../../middleware/auth.middleware.js';
+import { authenticate } from '../../../middleware/auth.middleware.js';
 import { requirePermission, requireRole } from '../../../middleware/role.middleware.js';
 import { validateRequest } from '../../../middleware/validation.middleware.js';
 import { ProductRepository } from '../../product/repositories/product.repository.js';
@@ -50,7 +50,7 @@ router.get('/:id/viewers', streamController.getStreamViewers);
 router.post('/end-stream', validateRequest(endStreamSchema), streamController.endStream);
 
 // Protected routes (require authentication)
-router.use(authMiddleware);
+router.use(authenticate);
 
 // Stream management - requires streamer or admin role
 router.post(

@@ -1,7 +1,7 @@
 import { Router } from 'express';
 
 import { PrismaService } from '../../../config/prisma.config.js';
-import { authMiddleware } from '../../../middleware/auth-enhanced.middleware.js';
+import { authenticate } from '../../../middleware/auth.middleware.js';
 import { requireBrand, requireBrandOwnership } from '../../../middleware/role.middleware.js';
 import { validateRequest } from '../../../middleware/validation.middleware.js';
 import { ProductController } from '../controllers/product.controller.js';
@@ -24,7 +24,7 @@ const productController = new ProductController(productService);
 const brandProductController = new BrandProductController(productService);
 
 // All routes require authentication and brand role
-router.use(authMiddleware);
+router.use(authenticate);
 router.use(requireBrand);
 
 // Brand product management endpoints

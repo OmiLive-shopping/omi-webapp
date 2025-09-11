@@ -3,14 +3,14 @@ import { body } from 'express-validator';
 import { unifiedResponse } from 'uni-response';
 
 import { apiKeyStore } from '../../../middleware/api-key.middleware.js';
-import { authMiddleware } from '../../../middleware/auth-enhanced.middleware.js';
+import { authenticate } from '../../../middleware/auth.middleware.js';
 import { handleValidationErrors } from '../../../middleware/input-validation.middleware.js';
 import { requireAdmin } from '../../../middleware/role.middleware.js';
 
 const router = Router();
 
 // All API key management routes require authentication and admin role
-router.use(authMiddleware, requireAdmin);
+router.use(authenticate, requireAdmin);
 
 // List all API keys
 router.get('/', (req: Request, res: Response) => {

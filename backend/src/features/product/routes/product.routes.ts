@@ -1,7 +1,7 @@
 import { Router } from 'express';
 
 import { PrismaService } from '../../../config/prisma.config.js';
-import { authMiddleware } from '../../../middleware/auth-enhanced.middleware.js';
+import { authenticate } from '../../../middleware/auth.middleware.js';
 import { requireAdmin, requirePermission } from '../../../middleware/role.middleware.js';
 import { validateRequest } from '../../../middleware/validation.middleware.js';
 import { ProductController } from '../controllers/product.controller.js';
@@ -29,7 +29,7 @@ router.get('/search', productController.searchProducts);
 router.get('/:id', productController.getProductById);
 
 // Protected routes (require authentication)
-router.use(authMiddleware);
+router.use(authenticate);
 
 // Admin routes - require admin role
 router.post(

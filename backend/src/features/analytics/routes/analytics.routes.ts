@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { container } from 'tsyringe';
 
-import { authMiddleware } from '@/middleware/auth.middleware';
+import { authenticate } from '@/middleware/auth.middleware';
 import { apiRateLimiter } from '@/middleware/rate-limit.middleware';
 
 import { AnalyticsController } from '../controllers/analytics.controller';
@@ -23,7 +23,7 @@ router.get(
 );
 
 // Protected routes
-router.use(authMiddleware);
+router.use(authenticate);
 
 router.get(
   '/dashboard',
