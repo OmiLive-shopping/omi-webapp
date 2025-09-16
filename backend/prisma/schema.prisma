@@ -32,6 +32,11 @@ model User {
   avatarUrl            String?
   bio                  String?
   
+  // Profile fields
+  location             String?
+  socialLinks          Json?               // Store as JSON for flexibility { twitter: "", instagram: "", etc. }
+  publicProfile        Boolean             @default(true)
+
   streamMessages       StreamMessage[]
   streams              Stream[]
   roleRelation         Roles?              @relation(fields: [roleId], references: [id])
@@ -57,6 +62,7 @@ model User {
   @@index([username])
   @@index([streamKey])
   @@index([role])
+  @@index([publicProfile])
 }
 
 model Roles {
@@ -82,7 +88,14 @@ model Brand {
   rejectionReason     String?
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @default(now()) @updatedAt
-  
+
+  // Profile fields
+  slug                String?   @unique
+  logoUrl             String?
+  coverImageUrl       String?
+  location            String?
+  socialLinks         Json?     // Store as JSON for flexibility { twitter: "", linkedin: "", etc. }
+
   user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   products            Product[] @relation("BrandProducts")
 
@@ -90,6 +103,7 @@ model Brand {
   @@index([approvalStatus])
   @@index([verified])
   @@index([approvalStatus, verified])
+  @@index([slug])
 }
 
 model Category {
