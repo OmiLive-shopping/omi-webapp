@@ -6,7 +6,7 @@ export const createBrandProductSchema = z.object({
     .string()
     .min(1, { message: 'Product name is required' })
     .max(200, { message: 'Product name must not exceed 200 characters' }),
-  
+
   // Images
   imageUrl: z.string().url({ message: 'Invalid image URL format' }).optional().nullable(),
   images: z
@@ -14,13 +14,13 @@ export const createBrandProductSchema = z.object({
     .max(10, { message: 'Maximum 10 images allowed' })
     .optional()
     .default([]),
-  
+
   description: z
     .string()
     .max(5000, { message: 'Description must not exceed 5000 characters' })
     .optional()
     .nullable(),
-  
+
   // Pricing
   price: z
     .number()
@@ -32,7 +32,7 @@ export const createBrandProductSchema = z.object({
     .max(999999.99, { message: 'Original price cannot exceed $999,999.99' })
     .optional()
     .nullable(),
-  
+
   // Coupons
   couponCode: z
     .string()
@@ -51,14 +51,14 @@ export const createBrandProductSchema = z.object({
       },
       { message: 'Coupon expiration must be in the future' },
     ),
-  
+
   // External link
   url: z.string().url({ message: 'Invalid URL format' }).optional().nullable(),
-  
+
   // Visibility and status
   public: z.boolean().optional().default(true),
   active: z.boolean().optional().default(true),
-  
+
   // Inventory
   inStock: z.boolean().optional().default(true),
   stockCount: z
@@ -67,10 +67,10 @@ export const createBrandProductSchema = z.object({
     .min(0, { message: 'Stock count must be 0 or greater' })
     .optional()
     .nullable(),
-  
+
   // Marketing
   featured: z.boolean().optional().default(false),
-  
+
   // Categorization
   categoryId: z.string().uuid({ message: 'Invalid category ID format' }).optional().nullable(),
   tags: z
@@ -87,20 +87,20 @@ export const updateBrandProductSchema = z.object({
     .min(1, { message: 'Product name cannot be empty' })
     .max(200, { message: 'Product name must not exceed 200 characters' })
     .optional(),
-  
+
   // Images
   imageUrl: z.string().url({ message: 'Invalid image URL format' }).optional().nullable(),
   images: z
     .array(z.string().url({ message: 'Invalid image URL format' }))
     .max(10, { message: 'Maximum 10 images allowed' })
     .optional(),
-  
+
   description: z
     .string()
     .max(5000, { message: 'Description must not exceed 5000 characters' })
     .optional()
     .nullable(),
-  
+
   // Pricing
   price: z
     .number()
@@ -113,7 +113,7 @@ export const updateBrandProductSchema = z.object({
     .max(999999.99, { message: 'Original price cannot exceed $999,999.99' })
     .optional()
     .nullable(),
-  
+
   // Coupons
   couponCode: z
     .string()
@@ -132,14 +132,14 @@ export const updateBrandProductSchema = z.object({
       },
       { message: 'Coupon expiration must be in the future' },
     ),
-  
+
   // External link
   url: z.string().url({ message: 'Invalid URL format' }).optional().nullable(),
-  
+
   // Visibility and status
   public: z.boolean().optional(),
   active: z.boolean().optional(),
-  
+
   // Inventory
   inStock: z.boolean().optional(),
   stockCount: z
@@ -148,10 +148,10 @@ export const updateBrandProductSchema = z.object({
     .min(0, { message: 'Stock count must be 0 or greater' })
     .optional()
     .nullable(),
-  
+
   // Marketing
   featured: z.boolean().optional(),
-  
+
   // Categorization
   categoryId: z.string().uuid({ message: 'Invalid category ID format' }).optional().nullable(),
   tags: z
@@ -172,7 +172,7 @@ export const brandProductFiltersSchema = z.object({
     .transform(val => val === 'true')
     .optional(),
   search: z.string().optional(),
-  
+
   // Inventory filters
   inStock: z
     .string()
@@ -182,7 +182,7 @@ export const brandProductFiltersSchema = z.object({
     .string()
     .transform(val => val === 'true')
     .optional(), // For products with stockCount < 10
-  
+
   // Marketing filters
   featured: z
     .string()
@@ -192,14 +192,14 @@ export const brandProductFiltersSchema = z.object({
     .string()
     .transform(val => val === 'true')
     .optional(),
-  
+
   // Category and tags
   categoryId: z.string().uuid().optional(),
   tags: z
     .string()
     .transform(val => val.split(',').filter(Boolean))
     .optional(),
-  
+
   // Price filtering
   minPrice: z
     .string()
@@ -211,10 +211,10 @@ export const brandProductFiltersSchema = z.object({
     .transform(val => parseFloat(val))
     .pipe(z.number().min(0))
     .optional(),
-  
+
   // Approval status (for brands to see their own pending/approved products)
   approvalStatus: z.enum(['pending', 'approved', 'rejected']).optional(),
-  
+
   // Pagination and sorting
   page: z
     .string()

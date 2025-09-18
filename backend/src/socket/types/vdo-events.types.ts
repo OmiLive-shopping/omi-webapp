@@ -18,7 +18,7 @@ export interface VdoStatsEvent {
 export interface VdoStreamStats {
   // Viewer stats
   viewerCount?: number;
-  
+
   // Video stats
   fps?: {
     current: number;

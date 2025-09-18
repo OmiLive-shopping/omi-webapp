@@ -1,5 +1,11 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { AnalyticsEventEmitter, analyticsEventEmitter, type AnalyticsEvent, type StatsUpdatedEvent } from '../analytics-event-emitter.js';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import {
+  type AnalyticsEvent,
+  AnalyticsEventEmitter,
+  analyticsEventEmitter,
+  type StatsUpdatedEvent,
+} from '../analytics-event-emitter.js';
 
 describe('AnalyticsEventEmitter', () => {
   let emitter: AnalyticsEventEmitter;
@@ -20,35 +26,39 @@ describe('AnalyticsEventEmitter', () => {
       const listener = vi.fn();
       emitter.onAnalyticsEvent('analytics:stats:updated', listener);
 
-      const result = await emitter.emitStatsUpdated('stream-123', {
-        currentViewers: 42,
-        peakViewers: 55,
-        totalViewers: 120,
-        averageViewDuration: 1800,
-        fps: 30,
-        bitrate: 2500,
-        resolution: { width: 1920, height: 1080 },
-        latency: 50,
-        packetLoss: 1.2,
-        jitter: 5,
-        connectionQuality: 'good',
-        connectionScore: 85,
-        qualityDistribution: {
-          excellent: 20,
-          good: 60,
-          fair: 15,
-          poor: 5,
-          critical: 0,
+      const result = await emitter.emitStatsUpdated(
+        'stream-123',
+        {
+          currentViewers: 42,
+          peakViewers: 55,
+          totalViewers: 120,
+          averageViewDuration: 1800,
+          fps: 30,
+          bitrate: 2500,
+          resolution: { width: 1920, height: 1080 },
+          latency: 50,
+          packetLoss: 1.2,
+          jitter: 5,
+          connectionQuality: 'good',
+          connectionScore: 85,
+          qualityDistribution: {
+            excellent: 20,
+            good: 60,
+            fair: 15,
+            poor: 5,
+            critical: 0,
+          },
+          isAudioMuted: false,
+          isVideoHidden: false,
+          isScreenSharing: false,
+          isRecording: true,
+          uploadSpeed: 5000,
+          downloadSpeed: 10000,
+          totalBytesOut: 1024000,
+          totalBytesIn: 2048000,
         },
-        isAudioMuted: false,
-        isVideoHidden: false,
-        isScreenSharing: false,
-        isRecording: true,
-        uploadSpeed: 5000,
-        downloadSpeed: 10000,
-        totalBytesOut: 1024000,
-        totalBytesIn: 2048000,
-      }, 'realtime');
+        'realtime',
+      );
 
       expect(result).toBe(true);
       expect(listener).toHaveBeenCalledWith(
@@ -61,7 +71,7 @@ describe('AnalyticsEventEmitter', () => {
             isRecording: true,
           }),
           interval: 'realtime',
-        })
+        }),
       );
     });
 
@@ -69,26 +79,30 @@ describe('AnalyticsEventEmitter', () => {
       const listener = vi.fn();
       emitter.onAnalyticsEvent('analytics:viewer:joined', listener);
 
-      const result = await emitter.emitViewerJoined('stream-123', {
-        sessionId: 'session-abc',
-        userId: 'user-456',
-        username: 'testviewer',
-        isAnonymous: false,
-        deviceType: 'desktop',
-        browser: 'Chrome',
-        os: 'Windows',
-        location: 'US',
-        connectionMetrics: {
-          latency: 45,
-          packetLoss: 0.5,
-          bandwidth: 5000,
+      const result = await emitter.emitViewerJoined(
+        'stream-123',
+        {
+          sessionId: 'session-abc',
+          userId: 'user-456',
+          username: 'testviewer',
+          isAnonymous: false,
+          deviceType: 'desktop',
+          browser: 'Chrome',
+          os: 'Windows',
+          location: 'US',
+          connectionMetrics: {
+            latency: 45,
+            packetLoss: 0.5,
+            bandwidth: 5000,
+          },
         },
-      }, {
-        currentViewers: 43,
-        totalViewers: 121,
-        deviceBreakdown: { desktop: 30, mobile: 13 },
-        locationBreakdown: { US: 25, UK: 10, CA: 8 },
-      });
+        {
+          currentViewers: 43,
+          totalViewers: 121,
+          deviceBreakdown: { desktop: 30, mobile: 13 },
+          locationBreakdown: { US: 25, UK: 10, CA: 8 },
+        },
+      );
 
       expect(result).toBe(true);
       expect(listener).toHaveBeenCalledWith(
@@ -104,14 +118,14 @@ describe('AnalyticsEventEmitter', () => {
             currentViewers: 43,
             totalViewers: 121,
           }),
-        })
+        }),
       );
     });
 
     it('should emit wildcard events', async () => {
       const wildcardListener = vi.fn();
       const specificListener = vi.fn();
-      
+
       emitter.onAnalyticsEvent('*', wildcardListener);
       emitter.onAnalyticsEvent('analytics:quality:changed', specificListener);
 
@@ -136,7 +150,7 @@ describe('AnalyticsEventEmitter', () => {
   describe('Event Validation', () => {
     it('should validate stats updated event structure', async () => {
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-      
+
       // Invalid event - missing required fields
       const invalidEvent = {
         type: 'analytics:stats:updated',
@@ -152,10 +166,7 @@ describe('AnalyticsEventEmitter', () => {
       const result = await emitter.emitAnalyticsEvent(invalidEvent);
 
       expect(result).toBe(false);
-      expect(consoleSpy).toHaveBeenCalledWith(
-        'Failed to emit analytics event:',
-        expect.any(Error)
-      );
+      expect(consoleSpy).toHaveBeenCalledWith('Failed to emit analytics event:', expect.any(Error));
 
       consoleSpy.mockRestore();
     });
@@ -184,7 +195,7 @@ describe('AnalyticsEventEmitter', () => {
       emitter.updateThrottleConfig({
         enabled: true,
         intervals: {
-          realtime: 100,   // 100ms for testing
+          realtime: 100, // 100ms for testing
           aggregated: 200,
           alerts: 50,
         },
@@ -202,53 +213,61 @@ describe('AnalyticsEventEmitter', () => {
       emitter.onAnalyticsEvent('analytics:stats:updated', listener);
 
       // Emit multiple events quickly
-      await emitter.emitStatsUpdated('stream-123', {
-        currentViewers: 10,
-        peakViewers: 10,
-        totalViewers: 10,
-        averageViewDuration: 0,
-        fps: 30,
-        bitrate: 2000,
-        resolution: null,
-        latency: 50,
-        packetLoss: 0,
-        jitter: 0,
-        connectionQuality: 'good',
-        connectionScore: 100,
-        qualityDistribution: { excellent: 0, good: 100, fair: 0, poor: 0, critical: 0 },
-        isAudioMuted: false,
-        isVideoHidden: false,
-        isScreenSharing: false,
-        isRecording: false,
-        uploadSpeed: 1000,
-        downloadSpeed: 2000,
-        totalBytesOut: 0,
-        totalBytesIn: 0,
-      }, 'realtime');
+      await emitter.emitStatsUpdated(
+        'stream-123',
+        {
+          currentViewers: 10,
+          peakViewers: 10,
+          totalViewers: 10,
+          averageViewDuration: 0,
+          fps: 30,
+          bitrate: 2000,
+          resolution: null,
+          latency: 50,
+          packetLoss: 0,
+          jitter: 0,
+          connectionQuality: 'good',
+          connectionScore: 100,
+          qualityDistribution: { excellent: 0, good: 100, fair: 0, poor: 0, critical: 0 },
+          isAudioMuted: false,
+          isVideoHidden: false,
+          isScreenSharing: false,
+          isRecording: false,
+          uploadSpeed: 1000,
+          downloadSpeed: 2000,
+          totalBytesOut: 0,
+          totalBytesIn: 0,
+        },
+        'realtime',
+      );
 
-      await emitter.emitStatsUpdated('stream-123', {
-        currentViewers: 11,
-        peakViewers: 11,
-        totalViewers: 11,
-        averageViewDuration: 0,
-        fps: 30,
-        bitrate: 2000,
-        resolution: null,
-        latency: 50,
-        packetLoss: 0,
-        jitter: 0,
-        connectionQuality: 'good',
-        connectionScore: 100,
-        qualityDistribution: { excellent: 0, good: 100, fair: 0, poor: 0, critical: 0 },
-        isAudioMuted: false,
-        isVideoHidden: false,
-        isScreenSharing: false,
-        isRecording: false,
-        uploadSpeed: 1000,
-        downloadSpeed: 2000,
-        totalBytesOut: 0,
-        totalBytesIn: 0,
-      }, 'realtime');
+      await emitter.emitStatsUpdated(
+        'stream-123',
+        {
+          currentViewers: 11,
+          peakViewers: 11,
+          totalViewers: 11,
+          averageViewDuration: 0,
+          fps: 30,
+          bitrate: 2000,
+          resolution: null,
+          latency: 50,
+          packetLoss: 0,
+          jitter: 0,
+          connectionQuality: 'good',
+          connectionScore: 100,
+          qualityDistribution: { excellent: 0, good: 100, fair: 0, poor: 0, critical: 0 },
+          isAudioMuted: false,
+          isVideoHidden: false,
+          isScreenSharing: false,
+          isRecording: false,
+          uploadSpeed: 1000,
+          downloadSpeed: 2000,
+          totalBytesOut: 0,
+          totalBytesIn: 0,
+        },
+        'realtime',
+      );
 
       // Should only emit once immediately
       expect(listener).toHaveBeenCalledTimes(1);
@@ -300,10 +319,54 @@ describe('AnalyticsEventEmitter', () => {
 
       // Generate multiple events quickly to queue them
       for (let i = 0; i < 5; i++) {
-        await emitter.emitStatsUpdated('stream-123', {
-          currentViewers: i,
-          peakViewers: i,
-          totalViewers: i,
+        await emitter.emitStatsUpdated(
+          'stream-123',
+          {
+            currentViewers: i,
+            peakViewers: i,
+            totalViewers: i,
+            averageViewDuration: 0,
+            fps: 30,
+            bitrate: 2000,
+            resolution: null,
+            latency: 50,
+            packetLoss: 0,
+            jitter: 0,
+            connectionQuality: 'good',
+            connectionScore: 100,
+            qualityDistribution: { excellent: 0, good: 100, fair: 0, poor: 0, critical: 0 },
+            isAudioMuted: false,
+            isVideoHidden: false,
+            isScreenSharing: false,
+            isRecording: false,
+            uploadSpeed: 1000,
+            downloadSpeed: 2000,
+            totalBytesOut: 0,
+            totalBytesIn: 0,
+          },
+          'realtime',
+        );
+      }
+
+      expect(emitter.getQueuedEventsCount('stream-123')).toBeGreaterThan(0);
+
+      // Flush events
+      await emitter.flushStreamEvents('stream-123');
+
+      // All events should be processed
+      expect(emitter.getQueuedEventsCount('stream-123')).toBe(0);
+      expect(listener).toHaveBeenCalled();
+    });
+  });
+
+  describe('Event History', () => {
+    it('should track event history per stream', async () => {
+      await emitter.emitStatsUpdated(
+        'stream-123',
+        {
+          currentViewers: 10,
+          peakViewers: 10,
+          totalViewers: 10,
           averageViewDuration: 0,
           fps: 30,
           bitrate: 2000,
@@ -322,58 +385,26 @@ describe('AnalyticsEventEmitter', () => {
           downloadSpeed: 2000,
           totalBytesOut: 0,
           totalBytesIn: 0,
-        }, 'realtime');
-      }
+        },
+        'realtime',
+      );
 
-      expect(emitter.getQueuedEventsCount('stream-123')).toBeGreaterThan(0);
-
-      // Flush events
-      await emitter.flushStreamEvents('stream-123');
-
-      // All events should be processed
-      expect(emitter.getQueuedEventsCount('stream-123')).toBe(0);
-      expect(listener).toHaveBeenCalled();
-    });
-  });
-
-  describe('Event History', () => {
-    it('should track event history per stream', async () => {
-      await emitter.emitStatsUpdated('stream-123', {
-        currentViewers: 10,
-        peakViewers: 10,
-        totalViewers: 10,
-        averageViewDuration: 0,
-        fps: 30,
-        bitrate: 2000,
-        resolution: null,
-        latency: 50,
-        packetLoss: 0,
-        jitter: 0,
-        connectionQuality: 'good',
-        connectionScore: 100,
-        qualityDistribution: { excellent: 0, good: 100, fair: 0, poor: 0, critical: 0 },
-        isAudioMuted: false,
-        isVideoHidden: false,
-        isScreenSharing: false,
-        isRecording: false,
-        uploadSpeed: 1000,
-        downloadSpeed: 2000,
-        totalBytesOut: 0,
-        totalBytesIn: 0,
-      }, 'realtime');
-
-      await emitter.emitViewerJoined('stream-123', {
-        sessionId: 'session-1',
-        userId: 'user-1',
-        username: 'viewer1',
-        isAnonymous: false,
-        deviceType: 'desktop',
-      }, {
-        currentViewers: 11,
-        totalViewers: 11,
-        deviceBreakdown: {},
-        locationBreakdown: {},
-      });
+      await emitter.emitViewerJoined(
+        'stream-123',
+        {
+          sessionId: 'session-1',
+          userId: 'user-1',
+          username: 'viewer1',
+          isAnonymous: false,
+          deviceType: 'desktop',
+        },
+        {
+          currentViewers: 11,
+          totalViewers: 11,
+          deviceBreakdown: {},
+          locationBreakdown: {},
+        },
+      );
 
       const history = emitter.getStreamHistory('stream-123');
       expect(history).toHaveLength(2);
@@ -384,16 +415,20 @@ describe('AnalyticsEventEmitter', () => {
     it('should limit history size per stream', async () => {
       // Create events beyond the max limit (50)
       for (let i = 0; i < 55; i++) {
-        await emitter.emitViewerJoined('stream-123', {
-          sessionId: `session-${i}`,
-          isAnonymous: true,
-          deviceType: 'mobile',
-        }, {
-          currentViewers: i + 1,
-          totalViewers: i + 1,
-          deviceBreakdown: {},
-          locationBreakdown: {},
-        });
+        await emitter.emitViewerJoined(
+          'stream-123',
+          {
+            sessionId: `session-${i}`,
+            isAnonymous: true,
+            deviceType: 'mobile',
+          },
+          {
+            currentViewers: i + 1,
+            totalViewers: i + 1,
+            deviceBreakdown: {},
+            locationBreakdown: {},
+          },
+        );
       }
 
       const history = emitter.getStreamHistory('stream-123');
@@ -404,10 +439,10 @@ describe('AnalyticsEventEmitter', () => {
   describe('Event Listeners', () => {
     it('should add and remove event listeners', () => {
       const listener = vi.fn();
-      
+
       emitter.onAnalyticsEvent('analytics:stats:updated', listener);
       expect(emitter.listenerCount('analytics:stats:updated')).toBe(1);
-      
+
       emitter.offAnalyticsEvent('analytics:stats:updated', listener);
       expect(emitter.listenerCount('analytics:stats:updated')).toBe(0);
     });
@@ -417,39 +452,43 @@ describe('AnalyticsEventEmitter', () => {
         throw new Error('Listener error');
       });
       const goodListener = vi.fn();
-      
+
       emitter.onAnalyticsEvent('analytics:stats:updated', errorListener);
       emitter.onAnalyticsEvent('analytics:stats:updated', goodListener);
 
       const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
-      await emitter.emitStatsUpdated('stream-123', {
-        currentViewers: 10,
-        peakViewers: 10,
-        totalViewers: 10,
-        averageViewDuration: 0,
-        fps: 30,
-        bitrate: 2000,
-        resolution: null,
-        latency: 50,
-        packetLoss: 0,
-        jitter: 0,
-        connectionQuality: 'good',
-        connectionScore: 100,
-        qualityDistribution: { excellent: 0, good: 100, fair: 0, poor: 0, critical: 0 },
-        isAudioMuted: false,
-        isVideoHidden: false,
-        isScreenSharing: false,
-        isRecording: false,
-        uploadSpeed: 1000,
-        downloadSpeed: 2000,
-        totalBytesOut: 0,
-        totalBytesIn: 0,
-      }, 'realtime');
+      await emitter.emitStatsUpdated(
+        'stream-123',
+        {
+          currentViewers: 10,
+          peakViewers: 10,
+          totalViewers: 10,
+          averageViewDuration: 0,
+          fps: 30,
+          bitrate: 2000,
+          resolution: null,
+          latency: 50,
+          packetLoss: 0,
+          jitter: 0,
+          connectionQuality: 'good',
+          connectionScore: 100,
+          qualityDistribution: { excellent: 0, good: 100, fair: 0, poor: 0, critical: 0 },
+          isAudioMuted: false,
+          isVideoHidden: false,
+          isScreenSharing: false,
+          isRecording: false,
+          uploadSpeed: 1000,
+          downloadSpeed: 2000,
+          totalBytesOut: 0,
+          totalBytesIn: 0,
+        },
+        'realtime',
+      );
 
       // Good listener should still be called despite error in first listener
       expect(goodListener).toHaveBeenCalled();
-      
+
       consoleSpy.mockRestore();
     });
   });
@@ -477,7 +516,7 @@ describe('AnalyticsEventEmitter', () => {
             category: 'engagement',
             title: 'Low Engagement',
           }),
-        })
+        }),
       );
     });
 
@@ -485,26 +524,30 @@ describe('AnalyticsEventEmitter', () => {
       const listener = vi.fn();
       emitter.onAnalyticsEvent('analytics:quality:changed', listener);
 
-      await emitter.emitQualityChanged('stream-123', {
-        previous: 'good',
-        current: 'poor',
-        metrics: {
-          fps: { previous: 30, current: 15 },
-          bitrate: { previous: 2500, current: 800 },
-          latency: { previous: 50, current: 300 },
-          packetLoss: { previous: 1, current: 8 },
-        },
-        reason: 'network',
-        impact: 'high',
-      }, [
+      await emitter.emitQualityChanged(
+        'stream-123',
         {
-          type: 'fps_drop',
-          severity: 'warning',
-          message: 'FPS dropped significantly',
-          threshold: 20,
-          currentValue: 15,
+          previous: 'good',
+          current: 'poor',
+          metrics: {
+            fps: { previous: 30, current: 15 },
+            bitrate: { previous: 2500, current: 800 },
+            latency: { previous: 50, current: 300 },
+            packetLoss: { previous: 1, current: 8 },
+          },
+          reason: 'network',
+          impact: 'high',
         },
-      ]);
+        [
+          {
+            type: 'fps_drop',
+            severity: 'warning',
+            message: 'FPS dropped significantly',
+            threshold: 20,
+            currentValue: 15,
+          },
+        ],
+      );
 
       expect(listener).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -519,7 +562,7 @@ describe('AnalyticsEventEmitter', () => {
               severity: 'warning',
             }),
           ]),
-        })
+        }),
       );
     });
   });
@@ -528,7 +571,7 @@ describe('AnalyticsEventEmitter', () => {
     it('should maintain singleton pattern', () => {
       const instance1 = AnalyticsEventEmitter.getInstance();
       const instance2 = AnalyticsEventEmitter.getInstance();
-      
+
       expect(instance1).toBe(instance2);
     });
 

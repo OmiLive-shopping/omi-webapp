@@ -18,12 +18,20 @@ export const envSchema = z.object({
   SOCKET_ADMIN_PASSWORD: z.string().optional(),
   REDIS_URL: z.string().url().optional().default('redis://localhost:6379'),
   API_KEY_HEADER: z.string().optional().default('x-api-key'),
-  
+
   // Security Configuration
-  SECURITY_ENABLE_AUDIT_LOGGING: z.string().transform(val => val === 'true').optional().default('true'),
+  SECURITY_ENABLE_AUDIT_LOGGING: z
+    .string()
+    .transform(val => val === 'true')
+    .optional()
+    .default('true'),
   SECURITY_MAX_ANONYMOUS_CONNECTIONS: z.coerce.number().optional().default(1000),
   SECURITY_SUSPICIOUS_ACTIVITY_THRESHOLD: z.coerce.number().optional().default(10),
-  SECURITY_BLOCK_SUSPICIOUS_IPS: z.string().transform(val => val === 'true').optional().default('true'),
+  SECURITY_BLOCK_SUSPICIOUS_IPS: z
+    .string()
+    .transform(val => val === 'true')
+    .optional()
+    .default('true'),
   SECURITY_MAX_PAYLOAD_SIZE: z.coerce.number().optional().default(1048576), // 1MB
   SECURITY_MAX_MESSAGE_LENGTH: z.coerce.number().optional().default(10000), // 10KB
 });

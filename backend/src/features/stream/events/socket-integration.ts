@@ -1,20 +1,20 @@
-import { 
-  streamEventEmitter, 
-  type StreamEvent,
-  type StreamEventType,
+import { SocketServer } from '../../../config/socket/socket.config.js';
+import { RoomManager } from '../../../socket/managers/room.manager.js';
+import {
+  type ProductFeaturedEvent,
+  type QualityChangedEvent,
+  type StatsUpdatedEvent,
   type StreamCreatedEvent,
-  type StreamStartedEvent,
   type StreamEndedEvent,
+  type StreamErrorEvent,
+  type StreamEvent,
+  streamEventEmitter,
+  type StreamEventType,
+  type StreamStartedEvent,
   type StreamUpdatedEvent,
   type ViewerJoinedEvent,
   type ViewerLeftEvent,
-  type ProductFeaturedEvent,
-  type StatsUpdatedEvent,
-  type QualityChangedEvent,
-  type StreamErrorEvent,
 } from './stream-event-emitter.js';
-import { SocketServer } from '../../../config/socket/socket.config.js';
-import { RoomManager } from '../../../socket/managers/room.manager.js';
 
 /**
  * Socket integration for stream events
@@ -59,9 +59,15 @@ export class StreamSocketIntegration {
     streamEventEmitter.onStreamEvent('stream:updated', this.handleStreamUpdated.bind(this));
     streamEventEmitter.onStreamEvent('stream:viewer:joined', this.handleViewerJoined.bind(this));
     streamEventEmitter.onStreamEvent('stream:viewer:left', this.handleViewerLeft.bind(this));
-    streamEventEmitter.onStreamEvent('stream:product:featured', this.handleProductFeatured.bind(this));
+    streamEventEmitter.onStreamEvent(
+      'stream:product:featured',
+      this.handleProductFeatured.bind(this),
+    );
     streamEventEmitter.onStreamEvent('stream:stats:updated', this.handleStatsUpdated.bind(this));
-    streamEventEmitter.onStreamEvent('stream:quality:changed', this.handleQualityChanged.bind(this));
+    streamEventEmitter.onStreamEvent(
+      'stream:quality:changed',
+      this.handleQualityChanged.bind(this),
+    );
     streamEventEmitter.onStreamEvent('stream:error', this.handleStreamError.bind(this));
 
     this.isInitialized = true;
@@ -82,7 +88,7 @@ export class StreamSocketIntegration {
    */
   private handleStreamEvent(event: StreamEvent): void {
     console.log(`📡 Broadcasting stream event: ${event.type} for stream ${event.streamId}`);
-    
+
     // Update metrics or analytics here if needed
     this.updateEventMetrics(event);
   }
@@ -196,19 +202,28 @@ export class StreamSocketIntegration {
    */
   private handleViewerJoined(event: ViewerJoinedEvent): void {
     // Notify others in the stream room (exclude the joiner)
-    this.socketServer.getIO().to(`stream:${event.streamId}`).emit('stream:viewer:joined', {
-      streamId: event.streamId,
-      viewer: event.viewer.isAnonymous ? null : {
-        id: event.viewer.id,
-        username: event.viewer.username,
-        avatarUrl: event.viewer.avatarUrl,
-      },
-      viewerCount: event.currentViewerCount,
-      timestamp: event.timestamp,
-    });
+    this.socketServer
+      .getIO()
+      .to(`stream:${event.streamId}`)
+      .emit('stream:viewer:joined', {
+        streamId: event.streamId,
+        viewer: event.viewer.isAnonymous
+          ? null
+          : {
+              id: event.viewer.id,
+              username: event.viewer.username,
+              avatarUrl: event.viewer.avatarUrl,
+            },
+        viewerCount: event.currentViewerCount,
+        timestamp: event.timestamp,
+      });
 
     // Update room viewer count
-    this.socketServer.emitToRoom(`stream:${event.streamId}`, 'stream:viewer-count', event.currentViewerCount);
+    this.socketServer.emitToRoom(
+      `stream:${event.streamId}`,
+      'stream:viewer-count',
+      event.currentViewerCount,
+    );
 
     // Notify the streamer with more details
     const stream = this.roomManager.getRoomInfo(event.streamId);
@@ -228,18 +243,27 @@ export class StreamSocketIntegration {
    */
   private handleViewerLeft(event: ViewerLeftEvent): void {
     // Notify others in the stream room
-    this.socketServer.getIO().to(`stream:${event.streamId}`).emit('stream:viewer:left', {
-      streamId: event.streamId,
-      viewer: event.viewer.id ? {
-        id: event.viewer.id,
-        username: event.viewer.username,
-      } : null,
-      viewerCount: event.currentViewerCount,
-      timestamp: event.timestamp,
-    });
+    this.socketServer
+      .getIO()
+      .to(`stream:${event.streamId}`)
+      .emit('stream:viewer:left', {
+        streamId: event.streamId,
+        viewer: event.viewer.id
+          ? {
+              id: event.viewer.id,
+              username: event.viewer.username,
+            }
+          : null,
+        viewerCount: event.currentViewerCount,
+        timestamp: event.timestamp,
+      });
 
     // Update room viewer count
-    this.socketServer.emitToRoom(`stream:${event.streamId}`, 'stream:viewer-count', event.currentViewerCount);
+    this.socketServer.emitToRoom(
+      `stream:${event.streamId}`,
+      'stream:viewer-count',
+      event.currentViewerCount,
+    );
 
     // Notify the streamer with viewer session details
     const stream = this.roomManager.getRoomInfo(event.streamId);
@@ -283,7 +307,11 @@ export class StreamSocketIntegration {
     });
 
     // Send viewer count to all viewers
-    this.socketServer.emitToRoom(`stream:${event.streamId}`, 'stream:viewer-count', event.stats.viewerCount);
+    this.socketServer.emitToRoom(
+      `stream:${event.streamId}`,
+      'stream:viewer-count',
+      event.stats.viewerCount,
+    );
 
     // Send quality indicators to viewers if quality info is available
     if (event.stats.quality) {
@@ -373,13 +401,13 @@ export class StreamSocketIntegration {
   private updateEventMetrics(event: StreamEvent): void {
     // This could integrate with analytics services
     // For now, just log important events
-    
+
     const importantEvents = [
       'stream:started',
-      'stream:ended', 
+      'stream:ended',
       'stream:viewer:joined',
       'stream:viewer:left',
-      'stream:error'
+      'stream:error',
     ];
 
     if (importantEvents.includes(event.type)) {

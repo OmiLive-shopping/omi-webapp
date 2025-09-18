@@ -1,11 +1,12 @@
 import { Router } from 'express';
-import { StreamService } from '../services/stream.service.js';
-import { StreamRepository } from '../repositories/stream.repository.js';
-import { ProductRepository } from '../../product/repositories/product.repository.js';
-import { UserRepository } from '../../user/repositories/user.repository.js';
+import { v4 as uuidv4 } from 'uuid';
+
 import { PrismaService } from '../../../config/prisma.config.js';
 import { SocketServer } from '../../../config/socket/socket.config.js';
-import { v4 as uuidv4 } from 'uuid';
+import { ProductRepository } from '../../product/repositories/product.repository.js';
+import { UserRepository } from '../../user/repositories/user.repository.js';
+import { StreamRepository } from '../repositories/stream.repository.js';
+import { StreamService } from '../services/stream.service.js';
 
 const router = Router();
 
@@ -33,7 +34,7 @@ const testMessages = [
   'LOL that was funny 😂',
   'First time here, loving the content!',
   'Great explanation!',
-  '@StreamerName you\'re the best!',
+  "@StreamerName you're the best!",
   'Can we see more of this?',
   'Thanks for streaming!',
   '🔥🔥🔥',
@@ -41,7 +42,7 @@ const testMessages = [
   'Following now!',
   'When is the next stream?',
   'Love the energy!',
-  'Keep up the great work!'
+  'Keep up the great work!',
 ];
 
 let simulationInterval: NodeJS.Timer | null = null;
@@ -55,23 +56,23 @@ router.post('/simulate/start', async (req, res) => {
   try {
     // Get the first stream from database
     const result = await streamService.getStreams({ limit: 1 });
-    
+
     if (!result.success || !result.data || result.data.length === 0) {
       return res.status(404).json({
         success: false,
-        message: 'No streams found to simulate'
+        message: 'No streams found to simulate',
       });
     }
 
     const stream = result.data[0];
-    
+
     // Make the stream go live using the goLive method
     const goLiveResult = await streamService.goLive(stream.id, stream.userId);
 
     if (!goLiveResult.success) {
       return res.status(500).json({
         success: false,
-        message: goLiveResult.message || 'Failed to make stream go live'
+        message: goLiveResult.message || 'Failed to make stream go live',
       });
     }
 
@@ -83,19 +84,19 @@ router.post('/simulate/start', async (req, res) => {
 
     // Simulate viewers joining
     let viewerCount = currentSimulatedStream.viewerCount || 10;
-    
+
     // Start chat simulation
     simulationInterval = setInterval(() => {
       // Randomly add/remove viewers
       if (Math.random() > 0.7) {
         viewerCount += Math.floor(Math.random() * 3) - 1;
         viewerCount = Math.max(1, viewerCount);
-        
+
         // Emit viewer count update
         io.to(`stream:${stream.id}`).emit('stream:viewers:update', {
           streamId: stream.id,
           viewerCount,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         });
       }
 
@@ -103,7 +104,7 @@ router.post('/simulate/start', async (req, res) => {
       if (Math.random() > 0.5) {
         const randomUser = testUsers[Math.floor(Math.random() * testUsers.length)];
         const randomMessage = testMessages[Math.floor(Math.random() * testMessages.length)];
-        
+
         const chatMessage = {
           id: uuidv4(),
           streamId: stream.id,
@@ -111,12 +112,12 @@ router.post('/simulate/start', async (req, res) => {
           username: randomUser.username,
           content: randomMessage,
           timestamp: new Date().toISOString(),
-          role: randomUser.role
+          role: randomUser.role,
         };
 
         // Emit chat message to stream room
         io.to(`stream:${stream.id}`).emit('chat:message', chatMessage);
-        
+
         // Also emit to test namespace for debugging
         io.emit('test:chat:message', chatMessage);
       }
@@ -130,7 +131,7 @@ router.post('/simulate/start', async (req, res) => {
           resolution: '1920x1080',
           packetLoss: Math.random() * 2,
           latency: Math.floor(Math.random() * 50) + 10,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         };
 
         io.to(`stream:${stream.id}`).emit('stream:stats:update', stats);
@@ -141,7 +142,7 @@ router.post('/simulate/start', async (req, res) => {
     for (let i = 0; i < 5; i++) {
       const randomUser = testUsers[Math.floor(Math.random() * testUsers.length)];
       const randomMessage = testMessages[Math.floor(Math.random() * testMessages.length)];
-      
+
       setTimeout(() => {
         const chatMessage = {
           id: uuidv4(),
@@ -150,7 +151,7 @@ router.post('/simulate/start', async (req, res) => {
           username: randomUser.username,
           content: randomMessage,
           timestamp: new Date().toISOString(),
-          role: randomUser.role
+          role: randomUser.role,
         };
 
         io.to(`stream:${stream.id}`).emit('chat:message', chatMessage);
@@ -166,15 +167,15 @@ router.post('/simulate/start', async (req, res) => {
         streamTitle: stream.title,
         isLive: true,
         viewerCount,
-        simulationActive: true
-      }
+        simulationActive: true,
+      },
     });
   } catch (error) {
     console.error('Simulation start error:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to start simulation',
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: error instanceof Error ? error.message : 'Unknown error',
     });
   }
 });
@@ -196,10 +197,10 @@ router.post('/simulate/stop', async (req, res) => {
       // Notify all clients
       const socketServer = SocketServer.getInstance();
       const io = socketServer.getIO();
-      
+
       io.to(`stream:${currentSimulatedStream.id}`).emit('stream:ended', {
         streamId: currentSimulatedStream.id,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
 
       const streamId = currentSimulatedStream.id;
@@ -210,13 +211,13 @@ router.post('/simulate/stop', async (req, res) => {
         message: 'Stream simulation stopped',
         data: {
           streamId,
-          simulationActive: false
-        }
+          simulationActive: false,
+        },
       });
     } else {
       res.json({
         success: true,
-        message: 'No active simulation to stop'
+        message: 'No active simulation to stop',
       });
     }
   } catch (error) {
@@ -224,7 +225,7 @@ router.post('/simulate/stop', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to stop simulation',
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: error instanceof Error ? error.message : 'Unknown error',
     });
   }
 });
@@ -238,8 +239,8 @@ router.get('/simulate/status', (req, res) => {
     data: {
       simulationActive: !!simulationInterval,
       currentStreamId: currentSimulatedStream?.id || null,
-      currentStreamTitle: currentSimulatedStream?.title || null
-    }
+      currentStreamTitle: currentSimulatedStream?.title || null,
+    },
   });
 });
 
@@ -258,21 +259,21 @@ router.post('/reset-all', async (req, res) => {
     // Reset all streams to offline in database
     await prisma.stream.updateMany({
       where: { isLive: true },
-      data: { 
+      data: {
         isLive: false,
         viewerCount: 0,
-        endedAt: new Date()
-      }
+        endedAt: new Date(),
+      },
     });
 
     // Get socket server and notify clients
     const socketServer = SocketServer.getInstance();
     const io = socketServer.getIO();
-    
+
     // Emit global reset event
     io.emit('streams:reset', {
       message: 'All streams have been reset to offline',
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
 
     res.json({
@@ -280,15 +281,15 @@ router.post('/reset-all', async (req, res) => {
       message: 'All streams reset to offline',
       data: {
         simulationStopped: true,
-        streamsReset: true
-      }
+        streamsReset: true,
+      },
     });
   } catch (error) {
     console.error('Reset error:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to reset streams',
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: error instanceof Error ? error.message : 'Unknown error',
     });
   }
 });
@@ -303,7 +304,7 @@ router.post('/simulate/chat', (req, res) => {
     if (!streamId || !message) {
       return res.status(400).json({
         success: false,
-        message: 'streamId and message are required'
+        message: 'streamId and message are required',
       });
     }
 
@@ -317,7 +318,7 @@ router.post('/simulate/chat', (req, res) => {
       username,
       content: message,
       timestamp: new Date().toISOString(),
-      role: 'viewer'
+      role: 'viewer',
     };
 
     io.to(`stream:${streamId}`).emit('chat:message', chatMessage);
@@ -326,14 +327,14 @@ router.post('/simulate/chat', (req, res) => {
     res.json({
       success: true,
       message: 'Test message sent',
-      data: chatMessage
+      data: chatMessage,
     });
   } catch (error) {
     console.error('Test chat error:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to send test message',
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: error instanceof Error ? error.message : 'Unknown error',
     });
   }
 });

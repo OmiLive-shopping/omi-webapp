@@ -4,8 +4,8 @@ import { PrismaService } from '../../../config/prisma.config.js';
 import { authenticate } from '../../../middleware/auth.middleware.js';
 import { requireBrand, requireBrandOwnership } from '../../../middleware/role.middleware.js';
 import { validateRequest } from '../../../middleware/validation.middleware.js';
-import { ProductController } from '../controllers/product.controller.js';
 import { BrandProductController } from '../controllers/brand-product.controller.js';
+import { ProductController } from '../controllers/product.controller.js';
 import { ProductRepository } from '../repositories/product.repository.js';
 import {
   createBrandProductSchema,

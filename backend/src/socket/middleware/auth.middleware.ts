@@ -8,11 +8,11 @@ export const socketAuthMiddleware = async (socket: SocketWithAuth, next: (err?: 
   try {
     // Try to get cookies from handshake headers (sent with withCredentials: true)
     const cookies = socket.handshake.headers.cookie || '';
-    
+
     if (process.env.SOCKET_DEBUG === 'true') {
       console.log('Socket auth middleware - cookies available:', cookies ? 'yes' : 'no');
     }
-    
+
     if (!cookies) {
       // No cookies - allow anonymous connection
       socket.userId = undefined;
@@ -34,9 +34,12 @@ export const socketAuthMiddleware = async (socket: SocketWithAuth, next: (err?: 
     const session = await auth.api.getSession({
       headers: headers as any,
     });
-    
+
     if (process.env.SOCKET_DEBUG === 'true') {
-      console.log('Socket auth: Better Auth session result:', session ? 'Valid session' : 'Invalid session');
+      console.log(
+        'Socket auth: Better Auth session result:',
+        session ? 'Valid session' : 'Invalid session',
+      );
     }
 
     if (!session || !session.user) {
@@ -90,7 +93,7 @@ export const socketAuthMiddleware = async (socket: SocketWithAuth, next: (err?: 
     } else {
       socket.role = 'viewer';
     }
-    
+
     if (process.env.SOCKET_DEBUG === 'true') {
       console.log(`Socket auth: Authenticated as ${socket.username} (${socket.role})`);
     }

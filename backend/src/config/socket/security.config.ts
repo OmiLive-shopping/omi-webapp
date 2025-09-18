@@ -1,6 +1,6 @@
-import { z } from 'zod';
-import { Socket } from 'socket.io';
 import { RateLimiterMemory } from 'rate-limiter-flexible';
+import { Socket } from 'socket.io';
+import { z } from 'zod';
 
 /**
  * WebSocket Security Configuration
@@ -15,34 +15,37 @@ export const securityConfigSchema = z.object({
     allowedMethods: z.array(z.string()).default(['GET', 'POST']),
     allowedHeaders: z.array(z.string()).default(['Authorization', 'Content-Type']),
   }),
-  
+
   rateLimiting: z.object({
     // Connection rate limiting per IP
     connectionLimit: z.object({
       maxConnections: z.number().min(1).default(50),
       windowMs: z.number().min(1000).default(60000), // 1 minute
     }),
-    
+
     // Message rate limiting per user
     messageLimit: z.object({
       maxMessages: z.number().min(1).default(100),
       windowMs: z.number().min(1000).default(60000), // 1 minute
     }),
-    
+
     // Event rate limiting per connection
     eventLimit: z.object({
       maxEvents: z.number().min(1).default(1000),
       windowMs: z.number().min(1000).default(60000), // 1 minute
     }),
   }),
-  
+
   validation: z.object({
-    maxPayloadSize: z.number().min(1).default(1024 * 1024), // 1MB
+    maxPayloadSize: z
+      .number()
+      .min(1)
+      .default(1024 * 1024), // 1MB
     maxMessageLength: z.number().min(1).default(10000), // 10KB text messages
     allowedEventTypes: z.array(z.string()).optional(),
     requireAuthentication: z.array(z.string()).default([]), // Events requiring auth
   }),
-  
+
   security: z.object({
     allowAnonymous: z.boolean().default(true),
     maxAnonymousConnections: z.number().min(0).default(1000),
@@ -50,7 +53,7 @@ export const securityConfigSchema = z.object({
     blockSuspiciousIps: z.boolean().default(true),
     enableAuditLogging: z.boolean().default(true),
   }),
-  
+
   monitoring: z.object({
     enableMetrics: z.boolean().default(true),
     enableHealthChecks: z.boolean().default(true),
@@ -67,12 +70,17 @@ export type SecurityConfig = z.infer<typeof securityConfigSchema>;
 // Default security configuration
 export const defaultSecurityConfig: SecurityConfig = {
   cors: {
-    allowedOrigins: ['http://localhost:8888', 'http://localhost:5173', 'http://localhost:5174', 'http://localhost:3000'],
+    allowedOrigins: [
+      'http://localhost:8888',
+      'http://localhost:5173',
+      'http://localhost:5174',
+      'http://localhost:3000',
+    ],
     allowCredentials: true,
     allowedMethods: ['GET', 'POST'],
     allowedHeaders: ['Authorization', 'Content-Type'],
   },
-  
+
   rateLimiting: {
     connectionLimit: {
       maxConnections: 50,
@@ -87,7 +95,7 @@ export const defaultSecurityConfig: SecurityConfig = {
       windowMs: 60000,
     },
   },
-  
+
   validation: {
     maxPayloadSize: 1024 * 1024, // 1MB
     maxMessageLength: 10000, // 10KB
@@ -103,7 +111,7 @@ export const defaultSecurityConfig: SecurityConfig = {
       'chat:slowmode',
     ],
   },
-  
+
   security: {
     allowAnonymous: true,
     maxAnonymousConnections: 1000,
@@ -111,7 +119,7 @@ export const defaultSecurityConfig: SecurityConfig = {
     blockSuspiciousIps: true,
     enableAuditLogging: true,
   },
-  
+
   monitoring: {
     enableMetrics: true,
     enableHealthChecks: true,
@@ -201,16 +209,16 @@ export class OriginValidator {
     // Allow connections with no origin (server-to-server, scripts, etc)
     if (!origin) return true;
     if (this.allowWildcard) return true;
-    
+
     // Check exact match
     if (this.allowedOrigins.has(origin)) return true;
-    
+
     // Check for localhost patterns in development
     if (process.env.NODE_ENV === 'development') {
       const localhostPattern = /^https?:\/\/localhost(:\d+)?$/;
       if (localhostPattern.test(origin)) return true;
     }
-    
+
     return false;
   }
 
@@ -234,28 +242,37 @@ export class IPReputationManager {
   private connections = new Map<string, ConnectionInfo>();
   private blockedIPs = new Set<string>();
   private rateLimiters = new Map<string, RateLimiterMemory>();
-  
+
   constructor(private config: SecurityConfig) {
     // Initialize rate limiters
-    this.rateLimiters.set('connection', new RateLimiterMemory({
-      points: config.rateLimiting.connectionLimit.maxConnections,
-      duration: config.rateLimiting.connectionLimit.windowMs / 1000,
-    }));
-    
-    this.rateLimiters.set('message', new RateLimiterMemory({
-      points: config.rateLimiting.messageLimit.maxMessages,
-      duration: config.rateLimiting.messageLimit.windowMs / 1000,
-    }));
-    
-    this.rateLimiters.set('event', new RateLimiterMemory({
-      points: config.rateLimiting.eventLimit.maxEvents,
-      duration: config.rateLimiting.eventLimit.windowMs / 1000,
-    }));
+    this.rateLimiters.set(
+      'connection',
+      new RateLimiterMemory({
+        points: config.rateLimiting.connectionLimit.maxConnections,
+        duration: config.rateLimiting.connectionLimit.windowMs / 1000,
+      }),
+    );
+
+    this.rateLimiters.set(
+      'message',
+      new RateLimiterMemory({
+        points: config.rateLimiting.messageLimit.maxMessages,
+        duration: config.rateLimiting.messageLimit.windowMs / 1000,
+      }),
+    );
+
+    this.rateLimiters.set(
+      'event',
+      new RateLimiterMemory({
+        points: config.rateLimiting.eventLimit.maxEvents,
+        duration: config.rateLimiting.eventLimit.windowMs / 1000,
+      }),
+    );
   }
 
   async checkConnectionLimit(ip: string): Promise<boolean> {
     if (this.blockedIPs.has(ip)) return false;
-    
+
     try {
       await this.rateLimiters.get('connection')!.consume(ip);
       return true;
@@ -285,7 +302,7 @@ export class IPReputationManager {
   trackConnection(ip: string, userAgent?: string): void {
     const existing = this.connections.get(ip);
     const now = new Date();
-    
+
     if (existing) {
       existing.connectionCount++;
       existing.lastConnection = now;
@@ -306,7 +323,7 @@ export class IPReputationManager {
     const connection = this.connections.get(ip);
     if (connection) {
       connection.suspiciousActivity++;
-      
+
       if (connection.suspiciousActivity >= this.config.security.suspiciousActivityThreshold) {
         this.blockIP(ip, 'Suspicious activity threshold exceeded');
       }
@@ -341,9 +358,11 @@ export class IPReputationManager {
   getMetrics(): SecurityMetrics {
     const total = this.connections.size;
     const blocked = Array.from(this.connections.values()).filter(c => c.blocked).length;
-    const suspicious = Array.from(this.connections.values())
-      .reduce((sum, c) => sum + c.suspiciousActivity, 0);
-    
+    const suspicious = Array.from(this.connections.values()).reduce(
+      (sum, c) => sum + c.suspiciousActivity,
+      0,
+    );
+
     return {
       totalConnections: total,
       activeConnections: total - blocked,
@@ -360,7 +379,7 @@ export class IPReputationManager {
   cleanup(): void {
     // Remove old connection records (older than 24 hours)
     const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-    
+
     for (const [ip, connection] of this.connections.entries()) {
       if (connection.lastConnection < oneDayAgo) {
         this.connections.delete(ip);
@@ -416,7 +435,7 @@ export function getClientIP(socket: Socket): string {
   if (!socket?.handshake) {
     return 'unknown';
   }
-  
+
   // Check for forwarded IP (behind proxy/load balancer)
   const forwarded = socket.handshake.headers?.['x-forwarded-for'];
   if (forwarded) {
@@ -424,13 +443,13 @@ export function getClientIP(socket: Socket): string {
     const ips = Array.isArray(forwarded) ? forwarded[0] : forwarded;
     return ips.split(',')[0].trim();
   }
-  
+
   // Check for real IP (CloudFlare, etc.)
   const realIP = socket.handshake.headers?.['x-real-ip'];
   if (realIP && typeof realIP === 'string') {
     return realIP;
   }
-  
+
   // Fallback to socket address
   return socket.handshake.address || 'unknown';
 }

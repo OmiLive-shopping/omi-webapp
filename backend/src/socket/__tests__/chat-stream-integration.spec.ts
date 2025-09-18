@@ -1,7 +1,8 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
 import { ChatStreamIntegrationService } from '../services/chat-stream-integration.service.js';
-import { SystemMessageGenerator } from '../utils/system-messages.js';
 import { StreamCommandParser } from '../utils/stream-commands.js';
+import { SystemMessageGenerator } from '../utils/system-messages.js';
 
 describe('Chat Stream Integration', () => {
   let chatIntegration: ChatStreamIntegrationService;
@@ -14,7 +15,7 @@ describe('Chat Stream Integration', () => {
     it('should generate stream started message', () => {
       const message = SystemMessageGenerator.generateMessage('stream:started', {
         streamId: 'test-stream',
-        username: 'TestStreamer'
+        username: 'TestStreamer',
       });
 
       expect(message.type).toBe('stream:started');
@@ -26,7 +27,7 @@ describe('Chat Stream Integration', () => {
       const message = SystemMessageGenerator.generateMessage('stream:viewer:joined', {
         streamId: 'test-stream',
         username: 'TestViewer',
-        viewerCount: 5
+        viewerCount: 5,
       });
 
       expect(message.type).toBe('stream:viewer:joined');
@@ -41,7 +42,7 @@ describe('Chat Stream Integration', () => {
         targetUsername: 'BadUser',
         moderatorUsername: 'ModUser',
         duration: 300,
-        reason: 'Spam'
+        reason: 'Spam',
       });
 
       expect(message.type).toBe('chat:moderation');
@@ -54,7 +55,7 @@ describe('Chat Stream Integration', () => {
     it('should generate product featured message', () => {
       const message = SystemMessageGenerator.generateMessage('stream:product:featured', {
         streamId: 'test-stream',
-        productName: 'Awesome Product'
+        productName: 'Awesome Product',
       });
 
       expect(message.type).toBe('stream:product:featured');
@@ -86,21 +87,21 @@ describe('Chat Stream Integration', () => {
 
     it('should parse commands correctly', () => {
       const parsed = StreamCommandParser.parseCommand('/feature product123');
-      
+
       expect(parsed).toEqual({
         command: 'feature',
         args: ['product123'],
-        raw: 'feature product123'
+        raw: 'feature product123',
       });
     });
 
     it('should parse commands with multiple arguments', () => {
       const parsed = StreamCommandParser.parseCommand('/quality 1080p test');
-      
+
       expect(parsed).toEqual({
         command: 'quality',
         args: ['1080p', 'test'],
-        raw: 'quality 1080p test'
+        raw: 'quality 1080p test',
       });
     });
 
@@ -129,7 +130,7 @@ describe('Chat Stream Integration', () => {
     it('should validate permissions correctly', () => {
       const helpCommand = StreamCommandParser.findCommand('help');
       const featureCommand = StreamCommandParser.findCommand('feature');
-      
+
       expect(helpCommand).toBeDefined();
       expect(featureCommand).toBeDefined();
 
@@ -138,15 +139,27 @@ describe('Chat Stream Integration', () => {
       expect(helpCheck.canExecute).toBe(true);
 
       // Feature command - requires moderator
-      const featureCheckViewer = StreamCommandParser.canExecuteCommand(featureCommand!, 'viewer', true);
+      const featureCheckViewer = StreamCommandParser.canExecuteCommand(
+        featureCommand!,
+        'viewer',
+        true,
+      );
       expect(featureCheckViewer.canExecute).toBe(false);
       expect(featureCheckViewer.reason).toContain('moderator');
 
-      const featureCheckMod = StreamCommandParser.canExecuteCommand(featureCommand!, 'moderator', true);
+      const featureCheckMod = StreamCommandParser.canExecuteCommand(
+        featureCommand!,
+        'moderator',
+        true,
+      );
       expect(featureCheckMod.canExecute).toBe(true);
 
       // Authentication required
-      const featureCheckNoAuth = StreamCommandParser.canExecuteCommand(featureCommand!, 'moderator', false);
+      const featureCheckNoAuth = StreamCommandParser.canExecuteCommand(
+        featureCommand!,
+        'moderator',
+        false,
+      );
       expect(featureCheckNoAuth.canExecute).toBe(false);
       expect(featureCheckNoAuth.reason).toContain('Authentication required');
     });
@@ -163,13 +176,13 @@ describe('Chat Stream Integration', () => {
       const invalidCheck = StreamCommandParser.validateParameters(featureCommand!, []);
       expect(validCheck.isValid).toBe(true); // feature command expects 1 arg but we passed 0, should be invalid
       // Let's check a command that actually requires parameters
-      
+
       const volumeCommand = StreamCommandParser.findCommand('volume');
       expect(volumeCommand).toBeDefined();
-      
+
       const volumeValid = StreamCommandParser.validateParameters(volumeCommand!, ['50']);
       expect(volumeValid.isValid).toBe(true);
-      
+
       const volumeInvalid = StreamCommandParser.validateParameters(volumeCommand!, []);
       expect(volumeInvalid.isValid).toBe(false);
       expect(volumeInvalid.errors).toBeDefined();
@@ -184,7 +197,9 @@ describe('Chat Stream Integration', () => {
       expect(validNumber.isValid).toBe(true);
 
       // Invalid number
-      const invalidNumber = StreamCommandParser.validateParameters(volumeCommand!, ['not-a-number']);
+      const invalidNumber = StreamCommandParser.validateParameters(volumeCommand!, [
+        'not-a-number',
+      ]);
       expect(invalidNumber.isValid).toBe(false);
       expect(invalidNumber.errors?.[0]).toContain('must be a number');
     });
@@ -204,7 +219,7 @@ describe('Chat Stream Integration', () => {
       expect(commands).toContain('Available commands');
       expect(commands).toContain('/help');
       expect(commands).toContain('/stats');
-      
+
       // Should not contain moderator commands
       expect(commands).not.toContain('/feature');
     });
@@ -228,72 +243,42 @@ describe('Chat Stream Integration', () => {
 
     it('should generate custom system message', async () => {
       const spy = vi.spyOn(chatIntegration, 'sendCustomSystemMessage');
-      
-      await chatIntegration.sendCustomSystemMessage(
-        'test-stream',
-        'Test message',
-        { priority: 'high' }
-      );
 
-      expect(spy).toHaveBeenCalledWith(
-        'test-stream',
-        'Test message',
-        { priority: 'high' }
-      );
+      await chatIntegration.sendCustomSystemMessage('test-stream', 'Test message', {
+        priority: 'high',
+      });
+
+      expect(spy).toHaveBeenCalledWith('test-stream', 'Test message', { priority: 'high' });
     });
 
     it('should generate moderation system message', async () => {
       const spy = vi.spyOn(chatIntegration, 'sendModerationMessage');
-      
-      await chatIntegration.sendModerationMessage(
-        'test-stream',
-        'timeout',
-        'BadUser',
-        'ModUser',
-        { reason: 'Spam', duration: 300 }
-      );
 
-      expect(spy).toHaveBeenCalledWith(
-        'test-stream',
-        'timeout',
-        'BadUser',
-        'ModUser',
-        { reason: 'Spam', duration: 300 }
-      );
+      await chatIntegration.sendModerationMessage('test-stream', 'timeout', 'BadUser', 'ModUser', {
+        reason: 'Spam',
+        duration: 300,
+      });
+
+      expect(spy).toHaveBeenCalledWith('test-stream', 'timeout', 'BadUser', 'ModUser', {
+        reason: 'Spam',
+        duration: 300,
+      });
     });
 
     it('should generate slow mode system message', async () => {
       const spy = vi.spyOn(chatIntegration, 'sendSlowModeMessage');
-      
-      await chatIntegration.sendSlowModeMessage(
-        'test-stream',
-        true,
-        30,
-        'ModUser'
-      );
 
-      expect(spy).toHaveBeenCalledWith(
-        'test-stream',
-        true,
-        30,
-        'ModUser'
-      );
+      await chatIntegration.sendSlowModeMessage('test-stream', true, 30, 'ModUser');
+
+      expect(spy).toHaveBeenCalledWith('test-stream', true, 30, 'ModUser');
     });
 
     it('should generate VDO connection system message', async () => {
       const spy = vi.spyOn(chatIntegration, 'sendVdoConnectionMessage');
-      
-      await chatIntegration.sendVdoConnectionMessage(
-        'test-stream',
-        'connected',
-        'TestStreamer'
-      );
 
-      expect(spy).toHaveBeenCalledWith(
-        'test-stream',
-        'connected',
-        'TestStreamer'
-      );
+      await chatIntegration.sendVdoConnectionMessage('test-stream', 'connected', 'TestStreamer');
+
+      expect(spy).toHaveBeenCalledWith('test-stream', 'connected', 'TestStreamer');
     });
   });
 
@@ -303,25 +288,31 @@ describe('Chat Stream Integration', () => {
       const streamStartedEvent = {
         streamId: 'test-stream',
         user: { username: 'TestStreamer' },
-        metadata: {}
+        metadata: {},
       };
 
       const viewerJoinedEvent = {
         streamId: 'test-stream',
         viewer: { username: 'TestViewer', id: 'viewer1' },
-        viewerCount: 1
+        viewerCount: 1,
       };
 
       const streamEndedEvent = {
         streamId: 'test-stream',
         user: { username: 'TestStreamer' },
-        metadata: { duration: 3600 }
+        metadata: { duration: 3600 },
       };
 
       // These would normally be called by event handlers
       // For testing, we can verify the message generation
-      const startMessage = SystemMessageGenerator.generateMessage('stream:started', streamStartedEvent);
-      const joinMessage = SystemMessageGenerator.generateMessage('stream:viewer:joined', viewerJoinedEvent);
+      const startMessage = SystemMessageGenerator.generateMessage(
+        'stream:started',
+        streamStartedEvent,
+      );
+      const joinMessage = SystemMessageGenerator.generateMessage(
+        'stream:viewer:joined',
+        viewerJoinedEvent,
+      );
       const endMessage = SystemMessageGenerator.generateMessage('stream:ended', streamEndedEvent);
 
       expect(startMessage.content).toContain('Stream has started');
@@ -337,18 +328,24 @@ describe('Chat Stream Integration', () => {
         targetUsername: 'BadUser',
         moderatorUsername: 'ModUser',
         duration: 300,
-        reason: 'Spam'
+        reason: 'Spam',
       };
 
       const slowModeAction = {
         streamId: 'test-stream',
         enabled: true,
         delay: 30,
-        moderatorUsername: 'ModUser'
+        moderatorUsername: 'ModUser',
       };
 
-      const timeoutMessage = SystemMessageGenerator.generateMessage('chat:moderation', timeoutAction);
-      const slowModeMessage = SystemMessageGenerator.generateMessage('chat:slowmode', slowModeAction);
+      const timeoutMessage = SystemMessageGenerator.generateMessage(
+        'chat:moderation',
+        timeoutAction,
+      );
+      const slowModeMessage = SystemMessageGenerator.generateMessage(
+        'chat:slowmode',
+        slowModeAction,
+      );
 
       expect(timeoutMessage.content).toContain('BadUser was timed out for 300 seconds');
       expect(slowModeMessage.content).toContain('Slow mode enabled (30s)');

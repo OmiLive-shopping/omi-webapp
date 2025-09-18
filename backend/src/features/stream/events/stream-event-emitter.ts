@@ -4,7 +4,7 @@ import { z } from 'zod';
 /**
  * Stream lifecycle event types
  */
-export type StreamEventType = 
+export type StreamEventType =
   | 'stream:created'
   | 'stream:updated'
   | 'stream:started'
@@ -265,7 +265,7 @@ export interface StreamErrorEvent extends BaseStreamEvent {
 /**
  * Union type for all stream events
  */
-export type StreamEvent = 
+export type StreamEvent =
   | StreamCreatedEvent
   | StreamUpdatedEvent
   | StreamStartedEvent
@@ -285,7 +285,9 @@ export type StreamEvent =
 /**
  * Event listener function type
  */
-export type StreamEventListener<T extends StreamEvent = StreamEvent> = (event: T) => void | Promise<void>;
+export type StreamEventListener<T extends StreamEvent = StreamEvent> = (
+  event: T,
+) => void | Promise<void>;
 
 /**
  * Event validation schemas
@@ -339,11 +341,13 @@ const viewerJoinedSchema = baseEventSchema.extend({
     socketId: z.string(),
   }),
   currentViewerCount: z.number().min(0),
-  connectionInfo: z.object({
-    userAgent: z.string().optional(),
-    ipAddress: z.string().optional(),
-    country: z.string().optional(),
-  }).optional(),
+  connectionInfo: z
+    .object({
+      userAgent: z.string().optional(),
+      ipAddress: z.string().optional(),
+      country: z.string().optional(),
+    })
+    .optional(),
 });
 
 /**
@@ -390,7 +394,7 @@ export class StreamEventEmitter extends EventEmitter {
       return result;
     } catch (error) {
       console.error('Failed to emit stream event:', error);
-      
+
       // Emit error event if the original event wasn't an error
       if (event.type !== 'stream:error') {
         const errorEvent: StreamErrorEvent = {
@@ -416,7 +420,7 @@ export class StreamEventEmitter extends EventEmitter {
    */
   public onStreamEvent<T extends StreamEvent>(
     eventType: T['type'] | '*',
-    listener: StreamEventListener<T>
+    listener: StreamEventListener<T>,
   ): this {
     return this.on(eventType, listener);
   }
@@ -426,7 +430,7 @@ export class StreamEventEmitter extends EventEmitter {
    */
   public onceStreamEvent<T extends StreamEvent>(
     eventType: T['type'] | '*',
-    listener: StreamEventListener<T>
+    listener: StreamEventListener<T>,
   ): this {
     return this.once(eventType, listener);
   }
@@ -436,7 +440,7 @@ export class StreamEventEmitter extends EventEmitter {
    */
   public offStreamEvent<T extends StreamEvent>(
     eventType: T['type'] | '*',
-    listener: StreamEventListener<T>
+    listener: StreamEventListener<T>,
   ): this {
     return this.off(eventType, listener);
   }
@@ -453,7 +457,7 @@ export class StreamEventEmitter extends EventEmitter {
    */
   public getRecentEvents(limit: number = 50): StreamEvent[] {
     const allEvents: StreamEvent[] = [];
-    
+
     for (const events of this.eventHistory.values()) {
       allEvents.push(...events);
     }
@@ -475,7 +479,7 @@ export class StreamEventEmitter extends EventEmitter {
    */
   public getEventStats(): Record<StreamEventType, number> {
     const stats: Partial<Record<StreamEventType, number>> = {};
-    
+
     for (const events of this.eventHistory.values()) {
       for (const event of events) {
         stats[event.type] = (stats[event.type] || 0) + 1;
@@ -519,7 +523,9 @@ export class StreamEventEmitter extends EventEmitter {
           baseEventSchema.parse(event);
       }
     } catch (validationError) {
-      throw new Error(`Event validation failed: ${validationError instanceof Error ? validationError.message : String(validationError)}`);
+      throw new Error(
+        `Event validation failed: ${validationError instanceof Error ? validationError.message : String(validationError)}`,
+      );
     }
   }
 
@@ -562,7 +568,11 @@ export class StreamEventEmitter extends EventEmitter {
     });
   }
 
-  public async emitStreamEnded(streamId: string, streamData: Omit<StreamEndedEvent['stream'], 'id'>, reason?: StreamEndedEvent['reason']): Promise<boolean> {
+  public async emitStreamEnded(
+    streamId: string,
+    streamData: Omit<StreamEndedEvent['stream'], 'id'>,
+    reason?: StreamEndedEvent['reason'],
+  ): Promise<boolean> {
     return this.emitStreamEvent({
       type: 'stream:ended',
       streamId,
@@ -572,7 +582,11 @@ export class StreamEventEmitter extends EventEmitter {
     });
   }
 
-  public async emitViewerJoined(streamId: string, viewer: ViewerJoinedEvent['viewer'], currentViewerCount: number): Promise<boolean> {
+  public async emitViewerJoined(
+    streamId: string,
+    viewer: ViewerJoinedEvent['viewer'],
+    currentViewerCount: number,
+  ): Promise<boolean> {
     return this.emitStreamEvent({
       type: 'stream:viewer:joined',
       streamId,
@@ -582,7 +596,12 @@ export class StreamEventEmitter extends EventEmitter {
     });
   }
 
-  public async emitViewerLeft(streamId: string, viewer: ViewerLeftEvent['viewer'], currentViewerCount: number, reason?: ViewerLeftEvent['reason']): Promise<boolean> {
+  public async emitViewerLeft(
+    streamId: string,
+    viewer: ViewerLeftEvent['viewer'],
+    currentViewerCount: number,
+    reason?: ViewerLeftEvent['reason'],
+  ): Promise<boolean> {
     return this.emitStreamEvent({
       type: 'stream:viewer:left',
       streamId,
@@ -593,7 +612,11 @@ export class StreamEventEmitter extends EventEmitter {
     });
   }
 
-  public async emitStatsUpdated(streamId: string, stats: StatsUpdatedEvent['stats'], source: StatsUpdatedEvent['source'] = 'room_manager'): Promise<boolean> {
+  public async emitStatsUpdated(
+    streamId: string,
+    stats: StatsUpdatedEvent['stats'],
+    source: StatsUpdatedEvent['source'] = 'room_manager',
+  ): Promise<boolean> {
     return this.emitStreamEvent({
       type: 'stream:stats:updated',
       streamId,
@@ -603,7 +626,11 @@ export class StreamEventEmitter extends EventEmitter {
     });
   }
 
-  public async emitQualityChanged(streamId: string, quality: QualityChangedEvent['quality'], automaticAdjustment = false): Promise<boolean> {
+  public async emitQualityChanged(
+    streamId: string,
+    quality: QualityChangedEvent['quality'],
+    automaticAdjustment = false,
+  ): Promise<boolean> {
     return this.emitStreamEvent({
       type: 'stream:quality:changed',
       streamId,
@@ -613,7 +640,11 @@ export class StreamEventEmitter extends EventEmitter {
     });
   }
 
-  public async emitStreamError(streamId: string, error: StreamErrorEvent['error'], recovery?: StreamErrorEvent['recovery']): Promise<boolean> {
+  public async emitStreamError(
+    streamId: string,
+    error: StreamErrorEvent['error'],
+    recovery?: StreamErrorEvent['recovery'],
+  ): Promise<boolean> {
     return this.emitStreamEvent({
       type: 'stream:error',
       streamId,

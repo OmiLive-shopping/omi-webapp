@@ -156,9 +156,9 @@ export class StreamRepository {
     // First check if the stream already has a vdoRoomId
     const existingStream = await this.prisma.stream.findUnique({
       where: { id: streamId },
-      select: { vdoRoomId: true }
+      select: { vdoRoomId: true },
     });
-    
+
     // Only generate a new room ID if one doesn't exist
     let vdoRoomId = existingStream?.vdoRoomId;
     if (!vdoRoomId) {
@@ -168,7 +168,7 @@ export class StreamRepository {
       const timestamp = Date.now().toString(36); // Base36 timestamp
       vdoRoomId = `stream${sanitizedId}${timestamp}`;
     }
-    
+
     return this.prisma.stream.update({
       where: { id: streamId },
       data: {

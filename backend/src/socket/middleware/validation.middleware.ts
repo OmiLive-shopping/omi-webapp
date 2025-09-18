@@ -3,12 +3,13 @@
  * Provides centralized validation for all incoming socket events
  */
 
-import { z } from 'zod';
 import { Socket } from 'socket.io';
+import { z } from 'zod';
+
 import { SocketWithAuth } from '../../config/socket/socket.config.js';
 
 // Type for validation result
-type ValidationResult<T> = 
+type ValidationResult<T> =
   | { success: true; data: T }
   | { success: false; error: string; details?: z.ZodIssue[] };
 
@@ -34,7 +35,7 @@ export function createValidatedHandler<T>(
     try {
       // Validate the incoming data
       const validated = schema.parse(rawData);
-      
+
       // Call the actual handler with validated data
       await handler(socket, validated);
     } catch (error) {
@@ -76,7 +77,7 @@ export function createValidatedHandler<T>(
       } else {
         // Handle non-validation errors
         console.error(`Handler error for socket ${socket.id}:`, error);
-        
+
         if (emitError) {
           socket.emit('error', {
             message: 'An error occurred processing your request',
@@ -95,7 +96,7 @@ export function createValidatedHandler<T>(
 export function createBatchValidator<T extends Record<string, z.ZodSchema>>(
   schemas: T,
 ): (data: Record<keyof T, unknown>) => ValidationResult<{ [K in keyof T]: z.infer<T[K]> }> {
-  return (data) => {
+  return data => {
     const results: any = {};
     const errors: z.ZodIssue[] = [];
 
@@ -104,10 +105,12 @@ export function createBatchValidator<T extends Record<string, z.ZodSchema>>(
         results[key] = schema.parse(data[key]);
       } catch (error) {
         if (error instanceof z.ZodError) {
-          errors.push(...error.errors.map(err => ({
-            ...err,
-            path: [key, ...err.path],
-          })));
+          errors.push(
+            ...error.errors.map(err => ({
+              ...err,
+              path: [key, ...err.path],
+            })),
+          );
         }
       }
     }
@@ -149,7 +152,7 @@ export function createRateLimitedHandler<T>(
       : socket.userId || socket.id;
 
     const record = requestCounts.get(identifier);
-    
+
     if (record && record.resetTime > now) {
       if (record.count >= rateLimitOptions.maxRequests) {
         socket.emit('rate-limit', {
@@ -167,7 +170,8 @@ export function createRateLimitedHandler<T>(
     }
 
     // Clean up old records periodically
-    if (Math.random() < 0.01) { // 1% chance to clean up
+    if (Math.random() < 0.01) {
+      // 1% chance to clean up
       const cutoff = now - rateLimitOptions.windowMs;
       for (const [key, value] of requestCounts.entries()) {
         if (value.resetTime < cutoff) {
@@ -262,7 +266,7 @@ export function createLoggedHandler<T>(
     const startTime = Date.now();
     try {
       await handler(socket, data);
-      
+
       console[logLevel]('Socket event completed:', {
         ...logData,
         duration: Date.now() - startTime,

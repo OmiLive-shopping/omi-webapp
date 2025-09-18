@@ -16,6 +16,8 @@ import {
   ProductsPage,
   ProductDetailPage,
   ProfilePage,
+  PublicProfilePage,
+  BrandProfilePage,
   WishlistPage,
   SchedulePage,
   AuthPage,
@@ -63,6 +65,8 @@ function App() {
               <Route path="products" element={<ProductsPage />} />
               <Route path="product/:id" element={<ProductDetailPage />} />
               <Route path="stream/:id" element={<StreamPage />} />
+              <Route path="profile/:username" element={<PublicProfilePage />} />
+              <Route path="brand/:slug" element={<BrandProfilePage />} />
               <Route path="schedule" element={<SchedulePage />} />
               <Route path="chat-input-demo" element={<ChatInputDemo />} />
               <Route path="viewer-count-demo" element={<ViewerCountDemo />} />

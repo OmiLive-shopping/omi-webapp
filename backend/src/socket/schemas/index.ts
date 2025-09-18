@@ -3,8 +3,8 @@
  * All socket event validation schemas in one place for consistency
  */
 
-import { z } from 'zod';
 import DOMPurify from 'isomorphic-dompurify';
+import { z } from 'zod';
 
 // Helper function to sanitize HTML/text content
 const sanitizeString = (str: string): string => {
@@ -17,8 +17,8 @@ const sanitizedString = (maxLength = 500) =>
   z
     .string()
     .max(maxLength)
-    .transform((val) => sanitizeString(val))
-    .refine((val) => val.length > 0, 'String cannot be empty after sanitization');
+    .transform(val => sanitizeString(val))
+    .refine(val => val.length > 0, 'String cannot be empty after sanitization');
 
 const uuid = () => z.string().uuid();
 const streamId = () => uuid();

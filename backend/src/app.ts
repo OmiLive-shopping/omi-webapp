@@ -7,8 +7,9 @@ import { corsMiddleware } from './config/cors.config.js';
 import { env } from './config/env-config.js';
 import analyticsRoutes from './features/analytics/routes/analytics.routes.js';
 import apiKeyRoutes from './features/api-key/routes/api-key.routes.js';
-import productRoutes from './features/product/routes/product.routes.js';
 import brandProductRoutes from './features/product/routes/brand-product.routes.js';
+import productRoutes from './features/product/routes/product.routes.js';
+import profileRoutes from './features/profile/routes/profile.routes.js';
 import streamRoutes from './features/stream/routes/stream.routes.js';
 import streamTestRoutes from './features/stream/routes/stream-test.routes.js';
 import userRoutes from './features/user/routes/user.routes.js';
@@ -99,6 +100,7 @@ app.get('/', hostWhitelist(allowedURLs), (_req: Request, res: Response): void =>
 
 // API Routes
 app.use('/v1/users', userRoutes);
+app.use('/v1/profiles', profileRoutes); // Public profile endpoints
 app.use('/v1/products', productRoutes);
 app.use('/v1/brands/products', brandProductRoutes); // Brand-specific product management
 app.use('/v1/streams/test', streamTestRoutes); // Test/simulation endpoints (before main stream routes)

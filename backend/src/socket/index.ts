@@ -1,15 +1,15 @@
 import { Server as HTTPServer } from 'http';
 import { container } from 'tsyringe';
-import { logger } from '../utils/logger.js';
 
 import { SocketServer, SocketWithAuth } from '../config/socket/socket.config.js';
+import RealtimeAnalyticsService from '../features/analytics/services/realtime-analytics.service.js';
+import { StreamSocketIntegration } from '../features/stream/events/socket-integration.js';
+import { logger } from '../utils/logger.js';
 import { ChatHandler } from './handlers/chat.handler.js';
 import { StreamHandler } from './handlers/stream.handler.js';
 import { vdoAnalyticsHandler } from './handlers/vdo-analytics.handler.js';
 import { RoomManager } from './managers/room.manager.js';
 import { socketAuthMiddleware } from './middleware/auth.middleware.js';
-import { StreamSocketIntegration } from '../features/stream/events/socket-integration.js';
-import RealtimeAnalyticsService from '../features/analytics/services/realtime-analytics.service.js';
 // Security manager removed - using direct handlers only
 
 export async function initializeSocketServer(httpServer: HTTPServer): Promise<void> {
@@ -17,7 +17,7 @@ export async function initializeSocketServer(httpServer: HTTPServer): Promise<vo
   const socketServer = SocketServer.getInstance(httpServer);
   const io = socketServer.getIO();
   const roomManager = RoomManager.getInstance();
-  
+
   console.log(`[SOCKET] Socket.IO server listening on HTTP server`);
 
   // Security manager removed - direct handlers with Zod validation are sufficient
@@ -25,13 +25,17 @@ export async function initializeSocketServer(httpServer: HTTPServer): Promise<vo
   // Initialize stream event socket integration with the HTTP server
   const streamSocketIntegration = StreamSocketIntegration.getInstance();
   streamSocketIntegration.initialize();
-  
+
   // Initialize analytics socket integration
-  const { analyticsSocketIntegration } = await import('../features/analytics/events/analytics-socket-integration.js');
+  const { analyticsSocketIntegration } = await import(
+    '../features/analytics/events/analytics-socket-integration.js'
+  );
   analyticsSocketIntegration.initialize();
 
   // Initialize chat-stream integration
-  const { ChatStreamIntegrationService } = await import('./services/chat-stream-integration.service.js');
+  const { ChatStreamIntegrationService } = await import(
+    './services/chat-stream-integration.service.js'
+  );
   const chatIntegration = ChatStreamIntegrationService.getInstance();
   await chatIntegration.initialize();
 
@@ -40,7 +44,7 @@ export async function initializeSocketServer(httpServer: HTTPServer): Promise<vo
   const streamHandler = new StreamHandler();
 
   // Security middleware removed - authentication middleware is sufficient
-  
+
   // Apply authentication middleware
   io.use(socketAuthMiddleware);
 
@@ -54,7 +58,11 @@ export async function initializeSocketServer(httpServer: HTTPServer): Promise<vo
         const hasObjectPayload = !!payload && typeof payload === 'object';
         const hasStreamIdKey = hasObjectPayload && 'streamId' in (payload as any);
         const streamIdVal = hasStreamIdKey ? (payload as any).streamId : undefined;
-        const isUuid = typeof streamIdVal === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(streamIdVal);
+        const isUuid =
+          typeof streamIdVal === 'string' &&
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+            streamIdVal,
+          );
 
         if (!hasObjectPayload || !hasStreamIdKey) {
           try {
@@ -65,7 +73,9 @@ export async function initializeSocketServer(httpServer: HTTPServer): Promise<vo
               user: socket.username,
               role: socket.role,
               typeofPayload: typeof payload,
-              preview: preview ? String(preview).slice(0, 120) + (String(preview).length > 120 ? '…' : '') : undefined,
+              preview: preview
+                ? String(preview).slice(0, 120) + (String(preview).length > 120 ? '…' : '')
+                : undefined,
             });
           } catch {
             console.warn('[TRACE:onAny] missing payload', {
@@ -83,7 +93,8 @@ export async function initializeSocketServer(httpServer: HTTPServer): Promise<vo
             user: socket.username,
             role: socket.role,
             typeofStreamId: typeof streamIdVal,
-            streamIdPreview: typeof streamIdVal === 'string' ? streamIdVal.slice(0, 60) : streamIdVal,
+            streamIdPreview:
+              typeof streamIdVal === 'string' ? streamIdVal.slice(0, 60) : streamIdVal,
           });
         }
       }
@@ -95,13 +106,13 @@ export async function initializeSocketServer(httpServer: HTTPServer): Promise<vo
     }
 
     // Stream events - using direct handlers with individual Zod validation
-    socket.on('stream:join', (data) => streamHandler.handleJoinStream(socket, data));
-    socket.on('stream:leave', (data) => streamHandler.handleLeaveStream(socket, data));
-    socket.on('stream:update', (data) => streamHandler.handleStreamUpdate(socket, data));
-    socket.on('stream:feature-product', (data) => streamHandler.handleFeatureProduct(socket, data));
-    socket.on('stream:get-analytics', (data) => streamHandler.handleGetAnalytics(socket, data));
-    socket.on('stream:stats:update', (data) => streamHandler.handleStreamStats(socket, data));
-    socket.on('stream:stats:get', (data) => streamHandler.handleGetStreamStatsEnhanced(socket, data));
+    socket.on('stream:join', data => streamHandler.handleJoinStream(socket, data));
+    socket.on('stream:leave', data => streamHandler.handleLeaveStream(socket, data));
+    socket.on('stream:update', data => streamHandler.handleStreamUpdate(socket, data));
+    socket.on('stream:feature-product', data => streamHandler.handleFeatureProduct(socket, data));
+    socket.on('stream:get-analytics', data => streamHandler.handleGetAnalytics(socket, data));
+    socket.on('stream:stats:update', data => streamHandler.handleStreamStats(socket, data));
+    socket.on('stream:stats:get', data => streamHandler.handleGetStreamStatsEnhanced(socket, data));
 
     // Register VDO.Ninja event handlers
     streamHandler.registerVdoHandlers(socket);
@@ -110,17 +121,19 @@ export async function initializeSocketServer(httpServer: HTTPServer): Promise<vo
     vdoAnalyticsHandler.registerHandlers(socket);
 
     // Chat events - using direct handlers with individual Zod validation
-    socket.on('chat:send-message', (data) => chatHandler.handleSendMessage(socket, data));
-    socket.on('chat:delete-message', (data) => chatHandler.handleDeleteMessage(socket, data));
-    socket.on('chat:moderate-user', (data) => chatHandler.handleModerateUser(socket, data));
-    socket.on('chat:typing', (data) => chatHandler.handleTyping(socket, data));
-    socket.on('chat:get-history', (data) => chatHandler.handleGetHistory(socket, data));
-    socket.on('chat:react', (data) => chatHandler.handleReactToMessage(socket, data));
-    socket.on('chat:pin-message', (data) => chatHandler.handlePinMessage(socket, data));
-    socket.on('chat:slowmode', (data) => chatHandler.handleSlowMode(socket, data));
+    socket.on('chat:send-message', data => chatHandler.handleSendMessage(socket, data));
+    socket.on('chat:delete-message', data => chatHandler.handleDeleteMessage(socket, data));
+    socket.on('chat:moderate-user', data => chatHandler.handleModerateUser(socket, data));
+    socket.on('chat:typing', data => chatHandler.handleTyping(socket, data));
+    socket.on('chat:get-history', data => chatHandler.handleGetHistory(socket, data));
+    socket.on('chat:react', data => chatHandler.handleReactToMessage(socket, data));
+    socket.on('chat:pin-message', data => chatHandler.handlePinMessage(socket, data));
+    socket.on('chat:slowmode', data => chatHandler.handleSlowMode(socket, data));
 
     // Rate limit management events
-    socket.on('rate_limit:get_status', data => chatHandler.getRateLimitStatus(socket, data.eventType));
+    socket.on('rate_limit:get_status', data =>
+      chatHandler.getRateLimitStatus(socket, data.eventType),
+    );
     socket.on('admin:rate_limit:reset', data => chatHandler.resetUserRateLimits(socket, data));
     socket.on('admin:rate_limit:stats', () => chatHandler.getRateLimitStats(socket));
 
@@ -138,55 +151,57 @@ export async function initializeSocketServer(httpServer: HTTPServer): Promise<vo
     });
 
     // TEST EVENTS - For debugging WebSocket connectivity
-    socket.on('test:echo', (data) => {
+    socket.on('test:echo', data => {
       console.log(`Test echo from ${socket.id}:`, data);
       // Echo back to sender
-      socket.emit('test:echo:reply', { 
-        ...data, 
+      socket.emit('test:echo:reply', {
+        ...data,
         timestamp: new Date().toISOString(),
-        socketId: socket.id 
+        socketId: socket.id,
       });
     });
 
-    socket.on('test:broadcast', (data) => {
+    socket.on('test:broadcast', data => {
       console.log(`Test broadcast from ${socket.id} to room ${data.room}:`, data);
       if (data.room) {
         // Broadcast to everyone in the room (including sender)
         io.to(`test:${data.room}`).emit('test:broadcast:message', {
           ...data,
           from: socket.id,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         });
       }
     });
 
-    socket.on('test:join-room', (data) => {
+    socket.on('test:join-room', data => {
       const roomId = data.room || data.roomId;
       console.log(`${socket.id} joining test room: test:${roomId}`);
       socket.join(`test:${roomId}`);
       socket.emit('test:joined', { room: roomId });
       // Notify others in room
-      socket.to(`test:${roomId}`).emit('test:user-joined', { 
+      socket.to(`test:${roomId}`).emit('test:user-joined', {
         userId: socket.id,
-        room: roomId 
+        room: roomId,
       });
     });
 
-    socket.on('test:leave-room', (data) => {
+    socket.on('test:leave-room', data => {
       const roomId = data.room || data.roomId;
       console.log(`${socket.id} leaving test room: test:${roomId}`);
       socket.leave(`test:${roomId}`);
       socket.emit('test:left', { room: roomId });
       // Notify others in room
-      socket.to(`test:${roomId}`).emit('test:user-left', { 
+      socket.to(`test:${roomId}`).emit('test:user-left', {
         userId: socket.id,
-        room: roomId 
+        room: roomId,
       });
     });
 
     // Handle disconnect
     socket.on('disconnect', async () => {
-      logger.socketDisconnect(`User disconnected: ${socket.id} (${socket.username || 'anonymous'})`);
+      logger.socketDisconnect(
+        `User disconnected: ${socket.id} (${socket.username || 'anonymous'})`,
+      );
       streamHandler.unregisterVdoHandlers(socket);
       await vdoAnalyticsHandler.unregisterHandlers(socket);
       await roomManager.handleDisconnect(socket);
@@ -259,70 +274,70 @@ function createAnalyticsNamespace(io: any): void {
     }
 
     // Handle real-time analytics subscription
-    socket.on('analytics:subscribe', async (data: {
-      streamId: string;
-      filters?: {
-        eventTypes?: string[];
-        minPriority?: 'low' | 'medium' | 'high' | 'critical';
-        updateInterval?: number;
-      };
-    }) => {
-      try {
-        const realtimeAnalytics = container.resolve(RealtimeAnalyticsService);
-        
-        const subscribed = await realtimeAnalytics.subscribe(
-          data.streamId,
-          socket.userId!,
-          socket.id,
-          socket.role as 'streamer' | 'admin',
-          data.filters
-        );
+    socket.on(
+      'analytics:subscribe',
+      async (data: {
+        streamId: string;
+        filters?: {
+          eventTypes?: string[];
+          minPriority?: 'low' | 'medium' | 'high' | 'critical';
+          updateInterval?: number;
+        };
+      }) => {
+        try {
+          const realtimeAnalytics = container.resolve(RealtimeAnalyticsService);
 
-        if (subscribed) {
-          socket.join(`analytics:${data.streamId}`);
-          
-          // Send current analytics data
-          const currentAnalytics = await realtimeAnalytics.getCurrentAnalytics(data.streamId);
-          socket.emit('analytics:initial', {
-            streamId: data.streamId,
-            metrics: currentAnalytics,
-            timestamp: new Date().toISOString(),
-          });
+          const subscribed = await realtimeAnalytics.subscribe(
+            data.streamId,
+            socket.userId!,
+            socket.id,
+            socket.role as 'streamer' | 'admin',
+            data.filters,
+          );
 
-          socket.emit('analytics:subscribed', {
-            streamId: data.streamId,
-            success: true,
-          });
-        } else {
+          if (subscribed) {
+            socket.join(`analytics:${data.streamId}`);
+
+            // Send current analytics data
+            const currentAnalytics = await realtimeAnalytics.getCurrentAnalytics(data.streamId);
+            socket.emit('analytics:initial', {
+              streamId: data.streamId,
+              metrics: currentAnalytics,
+              timestamp: new Date().toISOString(),
+            });
+
+            socket.emit('analytics:subscribed', {
+              streamId: data.streamId,
+              success: true,
+            });
+          } else {
+            socket.emit('analytics:error', {
+              message: 'Failed to subscribe to analytics',
+            });
+          }
+        } catch (error) {
+          console.error('Analytics subscription error:', error);
           socket.emit('analytics:error', {
-            message: 'Failed to subscribe to analytics',
+            message: 'Internal error during subscription',
           });
         }
-      } catch (error) {
-        console.error('Analytics subscription error:', error);
-        socket.emit('analytics:error', {
-          message: 'Internal error during subscription',
-        });
-      }
-    });
+      },
+    );
 
     socket.on('analytics:unsubscribe', (streamId: string) => {
       socket.leave(`analytics:${streamId}`);
-      
+
       const realtimeAnalytics = container.resolve(RealtimeAnalyticsService);
       realtimeAnalytics.unsubscribe(socket.id);
-      
+
       socket.emit('analytics:unsubscribed', { streamId });
     });
 
     // Configure milestones
-    socket.on('analytics:configure:milestones', (data: {
-      streamId: string;
-      milestones: any;
-    }) => {
+    socket.on('analytics:configure:milestones', (data: { streamId: string; milestones: any }) => {
       const realtimeAnalytics = container.resolve(RealtimeAnalyticsService);
       realtimeAnalytics.configureMilestones(data.streamId, data.milestones);
-      
+
       socket.emit('analytics:milestones:configured', {
         streamId: data.streamId,
         success: true,
@@ -330,13 +345,10 @@ function createAnalyticsNamespace(io: any): void {
     });
 
     // Configure alert thresholds
-    socket.on('analytics:configure:alerts', (data: {
-      streamId: string;
-      thresholds: any;
-    }) => {
+    socket.on('analytics:configure:alerts', (data: { streamId: string; thresholds: any }) => {
       const realtimeAnalytics = container.resolve(RealtimeAnalyticsService);
       realtimeAnalytics.configureAlertThresholds(data.streamId, data.thresholds);
-      
+
       socket.emit('analytics:alerts:configured', {
         streamId: data.streamId,
         success: true,
@@ -348,7 +360,7 @@ function createAnalyticsNamespace(io: any): void {
       if (socket.role === 'admin') {
         const realtimeAnalytics = container.resolve(RealtimeAnalyticsService);
         realtimeAnalytics.updateThrottleConfig(config);
-        
+
         socket.emit('analytics:throttle:configured', {
           success: true,
         });
@@ -364,7 +376,7 @@ function createAnalyticsNamespace(io: any): void {
       if (socket.role === 'admin') {
         const realtimeAnalytics = container.resolve(RealtimeAnalyticsService);
         const stats = realtimeAnalytics.getSubscriptionStats();
-        
+
         socket.emit('analytics:stats:subscriptions:data', stats);
       } else {
         socket.emit('analytics:error', {

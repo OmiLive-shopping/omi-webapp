@@ -1,14 +1,15 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
+
+import type { SocketWithAuth } from '../../config/socket/socket.config.js';
+import { createValidatedHandler } from '../middleware/validation.middleware.js';
 import {
-  validateSocketEvent,
+  chatSendMessageSchema,
   createValidationMiddleware,
   streamJoinSchema,
-  chatSendMessageSchema,
+  validateSocketEvent,
   vdoStatsEventSchema,
 } from '../schemas/index.js';
-import { createValidatedHandler } from '../middleware/validation.middleware.js';
-import type { SocketWithAuth } from '../../config/socket/socket.config.js';
 
 describe('Socket Event Validation', () => {
   describe('validateSocketEvent', () => {
@@ -66,7 +67,9 @@ describe('Socket Event Validation', () => {
 
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.details?.errors[0].message).toContain('String must contain at most 500 character(s)');
+        expect(result.details?.errors[0].message).toContain(
+          'String must contain at most 500 character(s)',
+        );
       }
     });
 
@@ -150,10 +153,7 @@ describe('Socket Event Validation', () => {
     });
 
     it('should call handler with validated data', async () => {
-      const validatedHandler = createValidatedHandler(
-        streamJoinSchema,
-        mockHandler,
-      );
+      const validatedHandler = createValidatedHandler(streamJoinSchema, mockHandler);
 
       await validatedHandler(mockSocket, {
         streamId: '123e4567-e89b-12d3-a456-426614174000',
@@ -165,10 +165,7 @@ describe('Socket Event Validation', () => {
     });
 
     it('should emit validation error for invalid data', async () => {
-      const validatedHandler = createValidatedHandler(
-        streamJoinSchema,
-        mockHandler,
-      );
+      const validatedHandler = createValidatedHandler(streamJoinSchema, mockHandler);
 
       await validatedHandler(mockSocket, {
         streamId: 'invalid-uuid',
@@ -190,10 +187,7 @@ describe('Socket Event Validation', () => {
 
     it('should handle handler errors gracefully', async () => {
       const errorHandler = vi.fn().mockRejectedValue(new Error('Handler error'));
-      const validatedHandler = createValidatedHandler(
-        streamJoinSchema,
-        errorHandler,
-      );
+      const validatedHandler = createValidatedHandler(streamJoinSchema, errorHandler);
 
       await validatedHandler(mockSocket, {
         streamId: '123e4567-e89b-12d3-a456-426614174000',
@@ -209,14 +203,10 @@ describe('Socket Event Validation', () => {
     });
 
     it('should respect custom error options', async () => {
-      const validatedHandler = createValidatedHandler(
-        streamJoinSchema,
-        mockHandler,
-        {
-          emitError: false,
-          logError: false,
-        },
-      );
+      const validatedHandler = createValidatedHandler(streamJoinSchema, mockHandler, {
+        emitError: false,
+        logError: false,
+      });
 
       await validatedHandler(mockSocket, {
         streamId: 'invalid-uuid',

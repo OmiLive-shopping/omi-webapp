@@ -4,7 +4,7 @@ import { z } from 'zod';
 /**
  * Real-time analytics event types
  */
-export type AnalyticsEventType = 
+export type AnalyticsEventType =
   | 'analytics:stats:updated'
   | 'analytics:viewer:joined'
   | 'analytics:viewer:left'
@@ -36,7 +36,7 @@ export interface StatsUpdatedEvent extends BaseAnalyticsEvent {
     peakViewers: number;
     totalViewers: number;
     averageViewDuration: number;
-    
+
     // Technical metrics
     fps: number;
     bitrate: number;
@@ -44,7 +44,7 @@ export interface StatsUpdatedEvent extends BaseAnalyticsEvent {
     latency: number;
     packetLoss: number;
     jitter: number;
-    
+
     // Connection quality
     connectionQuality: 'excellent' | 'good' | 'fair' | 'poor' | 'critical';
     connectionScore: number;
@@ -55,13 +55,13 @@ export interface StatsUpdatedEvent extends BaseAnalyticsEvent {
       poor: number;
       critical: number;
     };
-    
+
     // Audio/Video state
     isAudioMuted: boolean;
     isVideoHidden: boolean;
     isScreenSharing: boolean;
     isRecording: boolean;
-    
+
     // Network metrics
     uploadSpeed: number;
     downloadSpeed: number;
@@ -268,7 +268,7 @@ export interface IntervalSummaryEvent extends BaseAnalyticsEvent {
 /**
  * Union type for all analytics events
  */
-export type AnalyticsEvent = 
+export type AnalyticsEvent =
   | StatsUpdatedEvent
   | ViewerAnalyticsEvent
   | QualityAnalyticsEvent
@@ -281,7 +281,9 @@ export type AnalyticsEvent =
 /**
  * Analytics event listener function type
  */
-export type AnalyticsEventListener<T extends AnalyticsEvent = AnalyticsEvent> = (event: T) => void | Promise<void>;
+export type AnalyticsEventListener<T extends AnalyticsEvent = AnalyticsEvent> = (
+  event: T,
+) => void | Promise<void>;
 
 /**
  * Data throttling configuration
@@ -289,20 +291,20 @@ export type AnalyticsEventListener<T extends AnalyticsEvent = AnalyticsEvent> = 
 export interface ThrottleConfig {
   enabled: boolean;
   intervals: {
-    realtime: number;    // ms between realtime updates
-    aggregated: number;  // ms between aggregated updates
-    alerts: number;      // ms between alert checks
+    realtime: number; // ms between realtime updates
+    aggregated: number; // ms between aggregated updates
+    alerts: number; // ms between alert checks
   };
   batchSize: {
-    stats: number;       // max stats events per batch
-    viewers: number;     // max viewer events per batch
-    alerts: number;      // max alerts per batch
+    stats: number; // max stats events per batch
+    viewers: number; // max viewer events per batch
+    alerts: number; // max alerts per batch
   };
   priorities: {
-    critical: number;    // always send immediately
-    high: number;       // max delay for high priority
-    medium: number;     // max delay for medium priority
-    low: number;        // max delay for low priority
+    critical: number; // always send immediately
+    high: number; // max delay for high priority
+    medium: number; // max delay for medium priority
+    low: number; // max delay for low priority
   };
 }
 
@@ -312,9 +314,9 @@ export interface ThrottleConfig {
 export const DEFAULT_THROTTLE_CONFIG: ThrottleConfig = {
   enabled: true,
   intervals: {
-    realtime: 1000,    // 1 second
-    aggregated: 5000,  // 5 seconds
-    alerts: 500,       // 0.5 seconds
+    realtime: 1000, // 1 second
+    aggregated: 5000, // 5 seconds
+    alerts: 500, // 0.5 seconds
   },
   batchSize: {
     stats: 10,
@@ -322,10 +324,10 @@ export const DEFAULT_THROTTLE_CONFIG: ThrottleConfig = {
     alerts: 5,
   },
   priorities: {
-    critical: 0,       // immediate
-    high: 1000,        // 1 second max delay
-    medium: 3000,      // 3 seconds max delay
-    low: 10000,        // 10 seconds max delay
+    critical: 0, // immediate
+    high: 1000, // 1 second max delay
+    medium: 3000, // 3 seconds max delay
+    low: 10000, // 10 seconds max delay
   },
 };
 
@@ -417,7 +419,7 @@ export class AnalyticsEventEmitter extends EventEmitter {
    */
   public onAnalyticsEvent<T extends AnalyticsEvent>(
     eventType: T['type'] | '*',
-    listener: AnalyticsEventListener<T>
+    listener: AnalyticsEventListener<T>,
   ): this {
     return this.on(eventType, listener);
   }
@@ -427,7 +429,7 @@ export class AnalyticsEventEmitter extends EventEmitter {
    */
   public offAnalyticsEvent<T extends AnalyticsEvent>(
     eventType: T['type'] | '*',
-    listener: AnalyticsEventListener<T>
+    listener: AnalyticsEventListener<T>,
   ): this {
     return this.off(eventType, listener);
   }
@@ -459,7 +461,7 @@ export class AnalyticsEventEmitter extends EventEmitter {
   public clearStreamQueue(streamId: string): void {
     this.eventQueue.delete(streamId);
     this.lastEmitTimes.delete(streamId);
-    
+
     const timer = this.throttleTimers.get(streamId);
     if (timer) {
       clearTimeout(timer);
@@ -515,7 +517,9 @@ export class AnalyticsEventEmitter extends EventEmitter {
           baseEventSchema.parse(event);
       }
     } catch (validationError) {
-      throw new Error(`Event validation failed: ${validationError instanceof Error ? validationError.message : String(validationError)}`);
+      throw new Error(
+        `Event validation failed: ${validationError instanceof Error ? validationError.message : String(validationError)}`,
+      );
     }
   }
 
@@ -526,26 +530,32 @@ export class AnalyticsEventEmitter extends EventEmitter {
     switch (event.type) {
       case 'analytics:performance:alert':
         const alert = (event as PerformanceAlertEvent).alert;
-        return alert.level === 'critical' ? 'critical' : 
-               alert.level === 'error' ? 'high' : 'medium';
-      
+        return alert.level === 'critical'
+          ? 'critical'
+          : alert.level === 'error'
+            ? 'high'
+            : 'medium';
+
       case 'analytics:quality:changed':
         const quality = (event as QualityAnalyticsEvent).quality;
-        return quality.impact === 'critical' ? 'critical' :
-               quality.impact === 'high' ? 'high' : 'medium';
-      
+        return quality.impact === 'critical'
+          ? 'critical'
+          : quality.impact === 'high'
+            ? 'high'
+            : 'medium';
+
       case 'analytics:milestone:reached':
         const milestone = (event as MilestoneReachedEvent).milestone;
         return milestone.significance === 'record' ? 'high' : 'medium';
-      
+
       case 'analytics:viewer:joined':
       case 'analytics:viewer:left':
         return 'low';
-      
+
       case 'analytics:stats:updated':
-        const stats = (event as StatsUpdatedEvent);
+        const stats = event as StatsUpdatedEvent;
         return stats.interval === 'realtime' ? 'medium' : 'low';
-      
+
       default:
         return 'medium';
     }
@@ -554,7 +564,10 @@ export class AnalyticsEventEmitter extends EventEmitter {
   /**
    * Apply throttling and queue events
    */
-  private throttleAndEmit(event: AnalyticsEvent, priority: keyof ThrottleConfig['priorities']): boolean {
+  private throttleAndEmit(
+    event: AnalyticsEvent,
+    priority: keyof ThrottleConfig['priorities'],
+  ): boolean {
     const { streamId, type } = event;
 
     // Initialize maps if needed
@@ -628,7 +641,10 @@ export class AnalyticsEventEmitter extends EventEmitter {
   /**
    * Schedule batch processing
    */
-  private scheduleBatchProcessing(streamId: string, priority: keyof ThrottleConfig['priorities']): void {
+  private scheduleBatchProcessing(
+    streamId: string,
+    priority: keyof ThrottleConfig['priorities'],
+  ): void {
     // Don't schedule if already scheduled
     if (this.throttleTimers.has(streamId)) {
       return;
@@ -661,7 +677,7 @@ export class AnalyticsEventEmitter extends EventEmitter {
     // Emit the events
     for (const event of eventsByType.values()) {
       await this.doEmit(event);
-      
+
       // Update last emit time
       const streamEmitTimes = this.lastEmitTimes.get(streamId);
       if (streamEmitTimes) {
@@ -706,10 +722,10 @@ export class AnalyticsEventEmitter extends EventEmitter {
    */
 
   public async emitStatsUpdated(
-    streamId: string, 
-    stats: StatsUpdatedEvent['stats'], 
+    streamId: string,
+    stats: StatsUpdatedEvent['stats'],
     interval: StatsUpdatedEvent['interval'] = 'realtime',
-    source: BaseAnalyticsEvent['source'] = 'vdo_ninja'
+    source: BaseAnalyticsEvent['source'] = 'vdo_ninja',
   ): Promise<boolean> {
     return this.emitAnalyticsEvent({
       type: 'analytics:stats:updated',
@@ -724,7 +740,7 @@ export class AnalyticsEventEmitter extends EventEmitter {
   public async emitViewerJoined(
     streamId: string,
     viewer: ViewerAnalyticsEvent['viewer'],
-    aggregated: ViewerAnalyticsEvent['aggregated']
+    aggregated: ViewerAnalyticsEvent['aggregated'],
   ): Promise<boolean> {
     return this.emitAnalyticsEvent({
       type: 'analytics:viewer:joined',
@@ -739,7 +755,7 @@ export class AnalyticsEventEmitter extends EventEmitter {
   public async emitQualityChanged(
     streamId: string,
     quality: QualityAnalyticsEvent['quality'],
-    alerts: QualityAnalyticsEvent['alerts'] = []
+    alerts: QualityAnalyticsEvent['alerts'] = [],
   ): Promise<boolean> {
     return this.emitAnalyticsEvent({
       type: 'analytics:quality:changed',
@@ -753,7 +769,7 @@ export class AnalyticsEventEmitter extends EventEmitter {
 
   public async emitPerformanceAlert(
     streamId: string,
-    alert: PerformanceAlertEvent['alert']
+    alert: PerformanceAlertEvent['alert'],
   ): Promise<boolean> {
     return this.emitAnalyticsEvent({
       type: 'analytics:performance:alert',

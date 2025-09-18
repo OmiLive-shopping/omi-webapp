@@ -3,7 +3,6 @@ import { container } from 'tsyringe';
 
 import { AnalyticsService } from '@/features/analytics/services/analytics.service';
 
-import { VDO_SOCKET_EVENTS } from '../types/vdo-events.types';
 import type {
   VdoMediaEvent,
   VdoQualityEvent,
@@ -12,6 +11,7 @@ import type {
   VdoStreamEvent,
   VdoViewerEvent,
 } from '../types/vdo-events.types';
+import { VDO_SOCKET_EVENTS } from '../types/vdo-events.types';
 
 /**
  * VDO.Ninja Analytics Socket Handler

@@ -1,4 +1,5 @@
 import { Router } from 'express';
+
 import { SecurityController } from '../socket/controllers/security.controller.js';
 
 /**

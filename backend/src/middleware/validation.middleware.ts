@@ -29,3 +29,35 @@ export const validateRequest = (schema: ZodSchema<unknown>) => {
     next();
   };
 };
+
+/**
+ * Validation middleware with support for body, params, and query
+ */
+export const validationMiddleware = (
+  schema: ZodSchema<unknown>,
+  type: 'body' | 'params' | 'query' = 'body',
+) => {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    const dataToValidate = req[type];
+    const validationResult = schema.safeParse(dataToValidate);
+
+    if (!validationResult.success) {
+      // Extract error messages
+      const errorMessages = validationResult.error.errors.map(err => ({
+        path: err.path.join('.'),
+        message: err.message,
+      }));
+
+      // Send a response if validation fails
+      res.status(400).json(unifiedResponse(false, 'Validation error', null, errorMessages));
+
+      return; // Ensure no further middleware is called
+    }
+
+    // Attach parsed data back to the request object
+    (req as any)[type] = validationResult.data;
+
+    // Call next middleware if validation passes
+    next();
+  };
+};

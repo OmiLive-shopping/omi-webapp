@@ -5,8 +5,11 @@ import { PrismaService } from '../../config/prisma.config.js';
 import { SocketWithAuth } from '../../config/socket/socket.config.js';
 import { SocketServer } from '../../config/socket/socket.config.js';
 import { AnalyticsService } from '../../features/analytics/services/analytics.service.js';
+import {
+  createRateLimitedHandler as createEnhancedRateLimitedHandler,
+  EnhancedRateLimiter,
+} from '../managers/enhanced-rate-limiter.js';
 import { RoomManager } from '../managers/room.manager.js';
-import { EnhancedRateLimiter, createRateLimitedHandler as createEnhancedRateLimitedHandler } from '../managers/enhanced-rate-limiter.js';
 import type { VdoQualityEvent, VdoStreamEvent, VdoViewerEvent } from '../types/vdo-events.types.js';
 import { ChatHandler } from './chat.handler.js';
 
@@ -995,48 +998,48 @@ export class VdoStreamHandler {
     'vdo:stream:event',
     async (socket: SocketWithAuth, data: any) => {
       await this.handleVdoStreamEvent(socket, data);
-    }
+    },
   );
 
   handleVdoStatsUpdateEnhanced = createEnhancedRateLimitedHandler(
     'vdo:stats:update',
     async (socket: SocketWithAuth, data: any) => {
       await this.handleVdoStatsUpdate(socket, data);
-    }
+    },
   );
 
   handleVdoViewerEventEnhanced = createEnhancedRateLimitedHandler(
     'vdo:viewer:event',
     async (socket: SocketWithAuth, data: any) => {
       await this.handleVdoViewerEvent(socket, data);
-    }
+    },
   );
 
   handleVdoMediaEventEnhanced = createEnhancedRateLimitedHandler(
     'vdo:media:event',
     async (socket: SocketWithAuth, data: any) => {
       await this.handleVdoMediaEvent(socket, data);
-    }
+    },
   );
 
   handleVdoQualityEventEnhanced = createEnhancedRateLimitedHandler(
     'vdo:quality:event',
     async (socket: SocketWithAuth, data: any) => {
       await this.handleVdoQualityEvent(socket, data);
-    }
+    },
   );
 
   handleVdoRecordingEventEnhanced = createEnhancedRateLimitedHandler(
     'vdo:recording:event',
     async (socket: SocketWithAuth, data: any) => {
       await this.handleVdoRecordingEvent(socket, data);
-    }
+    },
   );
 
   handleGetVdoAnalyticsEnhanced = createEnhancedRateLimitedHandler(
     'vdo:get:analytics',
     async (socket: SocketWithAuth, data: any) => {
       await this.handleGetVdoAnalytics(socket, data);
-    }
+    },
   );
 }

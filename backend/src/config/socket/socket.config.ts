@@ -18,24 +18,26 @@ export class SocketServer {
   private constructor(httpServer: HTTPServer) {
     // Enhanced security configuration
     const securityConfig = defaultSecurityConfig;
-    const allowedOrigins = env.WHITE_LIST_URLS && env.WHITE_LIST_URLS.length > 0 
-      ? env.WHITE_LIST_URLS 
-      : securityConfig.cors.allowedOrigins;
+    const allowedOrigins =
+      env.WHITE_LIST_URLS && env.WHITE_LIST_URLS.length > 0
+        ? env.WHITE_LIST_URLS
+        : securityConfig.cors.allowedOrigins;
 
     this.io = new SocketIOServer(httpServer, {
       cors: {
         origin: (origin, callback) => {
           // Allow same-origin requests (no origin header)
           if (!origin) return callback(null, true);
-          
+
           // Check against allowed origins
-          const isAllowed = allowedOrigins.includes(origin) || 
+          const isAllowed =
+            allowedOrigins.includes(origin) ||
             (env.NODE_ENV === 'development' && /^https?:\/\/localhost(:\d+)?$/.test(origin)) ||
             // Allow Socket.IO Admin UI hosted sites
             origin === 'https://admin.socket.io' ||
             origin === 'https://socket.io' ||
             /^https:\/\/.*\.socket\.io$/.test(origin);
-          
+
           if (isAllowed) {
             callback(null, true);
           } else {
@@ -47,18 +49,18 @@ export class SocketServer {
         methods: securityConfig.cors.allowedMethods,
         allowedHeaders: securityConfig.cors.allowedHeaders,
       },
-      
+
       // Connection timeouts - more lenient for development
       pingTimeout: 120000, // 120 seconds (doubled)
       pingInterval: 30000, // 30 seconds
-      
+
       // Security settings
       maxHttpBufferSize: securityConfig.validation.maxPayloadSize,
       allowEIO3: false, // Disable legacy Engine.IO v3 support
-      
+
       // Transports restriction (disable polling in production for security)
       transports: env.NODE_ENV === 'production' ? ['websocket'] : ['websocket', 'polling'],
-      
+
       // Connection state recovery (prevent replay attacks)
       connectionStateRecovery: {
         maxDisconnectionDuration: 2 * 60 * 1000, // 2 minutes

@@ -1,7 +1,8 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
-import { SecurityManager } from '../managers/security.manager.js';
+
 import { SecurityEventType } from '../../config/socket/security.config.js';
+import { SecurityManager } from '../managers/security.manager.js';
 
 /**
  * Security monitoring and management controller
@@ -48,7 +49,7 @@ export class SecurityController {
       });
 
       const query = querySchema.parse(req.query);
-      
+
       const criteria: any = {};
       if (query.eventType) criteria.eventType = query.eventType;
       if (query.ip) criteria.ip = query.ip;
@@ -101,53 +102,69 @@ export class SecurityController {
   updateConfig = async (req: Request, res: Response) => {
     try {
       const configSchema = z.object({
-        cors: z.object({
-          allowedOrigins: z.array(z.string().url()).optional(),
-          allowCredentials: z.boolean().optional(),
-        }).optional(),
-        
-        rateLimiting: z.object({
-          connectionLimit: z.object({
-            maxConnections: z.number().min(1).optional(),
-            windowMs: z.number().min(1000).optional(),
-          }).optional(),
-          messageLimit: z.object({
-            maxMessages: z.number().min(1).optional(),
-            windowMs: z.number().min(1000).optional(),
-          }).optional(),
-        }).optional(),
-        
-        validation: z.object({
-          maxPayloadSize: z.number().min(1).optional(),
-          maxMessageLength: z.number().min(1).optional(),
-          requireAuthentication: z.array(z.string()).optional(),
-        }).optional(),
-        
-        security: z.object({
-          allowAnonymous: z.boolean().optional(),
-          maxAnonymousConnections: z.number().min(0).optional(),
-          suspiciousActivityThreshold: z.number().min(1).optional(),
-          blockSuspiciousIps: z.boolean().optional(),
-          enableAuditLogging: z.boolean().optional(),
-        }).optional(),
-        
-        monitoring: z.object({
-          enableMetrics: z.boolean().optional(),
-          enableHealthChecks: z.boolean().optional(),
-          alertThresholds: z.object({
-            highConnectionCount: z.number().min(1).optional(),
-            highMessageRate: z.number().min(1).optional(),
-            errorRate: z.number().min(0).max(1).optional(),
-          }).optional(),
-        }).optional(),
+        cors: z
+          .object({
+            allowedOrigins: z.array(z.string().url()).optional(),
+            allowCredentials: z.boolean().optional(),
+          })
+          .optional(),
+
+        rateLimiting: z
+          .object({
+            connectionLimit: z
+              .object({
+                maxConnections: z.number().min(1).optional(),
+                windowMs: z.number().min(1000).optional(),
+              })
+              .optional(),
+            messageLimit: z
+              .object({
+                maxMessages: z.number().min(1).optional(),
+                windowMs: z.number().min(1000).optional(),
+              })
+              .optional(),
+          })
+          .optional(),
+
+        validation: z
+          .object({
+            maxPayloadSize: z.number().min(1).optional(),
+            maxMessageLength: z.number().min(1).optional(),
+            requireAuthentication: z.array(z.string()).optional(),
+          })
+          .optional(),
+
+        security: z
+          .object({
+            allowAnonymous: z.boolean().optional(),
+            maxAnonymousConnections: z.number().min(0).optional(),
+            suspiciousActivityThreshold: z.number().min(1).optional(),
+            blockSuspiciousIps: z.boolean().optional(),
+            enableAuditLogging: z.boolean().optional(),
+          })
+          .optional(),
+
+        monitoring: z
+          .object({
+            enableMetrics: z.boolean().optional(),
+            enableHealthChecks: z.boolean().optional(),
+            alertThresholds: z
+              .object({
+                highConnectionCount: z.number().min(1).optional(),
+                highMessageRate: z.number().min(1).optional(),
+                errorRate: z.number().min(0).max(1).optional(),
+              })
+              .optional(),
+          })
+          .optional(),
       });
 
       const updates = configSchema.parse(req.body);
-      
+
       this.securityManager.updateConfig(updates);
-      
+
       const newConfig = this.securityManager.getConfig();
-      
+
       res.json({
         success: true,
         message: 'Security configuration updated successfully',
@@ -174,9 +191,9 @@ export class SecurityController {
       });
 
       const { ip, reason } = schema.parse(req.body);
-      
+
       this.securityManager.blockIP(ip, reason);
-      
+
       res.json({
         success: true,
         message: `IP ${ip} blocked successfully`,
@@ -201,9 +218,9 @@ export class SecurityController {
       });
 
       const { ip } = schema.parse(req.body);
-      
+
       this.securityManager.unblockIP(ip);
-      
+
       res.json({
         success: true,
         message: `IP ${ip} unblocked successfully`,
@@ -225,31 +242,40 @@ export class SecurityController {
     try {
       const metrics = this.securityManager.getMetrics();
       const recentLogs = this.securityManager.getAuditLogs(50);
-      
+
       // Aggregate recent activity
       const last24Hours = new Date(Date.now() - 24 * 60 * 60 * 1000);
       const recentActivity = this.securityManager.getAuditLogsByCriteria({
         since: last24Hours,
       });
-      
+
       // Count events by type
-      const eventCounts = recentActivity.reduce((acc, log) => {
-        acc[log.eventType] = (acc[log.eventType] || 0) + 1;
-        return acc;
-      }, {} as Record<string, number>);
-      
+      const eventCounts = recentActivity.reduce(
+        (acc, log) => {
+          acc[log.eventType] = (acc[log.eventType] || 0) + 1;
+          return acc;
+        },
+        {} as Record<string, number>,
+      );
+
       // Count events by severity
-      const severityCounts = recentActivity.reduce((acc, log) => {
-        acc[log.severity] = (acc[log.severity] || 0) + 1;
-        return acc;
-      }, {} as Record<string, number>);
-      
+      const severityCounts = recentActivity.reduce(
+        (acc, log) => {
+          acc[log.severity] = (acc[log.severity] || 0) + 1;
+          return acc;
+        },
+        {} as Record<string, number>,
+      );
+
       // Get top IPs by activity
-      const ipActivity = recentActivity.reduce((acc, log) => {
-        acc[log.ip] = (acc[log.ip] || 0) + 1;
-        return acc;
-      }, {} as Record<string, number>);
-      
+      const ipActivity = recentActivity.reduce(
+        (acc, log) => {
+          acc[log.ip] = (acc[log.ip] || 0) + 1;
+          return acc;
+        },
+        {} as Record<string, number>,
+      );
+
       const topIPs = Object.entries(ipActivity)
         .sort(([, a], [, b]) => b - a)
         .slice(0, 10)
@@ -288,7 +314,7 @@ export class SecurityController {
       });
 
       const { period, format } = querySchema.parse(req.query);
-      
+
       // Calculate time range
       const timeRanges = {
         '1h': 60 * 60 * 1000,
@@ -296,19 +322,25 @@ export class SecurityController {
         '7d': 7 * 24 * 60 * 60 * 1000,
         '30d': 30 * 24 * 60 * 60 * 1000,
       };
-      
+
       const since = new Date(Date.now() - timeRanges[period]);
       const logs = this.securityManager.getAuditLogsByCriteria({ since });
-      
+
       if (format === 'csv') {
         // Generate CSV report
         const csvHeader = 'Timestamp,Event Type,IP,User ID,Socket ID,Message,Severity\n';
-        const csvRows = logs.map(log => 
-          `"${log.timestamp.toISOString()}","${log.eventType}","${log.ip}","${log.userId || ''}","${log.socketId || ''}","${log.message}","${log.severity}"`
-        ).join('\n');
-        
+        const csvRows = logs
+          .map(
+            log =>
+              `"${log.timestamp.toISOString()}","${log.eventType}","${log.ip}","${log.userId || ''}","${log.socketId || ''}","${log.message}","${log.severity}"`,
+          )
+          .join('\n');
+
         res.setHeader('Content-Type', 'text/csv');
-        res.setHeader('Content-Disposition', `attachment; filename="security-report-${period}.csv"`);
+        res.setHeader(
+          'Content-Disposition',
+          `attachment; filename="security-report-${period}.csv"`,
+        );
         res.send(csvHeader + csvRows);
       } else {
         // Generate JSON report
@@ -320,15 +352,18 @@ export class SecurityController {
             uniqueIPs: new Set(logs.map(l => l.ip)).size,
             uniqueUsers: new Set(logs.map(l => l.userId).filter(Boolean)).size,
             eventTypes: Object.entries(
-              logs.reduce((acc, log) => {
-                acc[log.eventType] = (acc[log.eventType] || 0) + 1;
-                return acc;
-              }, {} as Record<string, number>)
+              logs.reduce(
+                (acc, log) => {
+                  acc[log.eventType] = (acc[log.eventType] || 0) + 1;
+                  return acc;
+                },
+                {} as Record<string, number>,
+              ),
             ).sort(([, a], [, b]) => b - a),
           },
           events: logs,
         };
-        
+
         res.json({
           success: true,
           data: report,
@@ -350,26 +385,26 @@ export class SecurityController {
     try {
       const metrics = this.securityManager.getMetrics();
       const config = this.securityManager.getConfig();
-      
+
       // Determine health status
       const thresholds = config.monitoring.alertThresholds;
       const issues = [];
-      
+
       if (metrics.activeConnections > thresholds.highConnectionCount) {
         issues.push(`High connection count: ${metrics.activeConnections}`);
       }
-      
+
       if (metrics.rateLimitViolations > thresholds.highMessageRate) {
         issues.push(`High rate limit violations: ${metrics.rateLimitViolations}`);
       }
-      
+
       const errorRate = metrics.blockedAttempts / Math.max(metrics.totalConnections, 1);
       if (errorRate > thresholds.errorRate) {
         issues.push(`High error rate: ${(errorRate * 100).toFixed(2)}%`);
       }
-      
+
       const status = issues.length === 0 ? 'healthy' : 'warning';
-      
+
       res.status(status === 'healthy' ? 200 : 503).json({
         status,
         timestamp: new Date().toISOString(),

@@ -4,7 +4,7 @@ import { z } from 'zod';
  * Stream command types and utilities for chat integration
  */
 
-export type StreamCommandType = 
+export type StreamCommandType =
   | 'start'
   | 'stop'
   | 'pause'
@@ -54,7 +54,7 @@ export const STREAM_COMMANDS: Record<StreamCommandType, StreamCommand> = {
     requiresAuth: true,
     requiredRole: 'streamer',
   },
-  
+
   stop: {
     type: 'stop',
     name: 'stop',
@@ -64,7 +64,7 @@ export const STREAM_COMMANDS: Record<StreamCommandType, StreamCommand> = {
     requiresAuth: true,
     requiredRole: 'streamer',
   },
-  
+
   pause: {
     type: 'pause',
     name: 'pause',
@@ -74,7 +74,7 @@ export const STREAM_COMMANDS: Record<StreamCommandType, StreamCommand> = {
     requiresAuth: true,
     requiredRole: 'streamer',
   },
-  
+
   resume: {
     type: 'resume',
     name: 'resume',
@@ -84,7 +84,7 @@ export const STREAM_COMMANDS: Record<StreamCommandType, StreamCommand> = {
     requiresAuth: true,
     requiredRole: 'streamer',
   },
-  
+
   feature: {
     type: 'feature',
     name: 'feature',
@@ -98,11 +98,11 @@ export const STREAM_COMMANDS: Record<StreamCommandType, StreamCommand> = {
         name: 'product_id',
         type: 'string',
         required: true,
-        description: 'ID of the product to feature'
-      }
-    ]
+        description: 'ID of the product to feature',
+      },
+    ],
   },
-  
+
   unfeature: {
     type: 'unfeature',
     name: 'unfeature',
@@ -112,7 +112,7 @@ export const STREAM_COMMANDS: Record<StreamCommandType, StreamCommand> = {
     requiresAuth: true,
     requiredRole: 'moderator',
   },
-  
+
   quality: {
     type: 'quality',
     name: 'quality',
@@ -126,11 +126,11 @@ export const STREAM_COMMANDS: Record<StreamCommandType, StreamCommand> = {
         name: 'quality',
         type: 'string',
         required: false,
-        description: 'Quality setting (auto, 1080p, 720p, 480p, 360p)'
-      }
-    ]
+        description: 'Quality setting (auto, 1080p, 720p, 480p, 360p)',
+      },
+    ],
   },
-  
+
   record: {
     type: 'record',
     name: 'record',
@@ -144,11 +144,11 @@ export const STREAM_COMMANDS: Record<StreamCommandType, StreamCommand> = {
         name: 'action',
         type: 'string',
         required: false,
-        description: 'start or stop recording (toggles if not specified)'
-      }
-    ]
+        description: 'start or stop recording (toggles if not specified)',
+      },
+    ],
   },
-  
+
   snapshot: {
     type: 'snapshot',
     name: 'snapshot',
@@ -158,7 +158,7 @@ export const STREAM_COMMANDS: Record<StreamCommandType, StreamCommand> = {
     requiresAuth: true,
     requiredRole: 'moderator',
   },
-  
+
   mute: {
     type: 'mute',
     name: 'mute',
@@ -168,7 +168,7 @@ export const STREAM_COMMANDS: Record<StreamCommandType, StreamCommand> = {
     requiresAuth: true,
     requiredRole: 'streamer',
   },
-  
+
   unmute: {
     type: 'unmute',
     name: 'unmute',
@@ -178,7 +178,7 @@ export const STREAM_COMMANDS: Record<StreamCommandType, StreamCommand> = {
     requiresAuth: true,
     requiredRole: 'streamer',
   },
-  
+
   volume: {
     type: 'volume',
     name: 'volume',
@@ -192,11 +192,11 @@ export const STREAM_COMMANDS: Record<StreamCommandType, StreamCommand> = {
         name: 'level',
         type: 'number',
         required: true,
-        description: 'Volume level (0-100)'
-      }
-    ]
+        description: 'Volume level (0-100)',
+      },
+    ],
   },
-  
+
   fullscreen: {
     type: 'fullscreen',
     name: 'fullscreen',
@@ -206,7 +206,7 @@ export const STREAM_COMMANDS: Record<StreamCommandType, StreamCommand> = {
     requiresAuth: false,
     requiredRole: 'viewer',
   },
-  
+
   pip: {
     type: 'pip',
     name: 'pip',
@@ -216,7 +216,7 @@ export const STREAM_COMMANDS: Record<StreamCommandType, StreamCommand> = {
     requiresAuth: false,
     requiredRole: 'viewer',
   },
-  
+
   stats: {
     type: 'stats',
     name: 'stats',
@@ -226,7 +226,7 @@ export const STREAM_COMMANDS: Record<StreamCommandType, StreamCommand> = {
     requiresAuth: false,
     requiredRole: 'viewer',
   },
-  
+
   help: {
     type: 'help',
     name: 'help',
@@ -240,10 +240,10 @@ export const STREAM_COMMANDS: Record<StreamCommandType, StreamCommand> = {
         name: 'command',
         type: 'string',
         required: false,
-        description: 'Specific command to get help for'
-      }
-    ]
-  }
+        description: 'Specific command to get help for',
+      },
+    ],
+  },
 };
 
 /**
@@ -279,7 +279,7 @@ export class StreamCommandParser {
     return {
       command,
       args,
-      raw: trimmed
+      raw: trimmed,
     };
   }
 
@@ -288,21 +288,21 @@ export class StreamCommandParser {
    */
   static findCommand(commandName: string): StreamCommand | null {
     const name = commandName.toLowerCase();
-    
+
     // Direct name match
     for (const cmd of Object.values(STREAM_COMMANDS)) {
       if (cmd.name === name) {
         return cmd;
       }
     }
-    
+
     // Alias match
     for (const cmd of Object.values(STREAM_COMMANDS)) {
       if (cmd.aliases.includes(name)) {
         return cmd;
       }
     }
-    
+
     return null;
   }
 
@@ -310,32 +310,32 @@ export class StreamCommandParser {
    * Validate command permissions
    */
   static canExecuteCommand(
-    command: StreamCommand, 
-    userRole: string, 
-    isAuthenticated: boolean
+    command: StreamCommand,
+    userRole: string,
+    isAuthenticated: boolean,
   ): { canExecute: boolean; reason?: string } {
     if (command.requiresAuth && !isAuthenticated) {
-      return { 
-        canExecute: false, 
-        reason: 'Authentication required' 
+      return {
+        canExecute: false,
+        reason: 'Authentication required',
       };
     }
 
     const roleHierarchy = {
-      'viewer': 0,
-      'subscriber': 1,
-      'moderator': 2,
-      'streamer': 3,
-      'admin': 4
+      viewer: 0,
+      subscriber: 1,
+      moderator: 2,
+      streamer: 3,
+      admin: 4,
     };
 
     const userLevel = roleHierarchy[userRole as keyof typeof roleHierarchy] ?? 0;
     const requiredLevel = roleHierarchy[command.requiredRole];
 
     if (userLevel < requiredLevel) {
-      return { 
-        canExecute: false, 
-        reason: `${command.requiredRole} role or higher required` 
+      return {
+        canExecute: false,
+        reason: `${command.requiredRole} role or higher required`,
       };
     }
 
@@ -346,8 +346,8 @@ export class StreamCommandParser {
    * Validate command parameters
    */
   static validateParameters(
-    command: StreamCommand, 
-    args: string[]
+    command: StreamCommand,
+    args: string[],
   ): { isValid: boolean; errors?: string[] } {
     if (!command.parameters) {
       return { isValid: true };
@@ -358,7 +358,9 @@ export class StreamCommandParser {
 
     // Check required parameters
     if (args.length < requiredParams.length) {
-      errors.push(`Missing required parameters. Expected: ${requiredParams.map(p => p.name).join(', ')}`);
+      errors.push(
+        `Missing required parameters. Expected: ${requiredParams.map(p => p.name).join(', ')}`,
+      );
     }
 
     // Validate parameter types
@@ -373,7 +375,9 @@ export class StreamCommandParser {
           }
           break;
         case 'boolean':
-          if (!['true', 'false', '1', '0', 'yes', 'no', 'on', 'off'].includes(value.toLowerCase())) {
+          if (
+            !['true', 'false', '1', '0', 'yes', 'no', 'on', 'off'].includes(value.toLowerCase())
+          ) {
             errors.push(`Parameter '${param.name}' must be a boolean (true/false)`);
           }
           break;
@@ -383,7 +387,7 @@ export class StreamCommandParser {
 
     return {
       isValid: errors.length === 0,
-      errors: errors.length > 0 ? errors : undefined
+      errors: errors.length > 0 ? errors : undefined,
     };
   }
 
@@ -392,15 +396,15 @@ export class StreamCommandParser {
    */
   static getCommandHelp(command: StreamCommand): string {
     let help = `**${command.usage}**\n${command.description}`;
-    
+
     if (command.aliases.length > 0) {
       help += `\nAliases: ${command.aliases.map(a => `/${a}`).join(', ')}`;
     }
-    
+
     if (command.requiresAuth) {
       help += `\nRequires: ${command.requiredRole} role or higher`;
     }
-    
+
     if (command.parameters) {
       help += '\nParameters:';
       for (const param of command.parameters) {
@@ -408,7 +412,7 @@ export class StreamCommandParser {
         help += `\n  • ${param.name}: ${param.description}${required}`;
       }
     }
-    
+
     return help;
   }
 
@@ -428,9 +432,9 @@ export class StreamCommandParser {
     for (const cmd of availableCommands) {
       help += `• **${cmd.usage}** - ${cmd.description}\n`;
     }
-    
+
     help += '\nUse `/help <command>` for detailed information about a specific command.';
-    
+
     return help;
   }
 
@@ -483,8 +487,8 @@ export const streamCommandSchema = z.object({
     username: z.string(),
     userRole: z.string(),
     isAuthenticated: z.boolean(),
-    socketId: z.string()
-  })
+    socketId: z.string(),
+  }),
 });
 
 export type ValidatedStreamCommand = z.infer<typeof streamCommandSchema>;

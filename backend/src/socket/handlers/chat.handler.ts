@@ -1,33 +1,45 @@
+import { ChatMessage } from '@omi-live/shared-types';
 import { z } from 'zod';
+
 import { PrismaService } from '../../config/prisma.config.js';
 import { SocketWithAuth } from '../../config/socket/socket.config.js';
-import { ChatMessage } from '@omi-live/shared-types';
-import { ChatRateLimiter, SlowModeManager } from '../managers/rate-limiter.js';
-import { EnhancedRateLimiter, createRateLimitedHandler as createEnhancedRateLimitedHandler } from '../managers/enhanced-rate-limiter.js';
-import { RoomManager } from '../managers/room.manager.js';
-import type { VdoQualityEvent, VdoStreamEvent, VdoViewerEvent } from '../types/vdo-events.types.js';
-import { ChatCommandHandler } from './chat-commands.js';
 import {
-  chatSendMessageSchema,
-  chatDeleteMessageSchema,
-  chatModerateUserSchema,
-  chatReactSchema,
-  chatPinMessageSchema,
-  chatSlowModeSchema,
-  chatTypingSchema,
-  chatGetHistorySchema,
-  type ChatSendMessageEvent,
+  createRateLimitedHandler as createEnhancedRateLimitedHandler,
+  EnhancedRateLimiter,
+} from '../managers/enhanced-rate-limiter.js';
+import { ChatRateLimiter, SlowModeManager } from '../managers/rate-limiter.js';
+import { RoomManager } from '../managers/room.manager.js';
+import {
+  createPermissionValidatedHandler,
+  createRateLimitedHandler,
+  createValidatedHandler,
+} from '../middleware/validation.middleware.js';
+import {
   type ChatDeleteMessageEvent,
-  type ChatModerateUserEvent,
-  type ChatReactEvent,
-  type ChatPinMessageEvent,
-  type ChatSlowModeEvent,
-  type ChatTypingEvent,
+  chatDeleteMessageSchema,
   type ChatGetHistoryEvent,
+  chatGetHistorySchema,
+  type ChatModerateUserEvent,
+  chatModerateUserSchema,
+  type ChatPinMessageEvent,
+  chatPinMessageSchema,
+  type ChatReactEvent,
+  chatReactSchema,
+  type ChatSendMessageEvent,
+  chatSendMessageSchema,
+  type ChatSlowModeEvent,
+  chatSlowModeSchema,
+  type ChatTypingEvent,
+  chatTypingSchema,
 } from '../schemas/index.js';
-import { createValidatedHandler, createRateLimitedHandler, createPermissionValidatedHandler } from '../middleware/validation.middleware.js';
 import { ChatStreamIntegrationService } from '../services/chat-stream-integration.service.js';
-import { StreamCommandParser, type CommandContext, type CommandExecutionResult } from '../utils/stream-commands.js';
+import type { VdoQualityEvent, VdoStreamEvent, VdoViewerEvent } from '../types/vdo-events.types.js';
+import {
+  type CommandContext,
+  type CommandExecutionResult,
+  StreamCommandParser,
+} from '../utils/stream-commands.js';
+import { ChatCommandHandler } from './chat-commands.js';
 
 export class ChatHandler {
   private roomManager = RoomManager.getInstance();
@@ -47,12 +59,16 @@ export class ChatHandler {
 
       // Check if user is authenticated
       if (!socket.userId) {
-        console.log(`[CHAT DEBUG] ❌ No socket.userId for socket ${socket.id}, username: ${socket.username}`);
+        console.log(
+          `[CHAT DEBUG] ❌ No socket.userId for socket ${socket.id}, username: ${socket.username}`,
+        );
         socket.emit('error', { message: 'Authentication required to send messages' });
         return;
       }
-      
-      console.log(`[CHAT DEBUG] ✅ Socket authenticated - userId: ${socket.userId}, username: ${socket.username}`);
+
+      console.log(
+        `[CHAT DEBUG] ✅ Socket authenticated - userId: ${socket.userId}, username: ${socket.username}`,
+      );
 
       // Check if user is in the room
       const room = this.roomManager.getRoomInfo(validated.streamId);
@@ -143,7 +159,7 @@ export class ChatHandler {
 
       // For anonymous users, don't save to database
       let chatMessage;
-      
+
       if (socket.userId) {
         // Create message in database for authenticated users
         const message = await this.prisma.streamMessage.create({
@@ -165,7 +181,7 @@ export class ChatHandler {
             role: true,
           },
         });
-        
+
         console.log(`[CHAT DEBUG] 🔍 User lookup result for userId ${socket.userId}:`, user);
 
         // Format message for broadcast
@@ -181,8 +197,10 @@ export class ChatHandler {
           replyTo: validated.replyTo,
           type: 'message' as const,
         };
-        
-        console.log(`[CHAT DEBUG] 📤 Sending message with username: "${chatMessage.username}" (from user.username: "${user?.username}", socket.username: "${socket.username}")`);
+
+        console.log(
+          `[CHAT DEBUG] 📤 Sending message with username: "${chatMessage.username}" (from user.username: "${user?.username}", socket.username: "${socket.username}")`,
+        );
       } else {
         // For anonymous users, create message without database
         chatMessage = {
@@ -200,10 +218,12 @@ export class ChatHandler {
       }
 
       // Broadcast to all users in the stream (excluding sender)
-      console.log(`[CHAT] ${socket.username || 'anonymous'}(${socket.id}) sending to room stream:${validated.streamId}: "${validated.content}"`);
+      console.log(
+        `[CHAT] ${socket.username || 'anonymous'}(${socket.id}) sending to room stream:${validated.streamId}: "${validated.content}"`,
+      );
       socket.to(`stream:${validated.streamId}`).emit('chat:message', chatMessage);
       socket.emit('chat:message:sent', chatMessage);
-      
+
       // Check who's in the room
       const isInRoom = socket.rooms.has(`stream:${validated.streamId}`);
       console.log(`[CHAT] Sender is in room: ${isInRoom}, socket rooms:`, Array.from(socket.rooms));
@@ -352,8 +372,8 @@ export class ChatHandler {
         socket.username || 'Moderator',
         {
           reason: validated.reason,
-          duration: validated.duration
-        }
+          duration: validated.duration,
+        },
       );
 
       // If banning or timeout, notify the user
@@ -779,27 +799,27 @@ export class ChatHandler {
       username: socket.username || 'Anonymous',
       userRole: socket.role || 'viewer',
       isAuthenticated: !!socket.userId,
-      socketId: socket.id
+      socketId: socket.id,
     };
 
     // Check permissions
     const permissionCheck = StreamCommandParser.canExecuteCommand(
       command,
       context.userRole,
-      context.isAuthenticated
+      context.isAuthenticated,
     );
 
     if (!permissionCheck.canExecute) {
-      socket.emit('error', { 
+      socket.emit('error', {
         message: permissionCheck.reason,
-        command: command.name 
+        command: command.name,
       });
 
       // Send system message about failed command
       await this.chatIntegration.sendCustomSystemMessage(
         streamId,
         `❌ Command failed: ${permissionCheck.reason}`,
-        { priority: 'low', saveToDatabase: false }
+        { priority: 'low', saveToDatabase: false },
       );
 
       return true;
@@ -809,18 +829,18 @@ export class ChatHandler {
     const paramValidation = StreamCommandParser.validateParameters(command, parsed.args);
     if (!paramValidation.isValid) {
       const errorMessage = paramValidation.errors?.join(', ') || 'Invalid parameters';
-      
-      socket.emit('error', { 
+
+      socket.emit('error', {
         message: errorMessage,
         command: command.name,
-        usage: command.usage
+        usage: command.usage,
       });
 
       // Send system message about invalid parameters
       await this.chatIntegration.sendCustomSystemMessage(
         streamId,
         `❌ ${command.usage} - ${errorMessage}`,
-        { priority: 'low', saveToDatabase: false }
+        { priority: 'low', saveToDatabase: false },
       );
 
       return true;
@@ -833,52 +853,47 @@ export class ChatHandler {
       if (result.success) {
         // Send success system message if provided
         if (result.message) {
-          await this.chatIntegration.sendCustomSystemMessage(
-            streamId,
-            `✅ ${result.message}`,
-            { 
-              priority: 'medium', 
-              metadata: { 
-                command: command.name,
-                executor: context.username,
-                result: result.data 
-              }
-            }
-          );
+          await this.chatIntegration.sendCustomSystemMessage(streamId, `✅ ${result.message}`, {
+            priority: 'medium',
+            metadata: {
+              command: command.name,
+              executor: context.username,
+              result: result.data,
+            },
+          });
         }
 
         // Send success response to user
         socket.emit('stream:command:success', {
           command: command.name,
           message: result.message,
-          data: result.data
+          data: result.data,
         });
       } else {
         // Send error system message
         await this.chatIntegration.sendCustomSystemMessage(
           streamId,
           `❌ Command failed: ${result.error || 'Unknown error'}`,
-          { priority: 'low', saveToDatabase: false }
+          { priority: 'low', saveToDatabase: false },
         );
 
-        socket.emit('error', { 
+        socket.emit('error', {
           message: result.error || 'Command execution failed',
-          command: command.name 
+          command: command.name,
         });
       }
-
     } catch (error) {
       console.error('Error executing stream command:', error);
-      
-      socket.emit('error', { 
+
+      socket.emit('error', {
         message: 'Internal error executing command',
-        command: command.name 
+        command: command.name,
       });
 
       await this.chatIntegration.sendCustomSystemMessage(
         streamId,
         `❌ Command error: Internal server error`,
-        { priority: 'low', saveToDatabase: false }
+        { priority: 'low', saveToDatabase: false },
       );
     }
 
@@ -889,37 +904,37 @@ export class ChatHandler {
   private async executeStreamCommand(
     command: any,
     args: string[],
-    context: CommandContext
+    context: CommandContext,
   ): Promise<CommandExecutionResult> {
     switch (command.type) {
       case 'help':
         return this.executeHelpCommand(args[0], context);
-      
+
       case 'stats':
         return this.executeStatsCommand(context);
-      
+
       case 'quality':
         return this.executeQualityCommand(args[0], context);
-      
+
       case 'feature':
         return this.executeFeatureCommand(args[0], context);
-      
+
       case 'unfeature':
         return this.executeUnfeatureCommand(context);
-      
+
       case 'record':
         return this.executeRecordCommand(args[0], context);
-      
+
       case 'volume':
         return this.executeVolumeCommand(args[0], context);
-      
+
       case 'snapshot':
         return this.executeSnapshotCommand(context);
-      
+
       default:
         return {
           success: false,
-          error: `Command '${command.name}' is not yet implemented`
+          error: `Command '${command.name}' is not yet implemented`,
         };
     }
   }
@@ -927,30 +942,30 @@ export class ChatHandler {
   // Command implementations
   private async executeHelpCommand(
     commandName: string | undefined,
-    context: CommandContext
+    context: CommandContext,
   ): Promise<CommandExecutionResult> {
     if (commandName) {
       const command = StreamCommandParser.findCommand(commandName);
       if (!command) {
         return {
           success: false,
-          error: `Unknown command: ${commandName}`
+          error: `Unknown command: ${commandName}`,
         };
       }
 
       const helpText = StreamCommandParser.getCommandHelp(command);
       return {
         success: true,
-        message: helpText
+        message: helpText,
       };
     } else {
       const helpText = StreamCommandParser.getAvailableCommands(
         context.userRole,
-        context.isAuthenticated
+        context.isAuthenticated,
       );
       return {
         success: true,
-        message: helpText
+        message: helpText,
       };
     }
   }
@@ -959,7 +974,7 @@ export class ChatHandler {
     try {
       const room = this.roomManager.getRoomInfo(context.streamId);
       const viewerCount = room?.viewers.size || 0;
-      
+
       // Get additional stats from database
       const stream = await this.prisma.stream.findUnique({
         where: { id: context.streamId },
@@ -967,26 +982,27 @@ export class ChatHandler {
           title: true,
           createdAt: true,
           isLive: true,
-          slowModeDelay: true
-        }
+          slowModeDelay: true,
+        },
       });
 
       if (!stream) {
         return {
           success: false,
-          error: 'Stream not found'
+          error: 'Stream not found',
         };
       }
 
-      const uptime = stream.createdAt ? 
-        Math.floor((Date.now() - stream.createdAt.getTime()) / 1000) : 0;
-      
+      const uptime = stream.createdAt
+        ? Math.floor((Date.now() - stream.createdAt.getTime()) / 1000)
+        : 0;
+
       const stats = [
         `📊 **Stream Statistics**`,
         `👥 Viewers: ${viewerCount}`,
         `⏱️ Uptime: ${this.formatDuration(uptime)}`,
         `🎬 Status: ${stream.isLive ? 'Live' : 'Offline'}`,
-        `🐌 Slow Mode: ${stream.slowModeDelay > 0 ? `${stream.slowModeDelay}s` : 'Disabled'}`
+        `🐌 Slow Mode: ${stream.slowModeDelay > 0 ? `${stream.slowModeDelay}s` : 'Disabled'}`,
       ].join('\n');
 
       return {
@@ -996,34 +1012,34 @@ export class ChatHandler {
           viewerCount,
           uptime,
           isLive: stream.isLive,
-          slowModeDelay: stream.slowModeDelay
-        }
+          slowModeDelay: stream.slowModeDelay,
+        },
       };
     } catch (error) {
       return {
         success: false,
-        error: 'Failed to retrieve stats'
+        error: 'Failed to retrieve stats',
       };
     }
   }
 
   private async executeQualityCommand(
     quality: string | undefined,
-    context: CommandContext
+    context: CommandContext,
   ): Promise<CommandExecutionResult> {
     const validQualities = ['auto', '1080p', '720p', '480p', '360p'];
-    
+
     if (!quality) {
       return {
         success: true,
-        message: `Available qualities: ${validQualities.join(', ')}`
+        message: `Available qualities: ${validQualities.join(', ')}`,
       };
     }
 
     if (!validQualities.includes(quality.toLowerCase())) {
       return {
         success: false,
-        error: `Invalid quality. Use: ${validQualities.join(', ')}`
+        error: `Invalid quality. Use: ${validQualities.join(', ')}`,
       };
     }
 
@@ -1032,18 +1048,18 @@ export class ChatHandler {
     return {
       success: true,
       message: `Quality changed to ${quality}`,
-      data: { quality }
+      data: { quality },
     };
   }
 
   private async executeFeatureCommand(
     productId: string,
-    context: CommandContext
+    context: CommandContext,
   ): Promise<CommandExecutionResult> {
     if (!productId) {
       return {
         success: false,
-        error: 'Product ID is required'
+        error: 'Product ID is required',
       };
     }
 
@@ -1051,13 +1067,13 @@ export class ChatHandler {
       // Find the product
       const product = await this.prisma.product.findUnique({
         where: { id: productId },
-        select: { id: true, name: true }
+        select: { id: true, name: true },
       });
 
       if (!product) {
         return {
           success: false,
-          error: 'Product not found'
+          error: 'Product not found',
         };
       }
 
@@ -1066,12 +1082,12 @@ export class ChatHandler {
       return {
         success: true,
         message: `Now featuring: ${product.name}`,
-        data: { productId, productName: product.name }
+        data: { productId, productName: product.name },
       };
     } catch (error) {
       return {
         success: false,
-        error: 'Failed to feature product'
+        error: 'Failed to feature product',
       };
     }
   }
@@ -1079,49 +1095,49 @@ export class ChatHandler {
   private async executeUnfeatureCommand(context: CommandContext): Promise<CommandExecutionResult> {
     return {
       success: true,
-      message: 'Featured product removed'
+      message: 'Featured product removed',
     };
   }
 
   private async executeRecordCommand(
     action: string | undefined,
-    context: CommandContext
+    context: CommandContext,
   ): Promise<CommandExecutionResult> {
     const validActions = ['start', 'stop'];
-    
+
     if (action && !validActions.includes(action.toLowerCase())) {
       return {
         success: false,
-        error: `Invalid action. Use: ${validActions.join(', ')}`
+        error: `Invalid action. Use: ${validActions.join(', ')}`,
       };
     }
 
     const recordAction = action?.toLowerCase() || 'toggle';
-    
+
     return {
       success: true,
       message: `Recording ${recordAction === 'start' ? 'started' : recordAction === 'stop' ? 'stopped' : 'toggled'}`,
-      data: { action: recordAction }
+      data: { action: recordAction },
     };
   }
 
   private async executeVolumeCommand(
     level: string,
-    context: CommandContext
+    context: CommandContext,
   ): Promise<CommandExecutionResult> {
     const volume = parseInt(level);
-    
+
     if (isNaN(volume) || volume < 0 || volume > 100) {
       return {
         success: false,
-        error: 'Volume must be between 0 and 100'
+        error: 'Volume must be between 0 and 100',
       };
     }
 
     return {
       success: true,
       message: `Volume set to ${volume}%`,
-      data: { volume }
+      data: { volume },
     };
   }
 
@@ -1129,7 +1145,7 @@ export class ChatHandler {
     return {
       success: true,
       message: 'Snapshot captured',
-      data: { timestamp: new Date().toISOString() }
+      data: { timestamp: new Date().toISOString() },
     };
   }
 
@@ -1185,7 +1201,7 @@ export class ChatHandler {
           validated.streamId,
           true,
           delay,
-          socket.username || 'Moderator'
+          socket.username || 'Moderator',
         );
       } else {
         this.slowModeManager.disableSlowMode(validated.streamId);
@@ -1204,7 +1220,7 @@ export class ChatHandler {
           validated.streamId,
           false,
           0,
-          socket.username || 'Moderator'
+          socket.username || 'Moderator',
         );
       }
     } catch (error) {
@@ -1222,44 +1238,41 @@ export class ChatHandler {
     'chat:message',
     async (socket: SocketWithAuth, data: any) => {
       await this.handleSendMessage(socket, data);
-    }
+    },
   );
 
   handleDeleteMessageEnhanced = createEnhancedRateLimitedHandler(
     'chat:delete',
     async (socket: SocketWithAuth, data: any) => {
       await this.handleDeleteMessage(socket, data);
-    }
+    },
   );
 
   handleModerateUserEnhanced = createEnhancedRateLimitedHandler(
     'chat:moderate',
     async (socket: SocketWithAuth, data: any) => {
       await this.handleModerateUser(socket, data);
-    }
+    },
   );
 
   handleTypingEnhanced = createEnhancedRateLimitedHandler(
     'chat:typing',
     async (socket: SocketWithAuth, data: any) => {
       await this.handleTyping(socket, data);
-    }
+    },
   );
 
   handleReactToMessageEnhanced = createEnhancedRateLimitedHandler(
     'chat:reaction',
     async (socket: SocketWithAuth, data: any) => {
       await this.handleReactToMessage(socket, data);
-    }
+    },
   );
 
   /**
    * Get rate limit status for a user
    */
-  async getRateLimitStatus(
-    socket: SocketWithAuth,
-    eventType: string
-  ): Promise<void> {
+  async getRateLimitStatus(socket: SocketWithAuth, eventType: string): Promise<void> {
     if (!socket.userId) {
       socket.emit('error', { message: 'Authentication required' });
       return;
@@ -1269,7 +1282,7 @@ export class ChatHandler {
       const status = await this.enhancedRateLimiter.getLimitStatus(
         eventType,
         socket.userId,
-        socket.role || 'viewer'
+        socket.role || 'viewer',
       );
 
       socket.emit('rate_limit_status', {
@@ -1287,7 +1300,7 @@ export class ChatHandler {
    */
   async resetUserRateLimits(
     socket: SocketWithAuth,
-    data: { userId: string; eventType?: string }
+    data: { userId: string; eventType?: string },
   ): Promise<void> {
     // Check admin permissions
     if (socket.role !== 'admin') {
@@ -1297,13 +1310,15 @@ export class ChatHandler {
 
     try {
       await this.enhancedRateLimiter.resetLimits(data.userId, data.eventType);
-      
+
       socket.emit('admin:rate_limit_reset:success', {
         userId: data.userId,
         eventType: data.eventType || 'all',
       });
 
-      console.log(`Rate limits reset by admin ${socket.userId} for user ${data.userId}, event: ${data.eventType || 'all'}`);
+      console.log(
+        `Rate limits reset by admin ${socket.userId} for user ${data.userId}, event: ${data.eventType || 'all'}`,
+      );
     } catch (error) {
       console.error('Error resetting rate limits:', error);
       socket.emit('error', { message: 'Failed to reset rate limits' });

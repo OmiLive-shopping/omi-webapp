@@ -2,8 +2,8 @@ import { Request, Response } from 'express';
 import { unifiedResponse } from 'uni-response';
 
 import { PrismaService } from '../../../config/prisma.config.js';
-import { ProductService } from '../services/product.service.js';
 import { BrandProductFilters } from '../schemas/brand-product.schema.js';
+import { ProductService } from '../services/product.service.js';
 
 export class BrandProductController {
   constructor(private readonly productService: ProductService) {}
@@ -24,7 +24,7 @@ export class BrandProductController {
 
       const brand = await prisma.brand.findUnique({
         where: { userId: req.user.id },
-        select: { id: true }
+        select: { id: true },
       });
 
       if (!brand) {
@@ -40,17 +40,27 @@ export class BrandProductController {
         limit: req.query.limit ? parseInt(req.query.limit as string) : undefined,
         minPrice: req.query.minPrice ? parseFloat(req.query.minPrice as string) : undefined,
         maxPrice: req.query.maxPrice ? parseFloat(req.query.maxPrice as string) : undefined,
-        public: req.query.public === 'true' ? true : req.query.public === 'false' ? false : undefined,
-        active: req.query.active === 'true' ? true : req.query.active === 'false' ? false : undefined,
-        inStock: req.query.inStock === 'true' ? true : req.query.inStock === 'false' ? false : undefined,
-        featured: req.query.featured === 'true' ? true : req.query.featured === 'false' ? false : undefined,
-        hasActiveCoupon: req.query.hasActiveCoupon === 'true' ? true : req.query.hasActiveCoupon === 'false' ? false : undefined,
-        lowStock: req.query.lowStock === 'true' ? true : req.query.lowStock === 'false' ? false : undefined,
+        public:
+          req.query.public === 'true' ? true : req.query.public === 'false' ? false : undefined,
+        active:
+          req.query.active === 'true' ? true : req.query.active === 'false' ? false : undefined,
+        inStock:
+          req.query.inStock === 'true' ? true : req.query.inStock === 'false' ? false : undefined,
+        featured:
+          req.query.featured === 'true' ? true : req.query.featured === 'false' ? false : undefined,
+        hasActiveCoupon:
+          req.query.hasActiveCoupon === 'true'
+            ? true
+            : req.query.hasActiveCoupon === 'false'
+              ? false
+              : undefined,
+        lowStock:
+          req.query.lowStock === 'true' ? true : req.query.lowStock === 'false' ? false : undefined,
         tags: req.query.tags ? (req.query.tags as string).split(',').filter(Boolean) : undefined,
       };
 
       const response = await this.productService.getBrandProducts(brand.id, filters);
-      
+
       if (response.success) {
         res.status(200).json(response);
       } else {
@@ -78,7 +88,7 @@ export class BrandProductController {
 
       const brand = await prisma.brand.findUnique({
         where: { userId: req.user.id },
-        select: { id: true }
+        select: { id: true },
       });
 
       if (!brand) {
@@ -87,7 +97,7 @@ export class BrandProductController {
       }
 
       const response = await this.productService.createBrandProduct(req.body, brand.id);
-      
+
       if (response.success) {
         res.status(201).json(response);
       } else {

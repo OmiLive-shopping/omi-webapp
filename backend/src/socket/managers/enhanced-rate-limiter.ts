@@ -132,7 +132,7 @@ export class EnhancedRateLimiter {
     },
 
     // Default fallback
-    'default': {
+    default: {
       maxAttempts: 30,
       windowMs: 60 * 1000,
       cooldownMs: 1 * 60 * 1000,
@@ -188,7 +188,9 @@ export class EnhancedRateLimiter {
     const ipKey = ipAddress ? `ip:${ipAddress}:${eventType}` : null;
 
     const userLimit = await this.checkSingleLimit(userKey, config, now, ipAddress, userAgent);
-    const ipLimit = ipKey ? await this.checkSingleLimit(ipKey, config, now, ipAddress, userAgent) : null;
+    const ipLimit = ipKey
+      ? await this.checkSingleLimit(ipKey, config, now, ipAddress, userAgent)
+      : null;
 
     // If either limit is exceeded, deny the request
     if (!userLimit.allowed) {
@@ -251,7 +253,9 @@ export class EnhancedRateLimiter {
 
     await this.setEntry(userKey, entry);
 
-    console.warn(`Rate limit penalty applied: ${userKey}, duration: ${penaltyDuration}ms, reason: ${reason}`);
+    console.warn(
+      `Rate limit penalty applied: ${userKey}, duration: ${penaltyDuration}ms, reason: ${reason}`,
+    );
   }
 
   /**
@@ -265,7 +269,7 @@ export class EnhancedRateLimiter {
       // Reset all events for this user
       const keys = await this.getAllKeys();
       const userKeys = keys.filter(key => key.startsWith(`user:${identifier}:`));
-      
+
       for (const key of userKeys) {
         await this.deleteEntry(key);
       }
@@ -321,10 +325,12 @@ export class EnhancedRateLimiter {
     return {
       ...baseConfig,
       maxAttempts: Math.floor(baseConfig.maxAttempts * multiplier),
-      bursts: baseConfig.bursts ? {
-        ...baseConfig.bursts,
-        maxBurst: Math.floor(baseConfig.bursts.maxBurst * multiplier),
-      } : undefined,
+      bursts: baseConfig.bursts
+        ? {
+            ...baseConfig.bursts,
+            maxBurst: Math.floor(baseConfig.bursts.maxBurst * multiplier),
+          }
+        : undefined,
     };
   }
 
@@ -430,12 +436,14 @@ export class EnhancedRateLimiter {
       }
     }
 
-    return this.limits.get(key) || {
-      count: 0,
-      resetTime: Date.now(),
-      violations: 0,
-      isBlocked: false,
-    };
+    return (
+      this.limits.get(key) || {
+        count: 0,
+        resetTime: Date.now(),
+        violations: 0,
+        isBlocked: false,
+      }
+    );
   }
 
   /**
@@ -491,7 +499,7 @@ export class EnhancedRateLimiter {
    */
   private async cleanup(): Promise<void> {
     const now = Date.now();
-    
+
     if (this.useRedis) {
       // Redis handles TTL automatically, but we can clean up blocked entries
       return;
@@ -501,7 +509,7 @@ export class EnhancedRateLimiter {
     for (const [key, entry] of this.limits.entries()) {
       const isExpired = now > entry.resetTime;
       const isUnblocked = !entry.isBlocked || (entry.blockUntil && now > entry.blockUntil);
-      
+
       if (isExpired && isUnblocked) {
         this.limits.delete(key);
       }
@@ -529,22 +537,21 @@ export class EnhancedRateLimiter {
 
     for (const key of keys) {
       const entry = await this.getEntry(key);
-      
+
       if (entry.isBlocked) {
         stats.blockedEntries++;
       }
 
       if (entry.violations > 0) {
         const eventType = key.split(':').pop() || 'unknown';
-        stats.violationsByEvent[eventType] = (stats.violationsByEvent[eventType] || 0) + entry.violations;
+        stats.violationsByEvent[eventType] =
+          (stats.violationsByEvent[eventType] || 0) + entry.violations;
         violators.push({ key, violations: entry.violations });
       }
     }
 
     // Sort violators by violation count
-    stats.topViolators = violators
-      .sort((a, b) => b.violations - a.violations)
-      .slice(0, 10);
+    stats.topViolators = violators.sort((a, b) => b.violations - a.violations).slice(0, 10);
 
     return stats;
   }
@@ -563,7 +570,7 @@ export function createRateLimitedHandler<T = any>(
 ) {
   return async (socket: any, data: T) => {
     const rateLimiter = EnhancedRateLimiter.getInstance();
-    
+
     // Get identifier and metadata (require authentication for chat events)
     const identifier = options?.customKey?.(socket, data) || socket.userId;
     const role = socket.role || 'viewer';
@@ -607,7 +614,6 @@ export function createRateLimitedHandler<T = any>(
 
       // Call the original handler
       await handler(socket, data);
-
     } catch (error) {
       console.error(`Rate limited handler error for ${eventType}:`, error);
       socket.emit('error', { message: 'Internal server error' });
@@ -630,6 +636,8 @@ export async function getRateLimitHeaders(
     'X-RateLimit-Limit': rateLimiter['getConfigForEvent'](eventType, role).maxAttempts.toString(),
     'X-RateLimit-Remaining': status.remaining.toString(),
     'X-RateLimit-Reset': Math.ceil(status.resetTime / 1000).toString(),
-    ...(status.isBlocked && { 'X-RateLimit-Blocked-Until': Math.ceil((status.blockUntil || 0) / 1000).toString() }),
+    ...(status.isBlocked && {
+      'X-RateLimit-Blocked-Until': Math.ceil((status.blockUntil || 0) / 1000).toString(),
+    }),
   };
 }

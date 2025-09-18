@@ -1,16 +1,17 @@
 import { Socket } from 'socket.io';
 import { z } from 'zod';
-import { 
-  SecurityConfig, 
-  SecurityEventType, 
-  SecurityAuditLog, 
-  SecurityMetrics,
-  OriginValidator,
-  IPReputationManager,
-  PayloadValidator,
-  getClientIP,
+
+import {
+  defaultSecurityConfig,
   generateAuditId,
-  defaultSecurityConfig 
+  getClientIP,
+  IPReputationManager,
+  OriginValidator,
+  PayloadValidator,
+  SecurityAuditLog,
+  SecurityConfig,
+  SecurityEventType,
+  SecurityMetrics,
 } from '../../config/socket/security.config.js';
 import { SocketWithAuth } from '../../config/socket/socket.config.js';
 
@@ -36,7 +37,7 @@ export class SecurityManager {
     this.ipReputationManager = new IPReputationManager(config);
     this.payloadValidator = new PayloadValidator(config);
     this.metrics = this.initializeMetrics();
-    
+
     // Start cleanup interval
     setInterval(() => this.cleanup(), 60000); // Every minute
   }
@@ -101,9 +102,10 @@ export class SecurityManager {
 
     // Check anonymous connection limits
     if (!socket.userId && this.config.security.allowAnonymous) {
-      const anonymousCount = Array.from(this.activeConnections.values())
-        .filter(s => !s.userId).length;
-      
+      const anonymousCount = Array.from(this.activeConnections.values()).filter(
+        s => !s.userId,
+      ).length;
+
       if (anonymousCount >= this.config.security.maxAnonymousConnections) {
         this.logSecurityEvent({
           eventType: SecurityEventType.CONNECTION_BLOCKED,
@@ -189,7 +191,9 @@ export class SecurityManager {
     // Check authentication requirement
     if (this.payloadValidator.requiresAuthentication(eventName) && !socket.userId) {
       if (process.env.SOCKET_DEBUG === 'true') {
-        console.log(`[SECURITY] Authentication required for event: ${eventName}, but socket.userId is ${socket.userId}`);
+        console.log(
+          `[SECURITY] Authentication required for event: ${eventName}, but socket.userId is ${socket.userId}`,
+        );
       }
       this.logSecurityEvent({
         eventType: SecurityEventType.AUTHENTICATION_FAILURE,
@@ -272,10 +276,10 @@ export class SecurityManager {
    */
   handleDisconnection(socket: SocketWithAuth): void {
     const ip = getClientIP(socket);
-    
+
     this.activeConnections.delete(socket.id);
     this.updateMetrics();
-    
+
     this.logSecurityEvent({
       eventType: SecurityEventType.CONNECTION_ATTEMPT,
       ip,
@@ -291,9 +295,9 @@ export class SecurityManager {
    */
   reportSuspiciousActivity(socket: SocketWithAuth, reason: string): void {
     const ip = getClientIP(socket);
-    
+
     this.ipReputationManager.reportSuspiciousActivity(ip);
-    
+
     this.logSecurityEvent({
       eventType: SecurityEventType.SUSPICIOUS_ACTIVITY,
       ip,
@@ -309,7 +313,7 @@ export class SecurityManager {
    */
   blockIP(ip: string, reason: string): void {
     this.ipReputationManager.blockIP(ip, reason);
-    
+
     // Disconnect all sockets from this IP
     for (const [socketId, socket] of this.activeConnections.entries()) {
       if (getClientIP(socket) === ip) {
@@ -317,14 +321,14 @@ export class SecurityManager {
         this.activeConnections.delete(socketId);
       }
     }
-    
+
     this.logSecurityEvent({
       eventType: SecurityEventType.IP_BLOCKED,
       ip,
       message: reason,
       severity: 'critical',
     });
-    
+
     this.updateMetrics();
   }
 
@@ -333,7 +337,7 @@ export class SecurityManager {
    */
   unblockIP(ip: string): void {
     this.ipReputationManager.unblockIP(ip);
-    
+
     this.logSecurityEvent({
       eventType: SecurityEventType.IP_BLOCKED,
       ip,
@@ -381,12 +385,12 @@ export class SecurityManager {
    */
   updateConfig(newConfig: Partial<SecurityConfig>): void {
     this.config = { ...this.config, ...newConfig };
-    
+
     // Update origin validator if CORS config changed
     if (newConfig.cors?.allowedOrigins) {
       this.originValidator = new OriginValidator(newConfig.cors.allowedOrigins);
     }
-    
+
     // Update other components as needed
     this.ipReputationManager = new IPReputationManager(this.config);
     this.payloadValidator = new PayloadValidator(this.config);
@@ -404,15 +408,17 @@ export class SecurityManager {
    */
   checkAlerts(): void {
     const thresholds = this.config.monitoring.alertThresholds;
-    
+
     if (this.metrics.activeConnections > thresholds.highConnectionCount) {
-      console.warn(`HIGH CONNECTION COUNT ALERT: ${this.metrics.activeConnections} active connections`);
+      console.warn(
+        `HIGH CONNECTION COUNT ALERT: ${this.metrics.activeConnections} active connections`,
+      );
     }
-    
+
     if (this.rateLimitViolations > thresholds.highMessageRate) {
       console.warn(`HIGH RATE LIMIT VIOLATIONS: ${this.rateLimitViolations} violations`);
     }
-    
+
     const errorRate = this.metrics.blockedAttempts / Math.max(this.metrics.totalConnections, 1);
     if (errorRate > thresholds.errorRate) {
       console.warn(`HIGH ERROR RATE ALERT: ${(errorRate * 100).toFixed(2)}% error rate`);
@@ -424,20 +430,20 @@ export class SecurityManager {
    */
   private logSecurityEvent(event: Omit<SecurityAuditLog, 'id' | 'timestamp'>): void {
     if (!this.config.security.enableAuditLogging) return;
-    
+
     const auditLog: SecurityAuditLog = {
       id: generateAuditId(),
       timestamp: new Date(),
       ...event,
     };
-    
+
     this.auditLogs.push(auditLog);
-    
+
     // Keep only last 10000 logs to prevent memory issues
     if (this.auditLogs.length > 10000) {
       this.auditLogs = this.auditLogs.slice(-5000);
     }
-    
+
     // Log critical events to console
     if (event.severity === 'critical' || event.severity === 'high') {
       console.warn(`SECURITY EVENT [${event.severity.toUpperCase()}]:`, event.message, {
@@ -466,7 +472,7 @@ export class SecurityManager {
     const activeConnections = Array.from(this.activeConnections.values());
     const anonymousCount = activeConnections.filter(s => !s.userId).length;
     const authenticatedCount = activeConnections.filter(s => s.userId).length;
-    
+
     this.metrics = {
       totalConnections: this.activeConnections.size,
       activeConnections: this.activeConnections.size,
@@ -478,7 +484,7 @@ export class SecurityManager {
       payloadViolations: this.payloadViolations,
       lastUpdated: new Date(),
     };
-    
+
     // Check for alerts
     if (this.config.monitoring.enableMetrics) {
       this.checkAlerts();
@@ -488,11 +494,11 @@ export class SecurityManager {
   private cleanup(): void {
     // Clean up IP reputation data
     this.ipReputationManager.cleanup();
-    
+
     // Reset violation counters periodically
     this.rateLimitViolations = Math.max(0, this.rateLimitViolations - 10);
     this.payloadViolations = Math.max(0, this.payloadViolations - 10);
-    
+
     // Update metrics
     this.updateMetrics();
   }
@@ -505,18 +511,18 @@ export function createSecurityMiddleware(securityManager: SecurityManager) {
   return async (socket: SocketWithAuth, next: (err?: Error) => void) => {
     try {
       const isValid = await securityManager.validateConnection(socket);
-      
+
       if (!isValid) {
         const error = new Error('Connection rejected by security policy');
         (error as any).type = 'SecurityRejection';
         return next(error);
       }
-      
+
       // Set up disconnection handler
       socket.on('disconnect', () => {
         securityManager.handleDisconnection(socket);
       });
-      
+
       next();
     } catch (error) {
       console.error('Security middleware error:', error);
@@ -530,14 +536,14 @@ export function createSecurityMiddleware(securityManager: SecurityManager) {
  */
 export function createEventValidationWrapper(securityManager: SecurityManager) {
   return function wrapHandler<T>(
-    eventName: string, 
-    handler: (socket: SocketWithAuth, data: T) => Promise<void> | void
+    eventName: string,
+    handler: (socket: SocketWithAuth, data: T) => Promise<void> | void,
   ) {
-    return async function(this: SocketWithAuth, data: T) {
+    return async function (this: SocketWithAuth, data: T) {
       try {
         // In Socket.IO, 'this' is bound to the socket instance
         const socket = this;
-        
+
         // Lightweight tracer: detect missing payload for stream:leave
         if (
           (eventName === 'stream:leave' || eventName === 'stream:join') &&
@@ -560,42 +566,42 @@ export function createEventValidationWrapper(securityManager: SecurityManager) {
           console.log(`[WRAPPER DEBUG] - socket.username: ${socket.username}`);
           console.log(`[WRAPPER DEBUG] - socket.role: ${socket.role}`);
         }
-        
+
         const isValid = await securityManager.validateEvent(socket, eventName, data);
-        
+
         if (!isValid) {
           // Check if socket.emit exists before trying to use it
           if (socket && typeof socket.emit === 'function') {
-            socket.emit('error', { 
+            socket.emit('error', {
               message: 'Event rejected by security policy',
-              event: eventName 
+              event: eventName,
             });
           }
           return;
         }
-        
+
         if (process.env.SOCKET_DEBUG === 'true') {
           console.log(`[WRAPPER DEBUG] About to call handler for ${eventName} with same socket:`);
           console.log(`[WRAPPER DEBUG] - handler socket.id: ${socket.id}`);
           console.log(`[WRAPPER DEBUG] - handler socket.userId: ${socket.userId}`);
         }
-        
+
         await handler(socket, data);
       } catch (error: any) {
         const errorMessage = error?.message || error?.toString() || 'Unknown error';
         console.error(`Event validation error for ${eventName}:`, errorMessage, error);
-        
+
         // In Socket.IO, 'this' is bound to the socket instance
         const socket = this;
-        
+
         // Check if socket.emit exists before trying to use it
         if (socket && typeof socket.emit === 'function') {
-          socket.emit('error', { 
+          socket.emit('error', {
             message: 'Event processing failed',
-            event: eventName 
+            event: eventName,
           });
         }
-        
+
         // Only report if socket is valid
         if (socket) {
           securityManager.reportSuspiciousActivity(socket, `Event processing error: ${eventName}`);

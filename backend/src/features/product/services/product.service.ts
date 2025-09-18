@@ -102,7 +102,7 @@ export class ProductService {
       brandId,
       approvalStatus: 'pending',
     };
-    
+
     const product = await this.productRepository.createProduct(brandProductInput);
     return unifiedResponse(true, 'Brand product created successfully', product);
   }

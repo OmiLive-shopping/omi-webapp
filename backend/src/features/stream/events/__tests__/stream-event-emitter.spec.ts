@@ -1,5 +1,12 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { StreamEventEmitter, streamEventEmitter, type StreamEvent, type StreamCreatedEvent, type ViewerJoinedEvent } from '../stream-event-emitter.js';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import {
+  type StreamCreatedEvent,
+  type StreamEvent,
+  StreamEventEmitter,
+  streamEventEmitter,
+  type ViewerJoinedEvent,
+} from '../stream-event-emitter.js';
 
 describe('StreamEventEmitter', () => {
   let emitter: StreamEventEmitter;
@@ -42,7 +49,7 @@ describe('StreamEventEmitter', () => {
           streamId: 'stream-123',
           stream: streamData,
           timestamp: expect.any(String),
-        })
+        }),
       );
     });
 
@@ -50,12 +57,16 @@ describe('StreamEventEmitter', () => {
       const listener = vi.fn();
       emitter.onStreamEvent('stream:viewer:joined', listener);
 
-      const result = await emitter.emitViewerJoined('stream-123', {
-        id: 'user-789',
-        username: 'viewer1',
-        isAnonymous: false,
-        socketId: 'socket-abc',
-      }, 42);
+      const result = await emitter.emitViewerJoined(
+        'stream-123',
+        {
+          id: 'user-789',
+          username: 'viewer1',
+          isAnonymous: false,
+          socketId: 'socket-abc',
+        },
+        42,
+      );
 
       expect(result).toBe(true);
       expect(listener).toHaveBeenCalledWith(
@@ -68,14 +79,14 @@ describe('StreamEventEmitter', () => {
             isAnonymous: false,
           }),
           currentViewerCount: 42,
-        })
+        }),
       );
     });
 
     it('should emit wildcard events', async () => {
       const wildcardListener = vi.fn();
       const specificListener = vi.fn();
-      
+
       emitter.onStreamEvent('*', wildcardListener);
       emitter.onStreamEvent('stream:started', specificListener);
 
@@ -100,7 +111,7 @@ describe('StreamEventEmitter', () => {
   describe('Event Validation', () => {
     it('should validate stream created event structure', async () => {
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-      
+
       // Invalid event - missing required fields
       const invalidEvent = {
         type: 'stream:created',
@@ -120,10 +131,7 @@ describe('StreamEventEmitter', () => {
       const result = await emitter.emitStreamEvent(invalidEvent);
 
       expect(result).toBe(false);
-      expect(consoleSpy).toHaveBeenCalledWith(
-        'Failed to emit stream event:',
-        expect.any(Error)
-      );
+      expect(consoleSpy).toHaveBeenCalledWith('Failed to emit stream event:', expect.any(Error));
 
       consoleSpy.mockRestore();
     });
@@ -171,7 +179,7 @@ describe('StreamEventEmitter', () => {
             code: 'EVENT_EMISSION_FAILED',
             severity: 'medium',
           }),
-        })
+        }),
       );
     });
   });
@@ -185,12 +193,16 @@ describe('StreamEventEmitter', () => {
         user: { id: 'user-456', username: 'testuser' },
       });
 
-      await emitter.emitViewerJoined('stream-123', {
-        id: 'user-789',
-        username: 'viewer1',
-        isAnonymous: false,
-        socketId: 'socket-abc',
-      }, 1);
+      await emitter.emitViewerJoined(
+        'stream-123',
+        {
+          id: 'user-789',
+          username: 'viewer1',
+          isAnonymous: false,
+          socketId: 'socket-abc',
+        },
+        1,
+      );
 
       const history = emitter.getStreamHistory('stream-123');
       expect(history).toHaveLength(2);
@@ -201,12 +213,16 @@ describe('StreamEventEmitter', () => {
     it('should limit history size per stream', async () => {
       // Create events beyond the max limit
       for (let i = 0; i < 105; i++) {
-        await emitter.emitViewerJoined('stream-123', {
-          id: `user-${i}`,
-          username: `viewer${i}`,
-          isAnonymous: false,
-          socketId: `socket-${i}`,
-        }, i + 1);
+        await emitter.emitViewerJoined(
+          'stream-123',
+          {
+            id: `user-${i}`,
+            username: `viewer${i}`,
+            isAnonymous: false,
+            socketId: `socket-${i}`,
+          },
+          i + 1,
+        );
       }
 
       const history = emitter.getStreamHistory('stream-123');
@@ -243,9 +259,9 @@ describe('StreamEventEmitter', () => {
       });
 
       expect(emitter.getStreamHistory('stream-123')).toHaveLength(1);
-      
+
       emitter.clearStreamHistory('stream-123');
-      
+
       expect(emitter.getStreamHistory('stream-123')).toHaveLength(0);
     });
   });
@@ -266,12 +282,16 @@ describe('StreamEventEmitter', () => {
         user: { id: 'user-2', username: 'user2' },
       });
 
-      await emitter.emitViewerJoined('stream-1', {
-        id: 'user-3',
-        username: 'viewer1',
-        isAnonymous: false,
-        socketId: 'socket-1',
-      }, 1);
+      await emitter.emitViewerJoined(
+        'stream-1',
+        {
+          id: 'user-3',
+          username: 'viewer1',
+          isAnonymous: false,
+          socketId: 'socket-1',
+        },
+        1,
+      );
 
       const stats = emitter.getEventStats();
       expect(stats['stream:created']).toBe(2);
@@ -282,19 +302,19 @@ describe('StreamEventEmitter', () => {
   describe('Event Listeners', () => {
     it('should add and remove event listeners', () => {
       const listener = vi.fn();
-      
+
       emitter.onStreamEvent('stream:created', listener);
       expect(emitter.listenerCount('stream:created')).toBe(1);
-      
+
       emitter.offStreamEvent('stream:created', listener);
       expect(emitter.listenerCount('stream:created')).toBe(0);
     });
 
     it('should handle one-time listeners', async () => {
       const listener = vi.fn();
-      
+
       emitter.onceStreamEvent('stream:created', listener);
-      
+
       await emitter.emitStreamCreated({
         id: 'stream-123',
         title: 'Test Stream',
@@ -311,7 +331,7 @@ describe('StreamEventEmitter', () => {
         throw new Error('Listener error');
       });
       const goodListener = vi.fn();
-      
+
       emitter.onStreamEvent('stream:created', errorListener);
       emitter.onStreamEvent('stream:created', goodListener);
 
@@ -326,7 +346,7 @@ describe('StreamEventEmitter', () => {
 
       // Good listener should still be called despite error in first listener
       expect(goodListener).toHaveBeenCalled();
-      
+
       consoleSpy.mockRestore();
     });
   });
@@ -336,13 +356,17 @@ describe('StreamEventEmitter', () => {
       const listener = vi.fn();
       emitter.onStreamEvent('stream:ended', listener);
 
-      await emitter.emitStreamEnded('stream-123', {
-        title: 'Test Stream',
-        userId: 'user-456',
-        duration: 1800, // 30 minutes
-        endedAt: new Date().toISOString(),
-        finalViewerCount: 50,
-      }, 'manual');
+      await emitter.emitStreamEnded(
+        'stream-123',
+        {
+          title: 'Test Stream',
+          userId: 'user-456',
+          duration: 1800, // 30 minutes
+          endedAt: new Date().toISOString(),
+          finalViewerCount: 50,
+        },
+        'manual',
+      );
 
       expect(listener).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -353,7 +377,7 @@ describe('StreamEventEmitter', () => {
             duration: 1800,
             finalViewerCount: 50,
           }),
-        })
+        }),
       );
     });
 
@@ -361,12 +385,16 @@ describe('StreamEventEmitter', () => {
       const listener = vi.fn();
       emitter.onStreamEvent('stream:stats:updated', listener);
 
-      await emitter.emitStatsUpdated('stream-123', {
-        viewerCount: 42,
-        bitrate: 2500,
-        fps: 30,
-        quality: 'good',
-      }, 'vdo_ninja');
+      await emitter.emitStatsUpdated(
+        'stream-123',
+        {
+          viewerCount: 42,
+          bitrate: 2500,
+          fps: 30,
+          quality: 'good',
+        },
+        'vdo_ninja',
+      );
 
       expect(listener).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -377,7 +405,7 @@ describe('StreamEventEmitter', () => {
             quality: 'good',
           }),
           source: 'vdo_ninja',
-        })
+        }),
       );
     });
 
@@ -385,14 +413,18 @@ describe('StreamEventEmitter', () => {
       const listener = vi.fn();
       emitter.onStreamEvent('stream:quality:changed', listener);
 
-      await emitter.emitQualityChanged('stream-123', {
-        level: 'poor',
-        metrics: {
-          bitrate: 800,
-          latency: 500,
+      await emitter.emitQualityChanged(
+        'stream-123',
+        {
+          level: 'poor',
+          metrics: {
+            bitrate: 800,
+            latency: 500,
+          },
+          previousLevel: 'good',
         },
-        previousLevel: 'good',
-      }, true);
+        true,
+      );
 
       expect(listener).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -403,7 +435,7 @@ describe('StreamEventEmitter', () => {
             previousLevel: 'good',
           }),
           automaticAdjustment: true,
-        })
+        }),
       );
     });
 
@@ -411,16 +443,20 @@ describe('StreamEventEmitter', () => {
       const listener = vi.fn();
       emitter.onStreamEvent('stream:error', listener);
 
-      await emitter.emitStreamError('stream-123', {
-        code: 'NETWORK_ERROR',
-        message: 'Connection lost',
-        severity: 'high',
-        source: 'network',
-      }, {
-        attempted: true,
-        successful: false,
-        action: 'reconnect',
-      });
+      await emitter.emitStreamError(
+        'stream-123',
+        {
+          code: 'NETWORK_ERROR',
+          message: 'Connection lost',
+          severity: 'high',
+          source: 'network',
+        },
+        {
+          attempted: true,
+          successful: false,
+          action: 'reconnect',
+        },
+      );
 
       expect(listener).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -434,7 +470,7 @@ describe('StreamEventEmitter', () => {
             attempted: true,
             successful: false,
           }),
-        })
+        }),
       );
     });
   });
@@ -443,7 +479,7 @@ describe('StreamEventEmitter', () => {
     it('should maintain singleton pattern', () => {
       const instance1 = StreamEventEmitter.getInstance();
       const instance2 = StreamEventEmitter.getInstance();
-      
+
       expect(instance1).toBe(instance2);
     });
 

@@ -163,9 +163,9 @@ export const requireBrandOwnership = (productIdParam: string = 'id') => {
         where: { id: productId },
         include: {
           brand: {
-            select: { userId: true }
-          }
-        }
+            select: { userId: true },
+          },
+        },
       });
 
       if (!product) {
@@ -175,7 +175,9 @@ export const requireBrandOwnership = (productIdParam: string = 'id') => {
 
       // Check if user's brand owns this product
       if (!product.brand || product.brand.userId !== req.user.id) {
-        res.status(403).json(unifiedResponse(false, 'You can only manage your own brand\'s products'));
+        res
+          .status(403)
+          .json(unifiedResponse(false, "You can only manage your own brand's products"));
         return;
       }
 

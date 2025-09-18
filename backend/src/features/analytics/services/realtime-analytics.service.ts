@@ -1,18 +1,19 @@
 import { inject, injectable } from 'tsyringe';
-import { AnalyticsService } from './analytics.service.js';
-import { 
-  analyticsEventEmitter, 
-  type AnalyticsEvent,
-  type StatsUpdatedEvent,
-  type ViewerAnalyticsEvent,
-  type QualityAnalyticsEvent,
-  type PerformanceAlertEvent,
-  type MilestoneReachedEvent,
-  type IntervalSummaryEvent,
-  type ThrottleConfig,
-} from '../events/analytics-event-emitter.js';
-import { streamEventEmitter } from '../../stream/events/stream-event-emitter.js';
+
 import type { VdoStreamStats } from '../../../socket/types/vdo-events.types.js';
+import { streamEventEmitter } from '../../stream/events/stream-event-emitter.js';
+import {
+  type AnalyticsEvent,
+  analyticsEventEmitter,
+  type IntervalSummaryEvent,
+  type MilestoneReachedEvent,
+  type PerformanceAlertEvent,
+  type QualityAnalyticsEvent,
+  type StatsUpdatedEvent,
+  type ThrottleConfig,
+  type ViewerAnalyticsEvent,
+} from '../events/analytics-event-emitter.js';
+import { AnalyticsService } from './analytics.service.js';
 
 /**
  * Subscription management for real-time analytics
@@ -89,9 +90,7 @@ export class RealtimeAnalyticsService {
   private intervalTimers: Map<string, NodeJS.Timeout> = new Map(); // streamId -> timer
   private alertThresholds: Map<string, any> = new Map(); // streamId -> thresholds
 
-  constructor(
-    @inject(AnalyticsService) private analyticsService: AnalyticsService
-  ) {
+  constructor(@inject(AnalyticsService) private analyticsService: AnalyticsService) {
     this.initializeEventListeners();
   }
 
@@ -105,7 +104,10 @@ export class RealtimeAnalyticsService {
     streamEventEmitter.onStreamEvent('stream:viewer:joined', this.handleViewerJoined.bind(this));
     streamEventEmitter.onStreamEvent('stream:viewer:left', this.handleViewerLeft.bind(this));
     streamEventEmitter.onStreamEvent('stream:stats:updated', this.handleStatsUpdated.bind(this));
-    streamEventEmitter.onStreamEvent('stream:quality:changed', this.handleQualityChanged.bind(this));
+    streamEventEmitter.onStreamEvent(
+      'stream:quality:changed',
+      this.handleQualityChanged.bind(this),
+    );
 
     // Listen to analytics events for forwarding to subscribers
     analyticsEventEmitter.onAnalyticsEvent('*', this.forwardToSubscribers.bind(this));
@@ -119,11 +121,15 @@ export class RealtimeAnalyticsService {
     userId: string,
     socketId: string,
     subscriptionType: AnalyticsSubscription['subscriptionType'],
-    filters?: AnalyticsSubscription['filters']
+    filters?: AnalyticsSubscription['filters'],
   ): Promise<boolean> {
     try {
       // Verify user has permission to view analytics
-      const hasPermission = await this.verifyAnalyticsPermission(streamId, userId, subscriptionType);
+      const hasPermission = await this.verifyAnalyticsPermission(
+        streamId,
+        userId,
+        subscriptionType,
+      );
       if (!hasPermission) {
         throw new Error('Insufficient permissions to view analytics');
       }
@@ -157,7 +163,6 @@ export class RealtimeAnalyticsService {
 
       console.log(`Analytics subscription created: ${userId} -> ${streamId} (${subscriptionType})`);
       return true;
-
     } catch (error) {
       console.error(`Failed to create analytics subscription: ${error}`);
       return false;
@@ -175,7 +180,7 @@ export class RealtimeAnalyticsService {
     const streamSubs = this.streamSubscriptions.get(subscription.streamId);
     if (streamSubs) {
       streamSubs.delete(socketId);
-      
+
       // Clean up stream metrics if no more subscribers
       if (streamSubs.size === 0) {
         this.cleanupStreamMetrics(subscription.streamId);
@@ -221,10 +226,10 @@ export class RealtimeAnalyticsService {
    */
   private async handleStreamStarted(event: any): Promise<void> {
     const streamId = event.streamId;
-    
+
     // Initialize metrics for the stream
     await this.initializeStreamMetrics(streamId);
-    
+
     // Set up default milestones
     this.configureMilestones(streamId, {
       milestones: [
@@ -262,10 +267,10 @@ export class RealtimeAnalyticsService {
    */
   private handleStreamEnded(event: any): void {
     const streamId = event.streamId;
-    
+
     // Clean up metrics and timers
     this.cleanupStreamMetrics(streamId);
-    
+
     // Remove milestone configs
     this.milestoneConfigs.delete(streamId);
     this.alertThresholds.delete(streamId);
@@ -277,13 +282,13 @@ export class RealtimeAnalyticsService {
   private async handleViewerJoined(event: any): Promise<void> {
     const streamId = event.streamId;
     const metrics = this.dashboardMetrics.get(streamId);
-    
+
     if (metrics) {
       // Update viewer metrics
       metrics.metrics.viewers.current = event.currentViewerCount;
       metrics.metrics.viewers.peak = Math.max(
         metrics.metrics.viewers.peak,
-        event.currentViewerCount
+        event.currentViewerCount,
       );
       metrics.lastUpdated = new Date();
 
@@ -291,18 +296,22 @@ export class RealtimeAnalyticsService {
       await this.checkMilestones(streamId, 'viewers', event.currentViewerCount);
 
       // Emit analytics event
-      await analyticsEventEmitter.emitViewerJoined(streamId, {
-        sessionId: event.viewer.socketId,
-        userId: event.viewer.id,
-        username: event.viewer.username,
-        isAnonymous: event.viewer.isAnonymous,
-        deviceType: 'unknown', // Would be detected from user agent
-      }, {
-        currentViewers: event.currentViewerCount,
-        totalViewers: metrics.metrics.viewers.current,
-        deviceBreakdown: {},
-        locationBreakdown: {},
-      });
+      await analyticsEventEmitter.emitViewerJoined(
+        streamId,
+        {
+          sessionId: event.viewer.socketId,
+          userId: event.viewer.id,
+          username: event.viewer.username,
+          isAnonymous: event.viewer.isAnonymous,
+          deviceType: 'unknown', // Would be detected from user agent
+        },
+        {
+          currentViewers: event.currentViewerCount,
+          totalViewers: metrics.metrics.viewers.current,
+          deviceBreakdown: {},
+          locationBreakdown: {},
+        },
+      );
     }
   }
 
@@ -312,16 +321,16 @@ export class RealtimeAnalyticsService {
   private async handleViewerLeft(event: any): Promise<void> {
     const streamId = event.streamId;
     const metrics = this.dashboardMetrics.get(streamId);
-    
+
     if (metrics) {
       // Update viewer metrics
       metrics.metrics.viewers.current = event.currentViewerCount;
       metrics.lastUpdated = new Date();
 
       // Check for significant viewer drops
-      const dropPercentage = 1 - (event.currentViewerCount / metrics.metrics.viewers.peak);
+      const dropPercentage = 1 - event.currentViewerCount / metrics.metrics.viewers.peak;
       const thresholds = this.alertThresholds.get(streamId)?.engagement?.viewerDrop;
-      
+
       if (thresholds && dropPercentage > thresholds.warning) {
         await analyticsEventEmitter.emitPerformanceAlert(streamId, {
           level: dropPercentage > thresholds.critical ? 'critical' : 'warning',
@@ -349,46 +358,50 @@ export class RealtimeAnalyticsService {
   private async handleStatsUpdated(event: any): Promise<void> {
     const streamId = event.streamId;
     const stats = event.stats;
-    
+
     // Process with existing analytics service
     await this.analyticsService.processRealtimeStats(streamId, stats);
-    
+
     // Update dashboard metrics
     await this.updateDashboardMetrics(streamId, stats);
-    
+
     // Check for quality alerts
     await this.checkQualityAlerts(streamId, stats);
-    
+
     // Emit analytics event
-    await analyticsEventEmitter.emitStatsUpdated(streamId, {
-      currentViewers: stats.viewerCount || 0,
-      peakViewers: this.dashboardMetrics.get(streamId)?.metrics.viewers.peak || 0,
-      totalViewers: this.dashboardMetrics.get(streamId)?.metrics.viewers.current || 0,
-      averageViewDuration: 0, // Would be calculated from session data
-      fps: stats.fps?.current || 0,
-      bitrate: stats.bitrate || 0,
-      resolution: stats.resolution || null,
-      latency: stats.latency || 0,
-      packetLoss: stats.packetLoss || 0,
-      jitter: stats.jitter || 0,
-      connectionQuality: stats.connectionQuality || 'good',
-      connectionScore: stats.connectionScore || 100,
-      qualityDistribution: {
-        excellent: 0,
-        good: 0,
-        fair: 0,
-        poor: 0,
-        critical: 0,
+    await analyticsEventEmitter.emitStatsUpdated(
+      streamId,
+      {
+        currentViewers: stats.viewerCount || 0,
+        peakViewers: this.dashboardMetrics.get(streamId)?.metrics.viewers.peak || 0,
+        totalViewers: this.dashboardMetrics.get(streamId)?.metrics.viewers.current || 0,
+        averageViewDuration: 0, // Would be calculated from session data
+        fps: stats.fps?.current || 0,
+        bitrate: stats.bitrate || 0,
+        resolution: stats.resolution || null,
+        latency: stats.latency || 0,
+        packetLoss: stats.packetLoss || 0,
+        jitter: stats.jitter || 0,
+        connectionQuality: stats.connectionQuality || 'good',
+        connectionScore: stats.connectionScore || 100,
+        qualityDistribution: {
+          excellent: 0,
+          good: 0,
+          fair: 0,
+          poor: 0,
+          critical: 0,
+        },
+        isAudioMuted: stats.isAudioMuted || false,
+        isVideoHidden: stats.isVideoHidden || false,
+        isScreenSharing: stats.isScreenSharing || false,
+        isRecording: stats.isRecording || false,
+        uploadSpeed: stats.uploadSpeed || 0,
+        downloadSpeed: stats.downloadSpeed || 0,
+        totalBytesOut: stats.bytesSent || 0,
+        totalBytesIn: stats.bytesReceived || 0,
       },
-      isAudioMuted: stats.isAudioMuted || false,
-      isVideoHidden: stats.isVideoHidden || false,
-      isScreenSharing: stats.isScreenSharing || false,
-      isRecording: stats.isRecording || false,
-      uploadSpeed: stats.uploadSpeed || 0,
-      downloadSpeed: stats.downloadSpeed || 0,
-      totalBytesOut: stats.bytesSent || 0,
-      totalBytesIn: stats.bytesReceived || 0,
-    }, 'realtime');
+      'realtime',
+    );
   }
 
   /**
@@ -396,7 +409,7 @@ export class RealtimeAnalyticsService {
    */
   private async handleQualityChanged(event: any): Promise<void> {
     const streamId = event.streamId;
-    
+
     // Emit analytics quality event
     await analyticsEventEmitter.emitQualityChanged(streamId, {
       previous: 'good', // Would track previous state
@@ -450,7 +463,7 @@ export class RealtimeAnalyticsService {
       const priorities = ['low', 'medium', 'high', 'critical'];
       const eventPriorityIndex = priorities.indexOf(eventPriority);
       const minPriorityIndex = priorities.indexOf(filters.minPriority);
-      
+
       if (eventPriorityIndex < minPriorityIndex) {
         return false;
       }
@@ -466,21 +479,27 @@ export class RealtimeAnalyticsService {
     switch (event.type) {
       case 'analytics:performance:alert':
         const alert = (event as PerformanceAlertEvent).alert;
-        return alert.level === 'critical' ? 'critical' : 
-               alert.level === 'error' ? 'high' : 'medium';
-      
+        return alert.level === 'critical'
+          ? 'critical'
+          : alert.level === 'error'
+            ? 'high'
+            : 'medium';
+
       case 'analytics:quality:changed':
         const quality = (event as QualityAnalyticsEvent).quality;
-        return quality.impact === 'critical' ? 'critical' :
-               quality.impact === 'high' ? 'high' : 'medium';
-      
+        return quality.impact === 'critical'
+          ? 'critical'
+          : quality.impact === 'high'
+            ? 'high'
+            : 'medium';
+
       case 'analytics:viewer:joined':
       case 'analytics:viewer:left':
         return 'low';
-      
+
       case 'analytics:stats:updated':
         return 'medium';
-      
+
       default:
         return 'medium';
     }
@@ -530,7 +549,7 @@ export class RealtimeAnalyticsService {
     // Update technical metrics
     metrics.metrics.technical.quality = stats.connectionQuality || 'good';
     metrics.metrics.technical.performance = this.calculatePerformanceScore(stats);
-    
+
     // Update viewer metrics if available
     if (stats.viewerCount !== undefined) {
       metrics.metrics.viewers.current = stats.viewerCount;
@@ -571,7 +590,13 @@ export class RealtimeAnalyticsService {
     const thresholds = this.alertThresholds.get(streamId)?.quality;
     if (!thresholds) return;
 
-    const alerts: Array<{ type: string; severity: string; message: string; threshold: number; currentValue: number }> = [];
+    const alerts: Array<{
+      type: string;
+      severity: string;
+      message: string;
+      threshold: number;
+      currentValue: number;
+    }> = [];
 
     // Check FPS
     if (stats.fps?.current < thresholds.fps.critical) {
@@ -683,11 +708,13 @@ export class RealtimeAnalyticsService {
         unit: type === 'duration' ? 'minutes' : type,
         significance: nextTarget >= 1000 ? 'record' : nextTarget >= 100 ? 'major' : 'minor',
       },
-      celebration: milestone.celebration ? {
-        message: `🎉 Reached ${nextTarget} ${type}!`,
-        emoji: '🎉',
-        duration: 5000,
-      } : undefined,
+      celebration: milestone.celebration
+        ? {
+            message: `🎉 Reached ${nextTarget} ${type}!`,
+            emoji: '🎉',
+            duration: 5000,
+          }
+        : undefined,
     });
   }
 
@@ -697,7 +724,7 @@ export class RealtimeAnalyticsService {
   private async verifyAnalyticsPermission(
     streamId: string,
     userId: string,
-    subscriptionType: string
+    subscriptionType: string,
   ): Promise<boolean> {
     // TODO: Implement proper permission checking
     // For now, allow streamers and admins to view their own analytics
@@ -767,7 +794,7 @@ export class RealtimeAnalyticsService {
    */
   private cleanupStreamMetrics(streamId: string): void {
     this.dashboardMetrics.delete(streamId);
-    
+
     const timer = this.intervalTimers.get(streamId);
     if (timer) {
       clearInterval(timer);
@@ -784,9 +811,9 @@ export class RealtimeAnalyticsService {
     subscriptionsByType: Record<string, number>;
   } {
     const subscriptionsByType: Record<string, number> = {};
-    
+
     for (const subscription of this.subscriptions.values()) {
-      subscriptionsByType[subscription.subscriptionType] = 
+      subscriptionsByType[subscription.subscriptionType] =
         (subscriptionsByType[subscription.subscriptionType] || 0) + 1;
     }
 

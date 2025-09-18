@@ -1,5 +1,6 @@
-import { describe, expect, test, beforeEach, vi } from 'vitest';
-import { EnhancedRateLimiter, createRateLimitedHandler } from '../enhanced-rate-limiter';
+import { beforeEach, describe, expect, test, vi } from 'vitest';
+
+import { createRateLimitedHandler, EnhancedRateLimiter } from '../enhanced-rate-limiter';
 
 describe('EnhancedRateLimiter', () => {
   let rateLimiter: EnhancedRateLimiter;
@@ -13,7 +14,7 @@ describe('EnhancedRateLimiter', () => {
   describe('Basic Rate Limiting', () => {
     test('should allow requests within limit', async () => {
       const result = await rateLimiter.checkLimit('chat:message', 'user123', 'viewer');
-      
+
       expect(result.allowed).toBe(true);
       expect(result.remaining).toBe(9); // 10 limit - 1 used
       expect(result.resetTime).toBeGreaterThan(Date.now());
@@ -30,7 +31,7 @@ describe('EnhancedRateLimiter', () => {
 
       // 11th request should be denied
       const result = await rateLimiter.checkLimit(eventType, userId, 'viewer');
-      
+
       expect(result.allowed).toBe(false);
       expect(result.remaining).toBe(0);
       expect(result.reason).toBe('Rate limit exceeded');
@@ -50,7 +51,7 @@ describe('EnhancedRateLimiter', () => {
       Date.now = vi.fn(() => originalNow() + 61 * 1000); // 61 seconds later
 
       const result = await rateLimiter.checkLimit(eventType, userId, 'viewer');
-      
+
       expect(result.allowed).toBe(true);
       expect(result.remaining).toBe(9);
 
@@ -71,7 +72,7 @@ describe('EnhancedRateLimiter', () => {
       // Moderator: 30 messages (3.0 multiplier)
       const moderatorResult = await rateLimiter.checkLimit(eventType, userId, 'moderator');
       expect(moderatorResult.allowed).toBe(true);
-      
+
       // Admin: 100 messages (10.0 multiplier)
       const adminResult = await rateLimiter.checkLimit(eventType, userId, 'admin');
       expect(adminResult.allowed).toBe(true);
@@ -123,7 +124,7 @@ describe('EnhancedRateLimiter', () => {
 
       // Check if IP limit affects second user
       const result = await rateLimiter.checkLimit(eventType, userId2, 'viewer', ipAddress);
-      
+
       // Should be limited by IP even though it's a different user
       expect(result.allowed).toBe(false);
       expect(result.reason).toBe('IP address rate limit exceeded');
@@ -140,7 +141,7 @@ describe('EnhancedRateLimiter', () => {
 
       // Check that user is blocked
       const result = await rateLimiter.checkLimit(eventType, userId, 'viewer');
-      
+
       expect(result.allowed).toBe(false);
       expect(result.reason).toBe('Temporarily blocked due to rate limit violations');
       expect(result.retryAfter).toBeGreaterThan(0);
@@ -169,7 +170,7 @@ describe('EnhancedRateLimiter', () => {
       await rateLimiter.applyPenalty('chat:typing', userId, 1000);
 
       const stats = await rateLimiter.getStats();
-      
+
       expect(stats.totalEntries).toBeGreaterThan(0);
       expect(stats.blockedEntries).toBeGreaterThan(0);
       expect(stats.violationsByEvent).toHaveProperty('chat:message');
@@ -207,9 +208,9 @@ describe('createRateLimitedHandler', () => {
       handshake: {
         address: '192.168.1.100',
         headers: {
-          'user-agent': 'test-agent'
-        }
-      }
+          'user-agent': 'test-agent',
+        },
+      },
     };
 
     const rateLimitedHandler = createRateLimitedHandler('chat:message', mockHandler);
@@ -224,11 +225,14 @@ describe('createRateLimitedHandler', () => {
     }
 
     // Should emit rate limit exceeded
-    expect(mockSocket.emit).toHaveBeenCalledWith('rate_limit_exceeded', expect.objectContaining({
-      eventType: 'chat:message',
-      reason: expect.any(String),
-      retryAfter: expect.any(Number)
-    }));
+    expect(mockSocket.emit).toHaveBeenCalledWith(
+      'rate_limit_exceeded',
+      expect.objectContaining({
+        eventType: 'chat:message',
+        reason: expect.any(String),
+        retryAfter: expect.any(Number),
+      }),
+    );
 
     // Original handler should not be called for rate-limited requests
     expect(mockHandler).toHaveBeenCalledTimes(10); // Only up to the limit
@@ -241,8 +245,8 @@ describe('createRateLimitedHandler', () => {
       role: 'viewer',
       emit: vi.fn(),
       handshake: {
-        address: '192.168.1.100'
-      }
+        address: '192.168.1.100',
+      },
     };
 
     const rateLimitedHandler = createRateLimitedHandler('chat:message', mockHandler);
@@ -250,7 +254,7 @@ describe('createRateLimitedHandler', () => {
     await rateLimitedHandler(mockSocket, { message: 'test' });
 
     expect(mockSocket.emit).toHaveBeenCalledWith('error', {
-      message: 'Internal server error'
+      message: 'Internal server error',
     });
   });
 });

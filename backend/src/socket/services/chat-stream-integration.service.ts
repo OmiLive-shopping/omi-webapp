@@ -1,13 +1,13 @@
 import { PrismaService } from '../../config/prisma.config.js';
 import { SocketServer } from '../../config/socket/socket.config.js';
-import { SystemMessageGenerator, SystemMessageData } from '../utils/system-messages.js';
-import type { 
-  StreamStartedEvent, 
-  StreamEndedEvent, 
-  StreamViewerJoinedEvent, 
+import type {
+  StreamEndedEvent,
+  StreamStartedEvent,
+  StreamStatsUpdatedEvent,
+  StreamViewerJoinedEvent,
   StreamViewerLeftEvent,
-  StreamStatsUpdatedEvent 
 } from '../../features/stream/events/stream-event-emitter.js';
+import { SystemMessageData, SystemMessageGenerator } from '../utils/system-messages.js';
 
 /**
  * Service that integrates chat system with stream events
@@ -37,22 +37,24 @@ export class ChatStreamIntegrationService {
     if (this.isInitialized) return;
 
     // Subscribe to stream events from the stream event emitter
-    const { streamEventEmitter } = await import('../../features/stream/events/stream-event-emitter.js');
-    
+    const { streamEventEmitter } = await import(
+      '../../features/stream/events/stream-event-emitter.js'
+    );
+
     // Stream lifecycle events
     streamEventEmitter.on('stream:started', this.handleStreamStarted.bind(this));
     streamEventEmitter.on('stream:ended', this.handleStreamEnded.bind(this));
     streamEventEmitter.on('stream:viewer:joined', this.handleViewerJoined.bind(this));
     streamEventEmitter.on('stream:viewer:left', this.handleViewerLeft.bind(this));
     streamEventEmitter.on('stream:stats:updated', this.handleStatsUpdated.bind(this));
-    
+
     // Product events
     streamEventEmitter.on('stream:product:featured', this.handleProductFeatured.bind(this));
     streamEventEmitter.on('stream:product:added', this.handleProductAdded.bind(this));
-    
+
     // Quality events
     streamEventEmitter.on('stream:quality:changed', this.handleQualityChanged.bind(this));
-    
+
     this.isInitialized = true;
     console.log('Chat-Stream integration service initialized');
   }
@@ -61,18 +63,18 @@ export class ChatStreamIntegrationService {
    * Send a system message to chat
    */
   private async sendSystemMessage(
-    streamId: string, 
+    streamId: string,
     messageData: SystemMessageData,
     options: {
       saveToDatabase?: boolean;
       announceToRoom?: boolean;
       priority?: 'low' | 'medium' | 'high';
-    } = {}
+    } = {},
   ): Promise<void> {
     const {
       saveToDatabase = false, // System messages are just real-time announcements
       announceToRoom = true,
-      priority = 'medium'
+      priority = 'medium',
     } = options;
 
     try {
@@ -91,8 +93,8 @@ export class ChatStreamIntegrationService {
         metadata: {
           systemType: messageData.type,
           priority,
-          ...messageData.metadata
-        }
+          ...messageData.metadata,
+        },
       };
 
       // Save to database if requested
@@ -102,18 +104,10 @@ export class ChatStreamIntegrationService {
 
       // Announce to room if requested
       if (announceToRoom) {
-        this.socketServer.emitToRoom(
-          `stream:${streamId}`, 
-          'chat:system-message', 
-          chatMessage
-        );
-        
+        this.socketServer.emitToRoom(`stream:${streamId}`, 'chat:system-message', chatMessage);
+
         // Also emit to general chat:message event for compatibility
-        this.socketServer.emitToRoom(
-          `stream:${streamId}`, 
-          'chat:message', 
-          chatMessage
-        );
+        this.socketServer.emitToRoom(`stream:${streamId}`, 'chat:message', chatMessage);
       }
 
       console.log(`System message sent for stream ${streamId}: ${messageData.content}`);
@@ -128,12 +122,12 @@ export class ChatStreamIntegrationService {
   private async handleStreamStarted(event: StreamStartedEvent): Promise<void> {
     const messageData = SystemMessageGenerator.generateMessage('stream:started', {
       streamId: event.streamId,
-      username: event.user?.username
+      username: event.user?.username,
     });
 
     await this.sendSystemMessage(event.streamId, messageData, {
       priority: 'high',
-      announceToRoom: true
+      announceToRoom: true,
     });
   }
 
@@ -144,12 +138,12 @@ export class ChatStreamIntegrationService {
     const messageData = SystemMessageGenerator.generateMessage('stream:ended', {
       streamId: event.streamId,
       username: event.user?.username,
-      duration: event.metadata?.duration
+      duration: event.metadata?.duration,
     });
 
     await this.sendSystemMessage(event.streamId, messageData, {
       priority: 'high',
-      announceToRoom: true
+      announceToRoom: true,
     });
   }
 
@@ -161,16 +155,16 @@ export class ChatStreamIntegrationService {
       streamId: event.streamId,
       username: event.viewer?.username,
       userId: event.viewer?.id,
-      viewerCount: event.viewerCount
+      viewerCount: event.viewerCount,
     });
 
     // Only announce viewer joins for named users (not anonymous)
     const shouldAnnounce = event.viewer?.username && event.viewer.username !== 'anonymous';
-    
+
     await this.sendSystemMessage(event.streamId, messageData, {
       priority: 'low',
       announceToRoom: shouldAnnounce,
-      saveToDatabase: false // Don't clutter database with every viewer join
+      saveToDatabase: false, // Don't clutter database with every viewer join
     });
   }
 
@@ -182,16 +176,16 @@ export class ChatStreamIntegrationService {
       streamId: event.streamId,
       username: event.viewer?.username,
       userId: event.viewer?.id,
-      viewerCount: event.viewerCount
+      viewerCount: event.viewerCount,
     });
 
     // Only announce viewer leaves for named users (not anonymous)
     const shouldAnnounce = event.viewer?.username && event.viewer.username !== 'anonymous';
-    
+
     await this.sendSystemMessage(event.streamId, messageData, {
       priority: 'low',
       announceToRoom: shouldAnnounce,
-      saveToDatabase: false // Don't clutter database with every viewer leave
+      saveToDatabase: false, // Don't clutter database with every viewer leave
     });
   }
 
@@ -202,12 +196,12 @@ export class ChatStreamIntegrationService {
     // Only send chat message for significant viewer count milestones
     const viewerCount = event.stats.viewerCount || 0;
     const milestones = [10, 25, 50, 100, 250, 500, 1000];
-    
+
     if (milestones.includes(viewerCount)) {
       const messageData = SystemMessageGenerator.generateMessage('stream:viewer:joined', {
         streamId: event.streamId,
         viewerCount: viewerCount,
-        milestone: true
+        milestone: true,
       });
 
       // Override the content for milestone messages
@@ -215,7 +209,7 @@ export class ChatStreamIntegrationService {
 
       await this.sendSystemMessage(event.streamId, messageData, {
         priority: 'medium',
-        announceToRoom: true
+        announceToRoom: true,
       });
     }
   }
@@ -227,12 +221,12 @@ export class ChatStreamIntegrationService {
     const messageData = SystemMessageGenerator.generateMessage('stream:product:featured', {
       streamId: event.streamId,
       productId: event.product?.id,
-      productName: event.product?.name || event.product?.title
+      productName: event.product?.name || event.product?.title,
     });
 
     await this.sendSystemMessage(event.streamId, messageData, {
       priority: 'medium',
-      announceToRoom: true
+      announceToRoom: true,
     });
   }
 
@@ -243,12 +237,12 @@ export class ChatStreamIntegrationService {
     const messageData = SystemMessageGenerator.generateMessage('stream:product:added', {
       streamId: event.streamId,
       productId: event.product?.id,
-      productName: event.product?.name || event.product?.title
+      productName: event.product?.name || event.product?.title,
     });
 
     await this.sendSystemMessage(event.streamId, messageData, {
       priority: 'low',
-      announceToRoom: true
+      announceToRoom: true,
     });
   }
 
@@ -259,13 +253,13 @@ export class ChatStreamIntegrationService {
     const messageData = SystemMessageGenerator.generateMessage('stream:quality:changed', {
       streamId: event.streamId,
       quality: event.quality,
-      username: event.user?.username
+      username: event.user?.username,
     });
 
     await this.sendSystemMessage(event.streamId, messageData, {
       priority: 'low',
       announceToRoom: true,
-      saveToDatabase: false // Don't save quality changes to database
+      saveToDatabase: false, // Don't save quality changes to database
     });
   }
 
@@ -280,19 +274,19 @@ export class ChatStreamIntegrationService {
     options: {
       reason?: string;
       duration?: number;
-    } = {}
+    } = {},
   ): Promise<void> {
     const messageData = SystemMessageGenerator.generateMessage('chat:moderation', {
       streamId,
       action,
       targetUsername,
       moderatorUsername,
-      ...options
+      ...options,
     });
 
     await this.sendSystemMessage(streamId, messageData, {
       priority: 'high',
-      announceToRoom: true
+      announceToRoom: true,
     });
   }
 
@@ -303,18 +297,18 @@ export class ChatStreamIntegrationService {
     streamId: string,
     enabled: boolean,
     delay: number,
-    moderatorUsername: string
+    moderatorUsername: string,
   ): Promise<void> {
     const messageData = SystemMessageGenerator.generateMessage('chat:slowmode', {
       streamId,
       enabled,
       delay,
-      moderatorUsername
+      moderatorUsername,
     });
 
     await this.sendSystemMessage(streamId, messageData, {
       priority: 'medium',
-      announceToRoom: true
+      announceToRoom: true,
     });
   }
 
@@ -324,18 +318,18 @@ export class ChatStreamIntegrationService {
   async sendVdoConnectionMessage(
     streamId: string,
     status: 'connected' | 'disconnected' | 'reconnecting',
-    username?: string
+    username?: string,
   ): Promise<void> {
     const messageData = SystemMessageGenerator.generateMessage('vdo:connection', {
       streamId,
       status,
-      username
+      username,
     });
 
     await this.sendSystemMessage(streamId, messageData, {
       priority: 'medium',
       announceToRoom: true,
-      saveToDatabase: false
+      saveToDatabase: false,
     });
   }
 
@@ -349,18 +343,18 @@ export class ChatStreamIntegrationService {
       priority?: 'low' | 'medium' | 'high';
       saveToDatabase?: boolean;
       metadata?: any;
-    } = {}
+    } = {},
   ): Promise<void> {
     const messageData = SystemMessageGenerator.generateCustomMessage(
       streamId,
       content,
       'stream:started', // Default type
-      options.metadata
+      options.metadata,
     );
 
     await this.sendSystemMessage(streamId, messageData, {
       priority: options.priority || 'medium',
-      saveToDatabase: options.saveToDatabase !== false
+      saveToDatabase: options.saveToDatabase !== false,
     });
   }
 
@@ -381,8 +375,8 @@ export class ChatStreamIntegrationService {
           metadata: message.metadata || {},
           isPinned: message.isPinned || false,
           isDeleted: message.isDeleted || false,
-          createdAt: message.timestamp
-        }
+          createdAt: message.timestamp,
+        },
       });
     } catch (error) {
       console.error('Error saving chat message to database:', error);
@@ -408,7 +402,7 @@ export class ChatStreamIntegrationService {
       'chat:slowmode': 'stream',
       'chat:subscriber_only': 'stream',
       'vdo:connection': 'stream',
-      'vdo:stats': 'stream'
+      'vdo:stats': 'stream',
     };
 
     return mapping[systemType] || 'stream';
@@ -426,31 +420,34 @@ export class ChatStreamIntegrationService {
       const messages = await this.prisma.streamMessage.findMany({
         where: {
           streamId,
-          type: 'system'
+          type: 'system',
         },
         orderBy: {
-          createdAt: 'desc'
+          createdAt: 'desc',
         },
-        take: 100
+        take: 100,
       });
 
-      const messagesByType = messages.reduce((acc, msg) => {
-        const type = msg.metadata?.systemType || 'unknown';
-        acc[type] = (acc[type] || 0) + 1;
-        return acc;
-      }, {} as Record<string, number>);
+      const messagesByType = messages.reduce(
+        (acc, msg) => {
+          const type = msg.metadata?.systemType || 'unknown';
+          acc[type] = (acc[type] || 0) + 1;
+          return acc;
+        },
+        {} as Record<string, number>,
+      );
 
       return {
         totalSystemMessages: messages.length,
         messagesByType,
-        lastSystemMessage: messages[0] || null
+        lastSystemMessage: messages[0] || null,
       };
     } catch (error) {
       console.error('Error getting integration stats:', error);
       return {
         totalSystemMessages: 0,
         messagesByType: {},
-        lastSystemMessage: null
+        lastSystemMessage: null,
       };
     }
   }

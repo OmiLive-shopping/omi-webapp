@@ -1,14 +1,14 @@
-import { 
-  analyticsEventEmitter, 
+import { SocketServer } from '../../../config/socket/socket.config.js';
+import {
   type AnalyticsEvent,
+  analyticsEventEmitter,
+  type IntervalSummaryEvent,
+  type MilestoneReachedEvent,
+  type PerformanceAlertEvent,
+  type QualityAnalyticsEvent,
   type StatsUpdatedEvent,
   type ViewerAnalyticsEvent,
-  type QualityAnalyticsEvent,
-  type PerformanceAlertEvent,
-  type MilestoneReachedEvent,
-  type IntervalSummaryEvent,
 } from './analytics-event-emitter.js';
-import { SocketServer } from '../../../config/socket/socket.config.js';
 
 /**
  * Socket integration for analytics events
@@ -45,13 +45,34 @@ export class AnalyticsSocketIntegration {
     analyticsEventEmitter.onAnalyticsEvent('*', this.handleAnalyticsEvent.bind(this));
 
     // Set up specific handlers for better performance
-    analyticsEventEmitter.onAnalyticsEvent('analytics:stats:updated', this.handleStatsUpdated.bind(this));
-    analyticsEventEmitter.onAnalyticsEvent('analytics:viewer:joined', this.handleViewerAnalytics.bind(this));
-    analyticsEventEmitter.onAnalyticsEvent('analytics:viewer:left', this.handleViewerAnalytics.bind(this));
-    analyticsEventEmitter.onAnalyticsEvent('analytics:quality:changed', this.handleQualityChanged.bind(this));
-    analyticsEventEmitter.onAnalyticsEvent('analytics:performance:alert', this.handlePerformanceAlert.bind(this));
-    analyticsEventEmitter.onAnalyticsEvent('analytics:milestone:reached', this.handleMilestoneReached.bind(this));
-    analyticsEventEmitter.onAnalyticsEvent('analytics:summary:interval', this.handleIntervalSummary.bind(this));
+    analyticsEventEmitter.onAnalyticsEvent(
+      'analytics:stats:updated',
+      this.handleStatsUpdated.bind(this),
+    );
+    analyticsEventEmitter.onAnalyticsEvent(
+      'analytics:viewer:joined',
+      this.handleViewerAnalytics.bind(this),
+    );
+    analyticsEventEmitter.onAnalyticsEvent(
+      'analytics:viewer:left',
+      this.handleViewerAnalytics.bind(this),
+    );
+    analyticsEventEmitter.onAnalyticsEvent(
+      'analytics:quality:changed',
+      this.handleQualityChanged.bind(this),
+    );
+    analyticsEventEmitter.onAnalyticsEvent(
+      'analytics:performance:alert',
+      this.handlePerformanceAlert.bind(this),
+    );
+    analyticsEventEmitter.onAnalyticsEvent(
+      'analytics:milestone:reached',
+      this.handleMilestoneReached.bind(this),
+    );
+    analyticsEventEmitter.onAnalyticsEvent(
+      'analytics:summary:interval',
+      this.handleIntervalSummary.bind(this),
+    );
 
     this.isInitialized = true;
     console.log('✅ Analytics Socket Integration initialized');
@@ -78,7 +99,7 @@ export class AnalyticsSocketIntegration {
    */
   private handleStatsUpdated(event: StatsUpdatedEvent): void {
     const { streamId } = event;
-    
+
     // Emit to analytics namespace subscribers
     this.emitToAnalyticsSubscribers(streamId, 'analytics:stats:realtime', {
       streamId,
@@ -90,8 +111,12 @@ export class AnalyticsSocketIntegration {
 
     // For realtime updates, also emit to main stream room for basic viewer count
     if (event.interval === 'realtime') {
-      this.socketServer.emitToRoom(`stream:${streamId}`, 'stream:viewer-count', event.stats.currentViewers);
-      
+      this.socketServer.emitToRoom(
+        `stream:${streamId}`,
+        'stream:viewer-count',
+        event.stats.currentViewers,
+      );
+
       // Emit quality indicator to viewers
       this.socketServer.emitToRoom(`stream:${streamId}`, 'stream:quality:indicator', {
         quality: event.stats.connectionQuality,
@@ -106,7 +131,7 @@ export class AnalyticsSocketIntegration {
    */
   private handleViewerAnalytics(event: ViewerAnalyticsEvent): void {
     const { streamId } = event;
-    
+
     // Emit detailed viewer analytics to analytics subscribers
     this.emitToAnalyticsSubscribers(streamId, `analytics:viewer:${event.type.split(':')[2]}`, {
       streamId,
@@ -132,7 +157,7 @@ export class AnalyticsSocketIntegration {
    */
   private handleQualityChanged(event: QualityAnalyticsEvent): void {
     const { streamId } = event;
-    
+
     // Emit to analytics subscribers with full details
     this.emitToAnalyticsSubscribers(streamId, 'analytics:quality:changed', {
       streamId,
@@ -162,7 +187,7 @@ export class AnalyticsSocketIntegration {
    */
   private handlePerformanceAlert(event: PerformanceAlertEvent): void {
     const { streamId } = event;
-    
+
     // Emit to analytics subscribers
     this.emitToAnalyticsSubscribers(streamId, 'analytics:alert:performance', {
       streamId,
@@ -198,7 +223,7 @@ export class AnalyticsSocketIntegration {
    */
   private handleMilestoneReached(event: MilestoneReachedEvent): void {
     const { streamId } = event;
-    
+
     // Emit to analytics subscribers with full details
     this.emitToAnalyticsSubscribers(streamId, 'analytics:milestone:reached', {
       streamId,
@@ -238,7 +263,7 @@ export class AnalyticsSocketIntegration {
    */
   private handleIntervalSummary(event: IntervalSummaryEvent): void {
     const { streamId } = event;
-    
+
     // Emit to analytics subscribers
     this.emitToAnalyticsSubscribers(streamId, 'analytics:summary:interval', {
       streamId,
@@ -267,7 +292,7 @@ export class AnalyticsSocketIntegration {
   private emitToAnalyticsSubscribers(streamId: string, eventName: string, data: any): void {
     const io = this.socketServer.getIO();
     const analyticsNamespace = io.of('/analytics');
-    
+
     analyticsNamespace.to(`analytics:${streamId}`).emit(eventName, data);
   }
 

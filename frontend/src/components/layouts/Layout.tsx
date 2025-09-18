@@ -17,11 +17,12 @@ const Layout = ({ children, type }: LayoutProps) => {
 
   return (
     <div className='h-screen bg-gray-50 dark:bg-gray-900 grid grid-rows-[auto_1fr]'>
-      <Navigation 
+      <Navigation
         isAuthenticated={isAuthenticated}
         user={user ? {
           name: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.username || user.name || '',
           email: user.email,
+          username: user.username,
           avatar: user.avatarUrl,
           role: user.role
         } : undefined}

@@ -1,24 +1,30 @@
 import { PrismaService } from '../../config/prisma.config.js';
-import { logger } from '../../utils/logger.js';
 import { SocketWithAuth } from '../../config/socket/socket.config.js';
 import { SocketServer } from '../../config/socket/socket.config.js';
-import { RoomManager } from '../managers/room.manager.js';
-import { EnhancedRateLimiter, createRateLimitedHandler as createEnhancedRateLimitedHandler } from '../managers/enhanced-rate-limiter.js';
-import { VdoStreamHandler } from './vdo-stream.handler.js';
 import { streamEventEmitter } from '../../features/stream/events/stream-event-emitter.js';
+import { logger } from '../../utils/logger.js';
 import {
-  streamJoinSchema,
-  streamUpdateSchema,
+  createRateLimitedHandler as createEnhancedRateLimitedHandler,
+  EnhancedRateLimiter,
+} from '../managers/enhanced-rate-limiter.js';
+import { RoomManager } from '../managers/room.manager.js';
+import {
+  createPermissionValidatedHandler,
+  createValidatedHandler,
+} from '../middleware/validation.middleware.js';
+import {
+  type StreamFeatureProductEvent,
   streamFeatureProductSchema,
-  streamStatsUpdateSchema,
+  type StreamGetAnalyticsEvent,
   streamGetAnalyticsSchema,
   type StreamJoinEvent,
-  type StreamUpdateEvent,
-  type StreamFeatureProductEvent,
+  streamJoinSchema,
   type StreamStatsUpdateEvent,
-  type StreamGetAnalyticsEvent,
+  streamStatsUpdateSchema,
+  type StreamUpdateEvent,
+  streamUpdateSchema,
 } from '../schemas/index.js';
-import { createValidatedHandler, createPermissionValidatedHandler } from '../middleware/validation.middleware.js';
+import { VdoStreamHandler } from './vdo-stream.handler.js';
 
 export class StreamHandler {
   private roomManager = RoomManager.getInstance();
@@ -52,19 +58,25 @@ export class StreamHandler {
       }
 
       // Join the room
-      logger.stream(`JOIN: ${socket.username || 'anonymous'}(${socket.id}) joining stream room: ${data.streamId}`);
+      logger.stream(
+        `JOIN: ${socket.username || 'anonymous'}(${socket.id}) joining stream room: ${data.streamId}`,
+      );
       await this.roomManager.joinRoom(socket, data.streamId);
       const viewerCount = this.roomManager.getViewerCount(data.streamId);
       logger.stream(`JOIN: Room ${data.streamId} now has ${viewerCount} viewers`);
 
       // Emit viewer joined event
-      await streamEventEmitter.emitViewerJoined(data.streamId, {
-        id: socket.userId,
-        username: socket.username,
-        avatarUrl: socket.avatarUrl,
-        isAnonymous: !socket.userId,
-        socketId: socket.id,
-      }, viewerCount);
+      await streamEventEmitter.emitViewerJoined(
+        data.streamId,
+        {
+          id: socket.userId,
+          username: socket.username,
+          avatarUrl: socket.avatarUrl,
+          isAnonymous: !socket.userId,
+          socketId: socket.id,
+        },
+        viewerCount,
+      );
 
       // Send stream info to the user
       socket.emit('stream:joined', {
@@ -95,7 +107,7 @@ export class StreamHandler {
       // Calculate session duration if available
       const roomInfo = this.roomManager.getRoomInfo(data.streamId);
       const viewer = roomInfo?.viewers.get(socket.id);
-      const duration = viewer?.joinedAt 
+      const duration = viewer?.joinedAt
         ? Math.floor((Date.now() - viewer.joinedAt.getTime()) / 1000)
         : undefined;
 
@@ -104,12 +116,17 @@ export class StreamHandler {
       const viewerCount = this.roomManager.getViewerCount(data.streamId);
 
       // Emit viewer left event
-      await streamEventEmitter.emitViewerLeft(data.streamId, {
-        id: socket.userId,
-        username: socket.username,
-        socketId: socket.id,
-        duration,
-      }, viewerCount, 'manual');
+      await streamEventEmitter.emitViewerLeft(
+        data.streamId,
+        {
+          id: socket.userId,
+          username: socket.username,
+          socketId: socket.id,
+          duration,
+        },
+        viewerCount,
+        'manual',
+      );
 
       // Notify others (legacy - will be replaced by event system)
       socket.to(`stream:${data.streamId}`).emit('stream:viewer:left', {
@@ -278,7 +295,6 @@ export class StreamHandler {
   handleStreamStats = createPermissionValidatedHandler(
     streamStatsUpdateSchema,
     async (socket: SocketWithAuth, data: StreamStatsUpdateEvent) => {
-
       // Check if user owns the stream
       const stream = await this.prisma.stream.findUnique({
         where: { id: data.streamId },
@@ -393,25 +409,37 @@ export class StreamHandler {
    */
   registerVdoHandlers(socket: SocketWithAuth) {
     // VDO.Ninja stream events with enhanced rate limiting
-    socket.on('vdo:stream:event', data => this.vdoHandler.handleVdoStreamEventEnhanced(socket, data));
+    socket.on('vdo:stream:event', data =>
+      this.vdoHandler.handleVdoStreamEventEnhanced(socket, data),
+    );
 
     // VDO.Ninja statistics
-    socket.on('vdo:stats:update', data => this.vdoHandler.handleVdoStatsUpdateEnhanced(socket, data));
+    socket.on('vdo:stats:update', data =>
+      this.vdoHandler.handleVdoStatsUpdateEnhanced(socket, data),
+    );
 
     // VDO.Ninja viewer events
-    socket.on('vdo:viewer:event', data => this.vdoHandler.handleVdoViewerEventEnhanced(socket, data));
+    socket.on('vdo:viewer:event', data =>
+      this.vdoHandler.handleVdoViewerEventEnhanced(socket, data),
+    );
 
     // VDO.Ninja media control events
     socket.on('vdo:media:event', data => this.vdoHandler.handleVdoMediaEventEnhanced(socket, data));
 
     // VDO.Ninja quality events
-    socket.on('vdo:quality:event', data => this.vdoHandler.handleVdoQualityEventEnhanced(socket, data));
+    socket.on('vdo:quality:event', data =>
+      this.vdoHandler.handleVdoQualityEventEnhanced(socket, data),
+    );
 
     // VDO.Ninja recording events
-    socket.on('vdo:recording:event', data => this.vdoHandler.handleVdoRecordingEventEnhanced(socket, data));
+    socket.on('vdo:recording:event', data =>
+      this.vdoHandler.handleVdoRecordingEventEnhanced(socket, data),
+    );
 
     // Get VDO.Ninja analytics
-    socket.on('vdo:get:analytics', data => this.vdoHandler.handleGetVdoAnalyticsEnhanced(socket, data));
+    socket.on('vdo:get:analytics', data =>
+      this.vdoHandler.handleGetVdoAnalyticsEnhanced(socket, data),
+    );
   }
 
   /**
@@ -432,20 +460,20 @@ export class StreamHandler {
     'stream:join',
     async (socket: SocketWithAuth, data: any) => {
       await this.handleJoinStream(socket, data);
-    }
+    },
   );
 
   handleLeaveStreamEnhanced = createEnhancedRateLimitedHandler(
     'stream:leave',
     async (socket: SocketWithAuth, data: any) => {
       await this.handleLeaveStream(socket, data);
-    }
+    },
   );
 
   handleGetStreamStatsEnhanced = createEnhancedRateLimitedHandler(
     'stream:get:stats',
     async (socket: SocketWithAuth, data: any) => {
       await this.handleGetStreamStats(socket, data);
-    }
+    },
   );
 }

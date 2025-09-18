@@ -4,8 +4,8 @@ import { socketEmitters } from '../../../socket/index.js';
 import { RoomManager } from '../../../socket/managers/room.manager.js';
 import { ProductRepository } from '../../product/repositories/product.repository.js';
 import { UserRepository } from '../../user/repositories/user.repository.js';
-import { StreamRepository } from '../repositories/stream.repository.js';
 import { streamEventEmitter } from '../events/stream-event-emitter.js';
+import { StreamRepository } from '../repositories/stream.repository.js';
 import {
   AddStreamProductInput,
   CommentInput,
@@ -28,10 +28,10 @@ export class StreamService {
 
   async createStream(userId: string, input: CreateStreamInput) {
     const stream = await this.streamRepository.createStream(userId, input);
-    
+
     // Get user info for event
     const user = await this.userRepository.findUserById(userId);
-    
+
     // Emit stream created event
     if (user) {
       await streamEventEmitter.emitStreamCreated({
@@ -49,7 +49,7 @@ export class StreamService {
         tags: stream.tags,
       });
     }
-    
+
     return unifiedResponse(true, 'Stream created successfully', stream);
   }
 
@@ -93,10 +93,10 @@ export class StreamService {
     };
 
     const updatedStream = await this.streamRepository.updateStream(streamId, input);
-    
+
     // Get user info for event
     const user = await this.userRepository.findUserById(userId);
-    
+
     // Emit stream updated event
     if (user) {
       await streamEventEmitter.emitStreamEvent({
@@ -117,7 +117,7 @@ export class StreamService {
         },
       });
     }
-    
+
     return unifiedResponse(true, 'Stream updated successfully', updatedStream);
   }
 
@@ -176,7 +176,6 @@ export class StreamService {
       });
     }
 
-
     return unifiedResponse(true, 'Stream is now live', liveStream);
   }
 
@@ -196,7 +195,6 @@ export class StreamService {
     }
 
     const liveStream = await this.streamRepository.goLive(stream.id);
-
 
     return unifiedResponse(true, 'Stream started successfully', liveStream);
   }
@@ -220,20 +218,24 @@ export class StreamService {
     const endedStream = await this.streamRepository.endStream(stream[0].id);
 
     // Calculate stream duration
-    const duration = stream[0].startedAt 
+    const duration = stream[0].startedAt
       ? Math.floor((new Date().getTime() - new Date(stream[0].startedAt).getTime()) / 1000)
       : undefined;
 
     // Emit stream ended event (this will handle all WebSocket notifications)
-    await streamEventEmitter.emitStreamEnded(stream[0].id, {
-      title: stream[0].title,
-      userId: stream[0].userId,
-      duration,
-      endedAt: endedStream.endedAt?.toISOString() || new Date().toISOString(),
-      // TODO: Get actual viewer counts from room manager
-      finalViewerCount: 0,
-      maxViewerCount: 0,
-    }, 'manual');
+    await streamEventEmitter.emitStreamEnded(
+      stream[0].id,
+      {
+        title: stream[0].title,
+        userId: stream[0].userId,
+        duration,
+        endedAt: endedStream.endedAt?.toISOString() || new Date().toISOString(),
+        // TODO: Get actual viewer counts from room manager
+        finalViewerCount: 0,
+        maxViewerCount: 0,
+      },
+      'manual',
+    );
 
     // Legacy socket emissions (to be removed once event system is fully integrated)
     try {

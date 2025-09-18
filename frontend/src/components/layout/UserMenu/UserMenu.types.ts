@@ -3,6 +3,7 @@ export interface UserMenuProps {
   user?: {
     name: string;
     email: string;
+    username?: string;
     avatar?: string;
     role?: string;
     isAdmin?: boolean;

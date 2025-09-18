@@ -3,7 +3,7 @@ import { z } from 'zod';
 /**
  * System message types for stream events and chat integration
  */
-export type SystemMessageType = 
+export type SystemMessageType =
   | 'stream:started'
   | 'stream:ended'
   | 'stream:viewer:joined'
@@ -49,54 +49,54 @@ export interface SystemMessageData {
  */
 export class SystemMessageGenerator {
   private static readonly MESSAGE_TEMPLATES: Record<SystemMessageType, (data: any) => string> = {
-    'stream:started': (data) => `🔴 Stream has started! Welcome everyone!`,
-    
-    'stream:ended': (data) => `⭕ Stream has ended. Thanks for watching!`,
-    
-    'stream:viewer:joined': (data) => {
+    'stream:started': data => `🔴 Stream has started! Welcome everyone!`,
+
+    'stream:ended': data => `⭕ Stream has ended. Thanks for watching!`,
+
+    'stream:viewer:joined': data => {
       const { username, viewerCount } = data;
       if (username) {
         return `👋 ${username} joined the stream! (${viewerCount || 1} viewers)`;
       }
       return `👋 A viewer joined the stream! (${viewerCount || 1} viewers)`;
     },
-    
-    'stream:viewer:left': (data) => {
+
+    'stream:viewer:left': data => {
       const { username, viewerCount } = data;
       if (username) {
         return `👋 ${username} left the stream (${viewerCount || 0} viewers)`;
       }
       return `👋 A viewer left the stream (${viewerCount || 0} viewers)`;
     },
-    
-    'stream:quality:changed': (data) => {
+
+    'stream:quality:changed': data => {
       const { quality, username } = data;
       if (username) {
         return `📺 ${username} changed stream quality to ${quality || 'auto'}`;
       }
       return `📺 Stream quality changed to ${quality || 'auto'}`;
     },
-    
-    'stream:recording:started': (data) => `🔴 Recording started`,
-    
-    'stream:recording:stopped': (data) => `⏹️ Recording stopped`,
-    
-    'stream:product:featured': (data) => {
+
+    'stream:recording:started': data => `🔴 Recording started`,
+
+    'stream:recording:stopped': data => `⏹️ Recording stopped`,
+
+    'stream:product:featured': data => {
       const { productName } = data;
       return `⭐ Now featuring: ${productName || 'a product'}`;
     },
-    
-    'stream:product:added': (data) => {
+
+    'stream:product:added': data => {
       const { productName } = data;
       return `🛒 New product added: ${productName || 'a product'}`;
     },
-    
-    'stream:error': (data) => {
+
+    'stream:error': data => {
       const { reason } = data;
       return `⚠️ Stream error: ${reason || 'Unknown error occurred'}`;
     },
-    
-    'chat:moderation': (data) => {
+
+    'chat:moderation': data => {
       const { action, targetUsername, moderatorUsername, reason, duration } = data;
       switch (action) {
         case 'timeout':
@@ -113,24 +113,24 @@ export class SystemMessageGenerator {
           return `🔨 Moderation action by ${moderatorUsername}`;
       }
     },
-    
-    'chat:slowmode': (data) => {
+
+    'chat:slowmode': data => {
       const { enabled, delay, moderatorUsername } = data;
       if (enabled) {
         return `🐌 Slow mode enabled (${delay}s) by ${moderatorUsername}`;
       }
       return `🏃 Slow mode disabled by ${moderatorUsername}`;
     },
-    
-    'chat:subscriber_only': (data) => {
+
+    'chat:subscriber_only': data => {
       const { enabled, moderatorUsername } = data;
       if (enabled) {
         return `💎 Subscriber-only mode enabled by ${moderatorUsername}`;
       }
       return `🌍 Subscriber-only mode disabled by ${moderatorUsername}`;
     },
-    
-    'vdo:connection': (data) => {
+
+    'vdo:connection': data => {
       const { status, username } = data;
       switch (status) {
         case 'connected':
@@ -143,14 +143,14 @@ export class SystemMessageGenerator {
           return `📡 VDO.Ninja status: ${status}`;
       }
     },
-    
-    'vdo:stats': (data) => {
+
+    'vdo:stats': data => {
       const { stats } = data;
       if (stats?.bitrate) {
         return `📊 Stream quality: ${Math.round(stats.bitrate / 1000)}kbps, ${stats.resolution || 'unknown resolution'}`;
       }
       return `📊 Stream stats updated`;
-    }
+    },
   };
 
   /**
@@ -166,7 +166,7 @@ export class SystemMessageGenerator {
       type,
       streamId: data.streamId || '',
       content: template(data),
-      metadata: data
+      metadata: data,
     };
   }
 
@@ -174,16 +174,16 @@ export class SystemMessageGenerator {
    * Generate a custom system message
    */
   static generateCustomMessage(
-    streamId: string, 
-    content: string, 
-    type: SystemMessageType = 'stream:started', 
-    metadata?: any
+    streamId: string,
+    content: string,
+    type: SystemMessageType = 'stream:started',
+    metadata?: any,
   ): SystemMessageData {
     return {
       type,
       streamId,
       content,
-      metadata
+      metadata,
     };
   }
 
@@ -205,9 +205,9 @@ export class SystemMessageGenerator {
       'chat:moderation',
       'chat:slowmode',
       'chat:subscriber_only',
-      'vdo:connection'
+      'vdo:connection',
     ];
-    
+
     return chatVisibleTypes.includes(type);
   }
 
@@ -230,9 +230,9 @@ export class SystemMessageGenerator {
       'vdo:connection': 9,
       'stream:viewer:joined': 10,
       'stream:viewer:left': 10,
-      'vdo:stats': 11
+      'vdo:stats': 11,
     };
-    
+
     return priorities[type] || 10;
   }
 
@@ -277,11 +277,11 @@ export const systemMessageSchema = z.object({
     'chat:slowmode',
     'chat:subscriber_only',
     'vdo:connection',
-    'vdo:stats'
+    'vdo:stats',
   ]),
   streamId: z.string(),
   content: z.string(),
-  metadata: z.record(z.any()).optional()
+  metadata: z.record(z.any()).optional(),
 });
 
 export type ValidatedSystemMessage = z.infer<typeof systemMessageSchema>;

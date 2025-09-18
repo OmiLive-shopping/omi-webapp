@@ -4,6 +4,8 @@ export { default as StudioPage } from './studio/StudioPage';
 export { default as ProductsPage } from './products/ProductsPage';
 export { default as ProductDetailPage } from './products/ProductDetailPage';
 export { default as ProfilePage } from './profile/ProfilePage';
+export { default as PublicProfilePage } from './profile/PublicProfilePage';
+export { default as BrandProfilePage } from './profile/BrandProfilePage';
 export { default as WishlistPage } from './wishlist/WishlistPage';
 export { default as SchedulePage } from './schedule/SchedulePage';
 export { default as AuthPage } from './auth/AuthPage';
