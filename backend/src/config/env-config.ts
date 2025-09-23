@@ -1,24 +1,13 @@
 import dotenv from 'dotenv';
-import fs from 'fs';
 
 import { envSchema, EnvVars } from './env-schema.js';
 
-// Determine which .env file to load based on NODE_ENV
-// eslint-disable-next-line node/no-process-env
-const envFile = `.env.${process.env.NODE_ENV || 'dev'}`;
-
-if (fs.existsSync(envFile)) {
-  dotenv.config({ path: envFile });
-  // eslint-disable-next-line node/no-process-env
-  console.log(`✅ Loaded environment: ${envFile}\nNODE_ENV: ${process.env.NODE_ENV}`);
-} else {
-  console.warn(`⚠️ Warning: Environment file "${envFile}" not found. Using defaults.`);
-}
+// Load .env file (standard practice)
+dotenv.config({ path: '.env' });
+console.log(`✅ Loaded environment: .env`);
 
 // eslint-disable-next-line node/no-process-env
 const parsedEnv = envSchema.safeParse(process.env);
-// eslint-disable-next-line node/no-process-env
-const NODE_ENV = process.env.NODE_ENV || 'development';
 
 // Commented out overly strict validation that was causing NODE_ENV issues
 // if (!parsedEnv.success) {
@@ -31,7 +20,6 @@ const NODE_ENV = process.env.NODE_ENV || 'development';
 //   process.exit(1); // Stop execution if required env variables are missing
 // }
 
-console.log(`Loaded environment: .env.${NODE_ENV}`);
 
 // Use parsed data if successful, otherwise fall back to defaults
 export const env: EnvVars = parsedEnv.success

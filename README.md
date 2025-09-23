@@ -24,17 +24,91 @@ cd omi-webapp
 npm run install:all
 ```
 
-### 2. Database Setup
+### 2. Environment Configuration
+
+#### Backend Environment Setup (.env)
 ```bash
-# Start PostgreSQL (using Docker)
-docker run --name omi-postgres -e POSTGRES_PASSWORD=postgresql -e POSTGRES_DB=dev_db -p 5432:5432 -d postgres:15
+cd backend
+cp .env.example .env
+# Edit .env with your configuration
+```
+
+**Example `.env` file** (replace with your actual values):
+```env
+# Server Configuration
+NODE_ENV=development
+PORT=9000
+LOG_LEVEL=debug
+
+# Database Configuration (PostgreSQL)
+DATABASE_URL="postgresql://username:password@localhost:5432/database_name?schema=public"
+SHADOW_DATABASE_URL="postgresql://username:password@localhost:5432/shadow_database_name"
+
+# Authentication (generate your own secrets - min 32 chars)
+JWT_SECRET=replace-with-your-own-secret-key-min-32-chars
+JWT_REFRESH_SECRET=replace-with-your-own-refresh-secret
+BETTER_AUTH_SECRET=replace-with-your-own-better-auth-secret
+
+# CORS Configuration (comma-separated URLs)
+WHITE_LIST_URLS=http://localhost:8888,http://localhost:5173
+
+# Optional: Redis (if using session management)
+REDIS_URL=redis://localhost:6379
+
+# Optional: API Security
+API_KEY_HEADER=x-api-key
+API_KEY_VALUE=your-secure-api-key-here
+
+# Optional: Socket.IO Admin UI
+SOCKET_ADMIN_USERNAME=admin
+SOCKET_ADMIN_PASSWORD=change-this-password
+```
+
+#### Frontend Environment Setup (.env.development)
+```bash
+cd frontend
+cp .env.example .env.development
+# Edit .env.development for local development
+```
+
+**Example `.env.development` file**:
+```env
+# Backend API URL (adjust port if needed)
+VITE_API_URL=http://localhost:9000
+VITE_API_BASE_PATH=/v1
+
+# WebSocket URL
+VITE_SOCKET_URL=ws://localhost:9000
+
+# Optional: VDO.ninja Configuration
+VITE_VDO_ROOM_PASSWORD=optional-room-password
+```
+
+**Example `.env.production` file** (for deployment):
+```env
+# Replace with your actual production URLs
+VITE_API_URL=https://your-api-domain.com
+VITE_API_BASE_PATH=/v1
+VITE_SOCKET_URL=wss://your-api-domain.com
+```
+
+### 3. Database Setup
+```bash
+# Start PostgreSQL (example using Docker)
+docker run --name omi-postgres \
+  -e POSTGRES_PASSWORD=your_password \
+  -e POSTGRES_DB=dev_db \
+  -p 5432:5432 \
+  -d postgres:15
+
+# Create shadow database (required for Prisma migrations)
+docker exec omi-postgres psql -U postgres -c "CREATE DATABASE dev_db_shadow;"
 
 # Backend database setup
 cd backend
-cp .env.example .env.dev  # Configure your DATABASE_URL
 npx prisma generate
 npx prisma migrate dev
-npx prisma db seed
+npm run seed  # Seeds with test data (see credentials below)
 ```
 
 ### 3. Start Development
@@ -48,10 +122,36 @@ npm run dev:frontend  # Frontend on http://localhost:5173
 ```
 
 ### 4. Verify Setup
-- **Frontend**: http://localhost:5173
-- **Backend API**: http://localhost:3000/v1
+- **Frontend**: http://localhost:5173 (or port 8888 if configured)
+- **Backend API**: http://localhost:9000/v1
 - **Database Studio**: `npx prisma studio` (from backend directory)
 - **WebSocket Test**: http://localhost:5173/debug/websocket-test
+- **Socket.IO Admin**: http://localhost:9000/admin (if configured)
+
+### Test Credentials (After Seeding)
+```
+Admin User:
+- Email: admin@omi.live
+- Password: password123
+
+Regular Users:
+- Email: john@example.com, jane@example.com, streamer@example.com
+- Password: password123
+```
+
+### Important Environment Notes
+
+⚠️ **Security Notes**:
+- Never commit `.env` files to git (they're in .gitignore)
+- Generate unique secrets for production (use `openssl rand -hex 32`)
+- JWT secrets must be at least 32 characters long
+- Change all default passwords before deployment
+
+📝 **Configuration Tips**:
+- Backend uses `.env` file (not `.env.development` or `.env.dev`)
+- Frontend uses `.env.development` for local dev, `.env.production` for builds
+- Prisma automatically loads `.env` from backend directory
+- All URLs in WHITE_LIST_URLS must be comma-separated without spaces
 
 ---
 

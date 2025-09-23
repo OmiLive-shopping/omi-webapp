@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcrypt';
+import { hashPassword } from 'better-auth/crypto';
 
 const prisma = new PrismaClient();
 
@@ -31,7 +32,8 @@ async function main() {
   console.log('✅ Roles created');
 
   // Create users
-  const hashedPassword = await bcrypt.hash('password123', 10);
+  const hashedPassword = await bcrypt.hash('password123', 10); // For User table (legacy)
+  const betterAuthPassword = await hashPassword('password123'); // For Better Auth Account table
 
   // Admin user
   const adminUser = await prisma.user.create({
@@ -43,6 +45,16 @@ async function main() {
       lastName: 'User',
       isAdmin: true,
       roleId: adminRole.id,
+    },
+  });
+
+  // Create Better Auth Account for admin
+  await prisma.account.create({
+    data: {
+      userId: adminUser.id,
+      accountId: adminUser.email,
+      providerId: 'credential',
+      password: betterAuthPassword, // Use Better Auth's password format
     },
   });
 
@@ -80,7 +92,22 @@ async function main() {
     }),
   ]);
 
+  // Create Better Auth Accounts for regular users
+  await Promise.all(
+    regularUsers.map((user) =>
+      prisma.account.create({
+        data: {
+          userId: user.id,
+          accountId: user.email,
+          providerId: 'credential',
+          password: betterAuthPassword, // Use Better Auth's password format
+        },
+      }),
+    ),
+  );
+
   console.log('✅ Users created');
+  console.log('✅ Better Auth Accounts created');
 
   // Create products
   const products = await Promise.all([
@@ -265,7 +292,7 @@ async function main() {
 
 async function cleanup() {
   console.log('🧹 Cleaning up existing data...');
-  
+
   // Delete in correct order to respect foreign key constraints
   await prisma.productAudit.deleteMany();
   await prisma.streamProduct.deleteMany();
@@ -273,9 +300,11 @@ async function cleanup() {
   await prisma.$executeRaw`DELETE FROM "_UserWishlist"`;
   await prisma.product.deleteMany();
   await prisma.brand.deleteMany();
+  await prisma.account.deleteMany(); // Clean Better Auth accounts
+  await prisma.session.deleteMany(); // Clean sessions
   await prisma.user.deleteMany();
   await prisma.roles.deleteMany();
-  
+
   console.log('✅ Cleanup completed');
 }
 
