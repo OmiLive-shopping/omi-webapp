@@ -1,10 +1,10 @@
 import { Router } from 'express';
 import { container } from 'tsyringe';
 
-import { authenticate } from '@/middleware/auth.middleware';
-import { apiRateLimiter } from '@/middleware/rate-limit.middleware';
+import { authenticate } from '@/middleware/auth.middleware.js';
+import { apiRateLimiter } from '@/middleware/rate-limit.middleware.js';
 
-import { AnalyticsController } from '../controllers/analytics.controller';
+import { AnalyticsController } from '../controllers/analytics.controller.js';
 
 const router = Router();
 const analyticsController = container.resolve(AnalyticsController);

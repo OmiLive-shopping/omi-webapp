@@ -1,6 +1,6 @@
 import { container } from 'tsyringe';
 
-import { AnalyticsService } from '../services/analytics.service';
+import { AnalyticsService } from '../services/analytics.service.js';
 
 /**
  * Analytics cleanup job

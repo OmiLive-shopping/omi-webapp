@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response } from 'express';
 import { inject, injectable } from 'tsyringe';
 
-import { AnalyticsService } from '../services/analytics.service';
+import { AnalyticsService } from '../services/analytics.service.js';
 
 @injectable()
 export class AnalyticsController {

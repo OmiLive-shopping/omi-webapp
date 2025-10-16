@@ -3,6 +3,7 @@ import { SocketWithAuth } from '../../config/socket/socket.config.js';
 
 interface RoomInfo {
   streamId: string;
+  creatorId?: string; // User ID of the stream creator
   viewers: Map<string, ViewerInfo>;
   moderators: Set<string>;
   createdAt: Date;
