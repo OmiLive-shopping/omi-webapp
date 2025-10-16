@@ -51,8 +51,12 @@ app.use(
 app.use(corsMiddleware);
 
 // Better Auth routes MUST be mounted BEFORE body parsing middleware
-console.log('Mounting Better Auth routes at /v1/auth');
+// Mount at BOTH paths:
+// - /v1/auth/* for local development (direct backend access)
+// - /api/v1/auth/* for production (Firebase Hosting proxy keeps /api/ prefix)
+console.log('Mounting Better Auth routes at /v1/auth and /api/v1/auth');
 app.all('/v1/auth/*', toNodeHandler(auth));
+app.all('/api/v1/auth/*', toNodeHandler(auth));
 
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
@@ -78,11 +82,15 @@ app.get('/heartbeat', (req: Request, res: Response): void => {
   return;
 });
 
+// Track deployment time
+const DEPLOYMENT_TIME = new Date().toISOString();
+
 app.get('/health', (_req: Request, res: Response): void => {
   res.json({
     status: 'healthy',
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
+    deployedAt: DEPLOYMENT_TIME,
   });
   return;
 });
@@ -109,13 +117,16 @@ app.use('/v1/api-keys', apiKeyRoutes);
 app.use('/v1/analytics', analyticsRoutes);
 
 // External API endpoints (require API key)
-app.use('/api/v1', validateApiKey(true), [
-  express.Router().use('/users', userRoutes),
-  express.Router().use('/products', productRoutes),
-  express.Router().use('/brands/products', brandProductRoutes),
-  express.Router().use('/streams', streamRoutes),
-  express.Router().use('/analytics', analyticsRoutes),
-]);
+// NOTE: /api/v1/auth/* is handled by Better Auth routes above (lines 58-59)
+// NOTE: Commented out because this was causing 404s on auth endpoints
+// The /api/v1 prefix was matching /api/v1/auth/* before Better Auth routes could handle them
+// app.use('/api/v1', validateApiKey(true), [
+//   express.Router().use('/users', userRoutes),
+//   express.Router().use('/products', productRoutes),
+//   express.Router().use('/brands/products', brandProductRoutes),
+//   express.Router().use('/streams', streamRoutes),
+//   express.Router().use('/analytics', analyticsRoutes),
+// ]);
 
 // Error Handling Middleware
 app.use(apiErrorHandler);

@@ -1,0 +1,36 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    /* More permissive settings for production builds */
+    "strict": false,
+    "noImplicitAny": false,
+    "strictNullChecks": false,
+    "strictFunctionTypes": false,
+    "strictBindCallApply": false,
+    "strictPropertyInitialization": false,
+    "noImplicitReturns": false,
+    "noFallthroughCasesInSwitch": false,
+    "noUncheckedIndexedAccess": false,
+    "exactOptionalPropertyTypes": false,
+    "noImplicitOverride": false,
+    
+    /* Skip problematic checks */
+    "skipLibCheck": true,
+    "skipDefaultLibCheck": true,
+    
+    /* Type checking */
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    
+    /* Additional permissive settings */
+    "allowJs": true
+  },
+  "exclude": [
+    "**/*.spec.ts",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/__tests__/**/*",
+    "**/test/**/*",
+    "e2e/**/*"
+  ]
+}

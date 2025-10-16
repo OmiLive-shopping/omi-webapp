@@ -10,15 +10,21 @@ const AuthContext = createContext({});
 
 export function AuthProvider({ children }: AuthProviderProps) {
   const session = useSession();
-  
+
   // Log session state for debugging
   useEffect(() => {
-    console.log('AuthProvider - Session state:', {
-      isLoading: session.isPending,
+    console.log('🔐 AuthProvider - Session state:', {
+      isPending: session.isPending,
       isAuthenticated: !!session.data,
-      user: session.data?.user,
+      hasUser: !!session.data?.user,
+      hasSession: !!session.data?.session,
+      error: session.error,
+      fullData: session.data,
     });
-  }, [session.isPending, session.data]);
+
+    // Log cookies for debugging
+    console.log('🍪 Cookies:', document.cookie);
+  }, [session.isPending, session.data, session.error]);
 
   // The session hook from Better Auth automatically:
   // 1. Checks for existing session cookie on mount

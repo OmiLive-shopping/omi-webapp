@@ -6,12 +6,21 @@ import { env } from './env-config.js';
 const getAllowedOrigins = (): string[] => {
   const origins: string[] = [];
 
-  // Add whitelisted URLs from env
+  // Production domains (hardcoded for reliability)
+  if (env.NODE_ENV === 'production') {
+    origins.push(
+      'https://app.omiliveshopping.com',      // Production frontend
+      'https://omiliveshopping.com',          // Alternate domain
+      'https://omi-live-backend.web.app',     // Firebase hosting
+    );
+  }
+
+  // Add whitelisted URLs from env (for additional domains)
   if (env.WHITE_LIST_URLS) {
     origins.push(...env.WHITE_LIST_URLS);
   }
 
-  // Add client URL if specified
+  // Add client URL if specified (fallback)
   if (env.CLIENT_URL) {
     origins.push(env.CLIENT_URL);
   }
@@ -30,7 +39,14 @@ const getAllowedOrigins = (): string[] => {
     );
   }
 
-  return [...new Set(origins)]; // Remove duplicates
+  const uniqueOrigins = [...new Set(origins)];
+
+  console.log('🌐 CORS Configuration:', {
+    NODE_ENV: env.NODE_ENV,
+    allowedOrigins: uniqueOrigins
+  });
+
+  return uniqueOrigins;
 };
 
 // CORS options configuration

@@ -9,60 +9,49 @@ datasource db {
 }
 
 model User {
-  id                   String              @id @default(uuid())
-  name                 String?
-  email                String              @unique
-  emailVerified        Boolean             @default(false)
-  image                String?
-  createdAt            DateTime            @default(now())
-  updatedAt            DateTime            @default(now()) @updatedAt
-  
-  // Better Auth role field
-  role                 String              @default("user")
-  
-  // Additional fields from original schema
-  firstName            String?
-  lastName             String?
-  password             String?
-  roleId               String?
-  active               Boolean             @default(true)
-  isAdmin              Boolean             @default(false)
-  streamKey            String              @unique @default(cuid())
-  username             String              @unique
-  avatarUrl            String?
-  bio                  String?
-  
-  // Profile fields
-  location             String?
-  socialLinks          Json?               // Store as JSON for flexibility { twitter: "", instagram: "", etc. }
-  publicProfile        Boolean             @default(true)
-
-  streamMessages       StreamMessage[]
-  streams              Stream[]
-  roleRelation         Roles?              @relation(fields: [roleId], references: [id])
-  wishlist             Product[]           @relation("UserWishlist")
-  cart                 Cart?
-  orders               Order[]
-  streamViewers        StreamViewer[]
-  refreshTokens        RefreshToken[]
-  followers            Follow[]            @relation("UserFollowers")
-  following            Follow[]            @relation("UserFollowing")
-  messageReactions     MessageReaction[]
-  moderatedActions     ChatModeration[]    @relation("ModeratedUsers")
-  moderatorActions     ChatModeration[]    @relation("ModeratorActions")
-  streamModeratorFor   StreamModerator[]   @relation("StreamModeratorUser")
+  id                     String            @id @default(uuid())
+  firstName              String?
+  lastName               String?
+  email                  String            @unique
+  password               String?
+  roleId                 String?
+  active                 Boolean           @default(true)
+  createdAt              DateTime          @default(now())
+  updatedAt              DateTime          @default(now()) @updatedAt
+  avatarUrl              String?
+  bio                    String?
+  emailVerified          Boolean           @default(false)
+  image                  String?
+  isAdmin                Boolean           @default(false)
+  name                   String?
+  role                   String            @default("user")
+  streamKey              String            @unique @default(cuid())
+  username               String            @unique
+  accounts               Account[]
+  brand                  Brand?
+  cart                   Cart?
+  moderatorActions       ChatModeration[]  @relation("ModeratorActions")
+  moderatedActions       ChatModeration[]  @relation("ModeratedUsers")
+  following              Follow[]          @relation("UserFollowing")
+  followers              Follow[]          @relation("UserFollowers")
+  messageReactions       MessageReaction[]
+  orders                 Order[]
+  productAudits          ProductAudit[]
+  refreshTokens          RefreshToken[]
+  sessions               Session[]
+  streams                Stream[]
+  streamMessages         StreamMessage[]
   streamModeratorAddedBy StreamModerator[] @relation("StreamModeratorAddedBy")
-  sessions             Session[]
-  accounts             Account[]
-  viewerAnalytics      ViewerAnalytics[]
-  brand                Brand?
-  productAudits        ProductAudit[]
+  streamModeratorFor     StreamModerator[] @relation("StreamModeratorUser")
+  streamViewers          StreamViewer[]
+  roleRelation           Roles?            @relation(fields: [roleId], references: [id])
+  viewerAnalytics        ViewerAnalytics[]
+  wishlist               Product[]         @relation("UserWishlist")
 
   @@index([email])
   @@index([username])
   @@index([streamKey])
   @@index([role])
-  @@index([publicProfile])
 }
 
 model Roles {
@@ -73,37 +62,28 @@ model Roles {
 }
 
 model Brand {
-  id                  String    @id @default(uuid())
-  userId              String    @unique
-  companyName         String
-  companyDescription  String?
-  websiteUrl          String?
-  businessEmail       String
-  businessPhone       String?
-  verified            Boolean   @default(false)
-  approvalStatus      String    @default("pending") // pending, approved, rejected
-  appliedAt           DateTime  @default(now())
-  approvedAt          DateTime?
-  rejectedAt          DateTime?
-  rejectionReason     String?
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @default(now()) @updatedAt
-
-  // Profile fields
-  slug                String?   @unique
-  logoUrl             String?
-  coverImageUrl       String?
-  location            String?
-  socialLinks         Json?     // Store as JSON for flexibility { twitter: "", linkedin: "", etc. }
-
-  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  products            Product[] @relation("BrandProducts")
+  id                 String    @id @default(uuid())
+  userId             String    @unique
+  companyName        String
+  companyDescription String?
+  websiteUrl         String?
+  businessEmail      String
+  businessPhone      String?
+  verified           Boolean   @default(false)
+  approvalStatus     String    @default("pending")
+  appliedAt          DateTime  @default(now())
+  approvedAt         DateTime?
+  rejectedAt         DateTime?
+  rejectionReason    String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @default(now()) @updatedAt
+  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  products           Product[] @relation("BrandProducts")
 
   @@index([userId])
   @@index([approvalStatus])
   @@index([verified])
   @@index([approvalStatus, verified])
-  @@index([slug])
 }
 
 model Category {
@@ -142,24 +122,21 @@ model Product {
   tags             String[]        @default([])
   rating           Float?
   reviewCount      Int             @default(0)
-  
-  // Brand ownership and approval
   brandId          String?
-  approvalStatus   String          @default("pending") // pending, approved, rejected
+  approvalStatus   String          @default("pending")
   approvedAt       DateTime?
   rejectedAt       DateTime?
   rejectionReason  String?
-  deletedAt        DateTime?       // Soft delete support
-  
+  deletedAt        DateTime?
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @default(now()) @updatedAt
-  category         Category?       @relation(fields: [categoryId], references: [id])
-  brand            Brand?          @relation("BrandProducts", fields: [brandId], references: [id])
-  streams          StreamProduct[]
-  wishlistedBy     User[]          @relation("UserWishlist")
   cartItems        CartItem[]
   orderItems       OrderItem[]
+  brand            Brand?          @relation("BrandProducts", fields: [brandId], references: [id])
+  category         Category?       @relation(fields: [categoryId], references: [id])
   audits           ProductAudit[]
+  streams          StreamProduct[]
+  wishlistedBy     User[]          @relation("UserWishlist")
 
   @@index([public])
   @@index([active])
@@ -174,15 +151,14 @@ model Product {
 model ProductAudit {
   id            String   @id @default(uuid())
   productId     String
-  userId        String   // User who made the change
-  action        String   // created, updated, approved, rejected, deleted
-  fieldName     String?  // Field that was changed (e.g., "price", "name", "description")
-  previousValue String?  // Previous value (as JSON string for flexibility)
-  newValue      String?  // New value (as JSON string for flexibility)
-  reason        String?  // Reason for change (e.g., rejection reason)
-  metadata      Json?    // Additional context if needed
+  userId        String
+  action        String
+  fieldName     String?
+  previousValue String?
+  newValue      String?
+  reason        String?
+  metadata      Json?
   createdAt     DateTime @default(now())
-  
   product       Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   user          User     @relation(fields: [userId], references: [id])
 
@@ -193,35 +169,35 @@ model ProductAudit {
 }
 
 model Stream {
-  id              String             @id @default(uuid())
+  id              String                @id @default(uuid())
   title           String
   description     String?
   scheduled       DateTime
   userId          String
-  isLive          Boolean            @default(false)
-  viewerCount     Int                @default(0)
+  isLive          Boolean               @default(false)
+  viewerCount     Int                   @default(0)
   startedAt       DateTime?
   endedAt         DateTime?
   thumbnailUrl    String?
   streamUrl       String?
-  streamKey       String?            @unique @default(cuid())
-  vdoRoomId       String?            @unique // VDO.Ninja room identifier
+  streamKey       String?               @unique @default(cuid())
+  vdoRoomId       String?               @unique
   categoryId      String?
-  tags            String[]           @default([])
-  status          String             @default("scheduled") // scheduled, live, ended
-  slowModeDelay   Int                @default(0) // Slow mode delay in seconds
-  createdAt       DateTime           @default(now())
-  updatedAt       DateTime           @default(now()) @updatedAt
-  streamMessages  StreamMessage[]
-  user            User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  category        Category?          @relation(fields: [categoryId], references: [id])
-  products        StreamProduct[]
-  streamViewers   StreamViewer[]
+  tags            String[]              @default([])
+  status          String                @default("scheduled")
+  slowModeDelay   Int                   @default(0)
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @default(now()) @updatedAt
   moderations     ChatModeration[]
-  moderators      StreamModerator[]
+  category        Category?             @relation(fields: [categoryId], references: [id])
+  user            User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
   analytics       StreamAnalytics[]
-  realtimeStats   StreamRealtimeStats[]
+  streamMessages  StreamMessage[]
+  moderators      StreamModerator[]
+  products        StreamProduct[]
   qualityEvents   StreamQualityEvent[]
+  realtimeStats   StreamRealtimeStats[]
+  streamViewers   StreamViewer[]
   viewerAnalytics ViewerAnalytics[]
 
   @@index([userId])
@@ -246,24 +222,24 @@ model StreamProduct {
 }
 
 model StreamMessage {
-  id        String              @id @default(uuid())
+  id        String            @id @default(uuid())
   content   String
   userId    String
   streamId  String
-  username  String?             // Cached username for faster display
-  type      String              @default("message") // message, system, announcement, donation, subscription
-  subType   String?             // For system messages: stream, viewer, quality, error, etc.
-  metadata  Json?               // Extra data like donation amounts, subscriber tiers, etc.
-  isPinned  Boolean             @default(false)
-  isDeleted Boolean             @default(false)
+  username  String?
+  type      String            @default("message")
+  subType   String?
+  metadata  Json?
+  isPinned  Boolean           @default(false)
+  isDeleted Boolean           @default(false)
   replyToId String?
-  createdAt DateTime            @default(now())
-  updatedAt DateTime            @default(now()) @updatedAt
-  stream    Stream              @relation(fields: [streamId], references: [id], onDelete: Cascade)
-  user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  replyTo   StreamMessage?      @relation("StreamMessageReplies", fields: [replyToId], references: [id])
-  replies   StreamMessage[]     @relation("StreamMessageReplies")
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @default(now()) @updatedAt
   reactions MessageReaction[]
+  replyTo   StreamMessage?    @relation("StreamMessageReplies", fields: [replyToId], references: [id])
+  replies   StreamMessage[]   @relation("StreamMessageReplies")
+  stream    Stream            @relation(fields: [streamId], references: [id], onDelete: Cascade)
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([streamId])
   @@index([userId])
@@ -275,10 +251,10 @@ model StreamMessage {
 model Cart {
   id        String     @id @default(uuid())
   userId    String     @unique
-  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  items     CartItem[]
   createdAt DateTime   @default(now())
   updatedAt DateTime   @default(now()) @updatedAt
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items     CartItem[]
 
   @@index([userId])
 }
@@ -288,10 +264,10 @@ model CartItem {
   cartId    String
   productId String
   quantity  Int      @default(1)
-  cart      Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
+  cart      Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@unique([cartId, productId])
   @@index([cartId])
@@ -302,9 +278,8 @@ model Order {
   id              String      @id @default(uuid())
   orderNumber     String      @unique @default(cuid())
   userId          String
-  user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  status          String      @default("pending") // pending, processing, shipped, delivered, cancelled
-  paymentStatus   String      @default("unpaid") // unpaid, paid, refunded
+  status          String      @default("pending")
+  paymentStatus   String      @default("unpaid")
   paymentMethod   String?
   subtotal        Float
   tax             Float       @default(0)
@@ -313,9 +288,10 @@ model Order {
   shippingAddress Json?
   billingAddress  Json?
   notes           String?
-  items           OrderItem[]
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @default(now()) @updatedAt
+  user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items           OrderItem[]
 
   @@index([userId])
   @@index([orderNumber])
@@ -324,33 +300,33 @@ model Order {
 }
 
 model OrderItem {
-  id         String   @id @default(uuid())
-  orderId    String
-  productId  String
-  quantity   Int
-  price      Float
-  total      Float
-  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  product    Product  @relation(fields: [productId], references: [id])
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @default(now()) @updatedAt
+  id        String   @id @default(uuid())
+  orderId   String
+  productId String
+  quantity  Int
+  price     Float
+  total     Float
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id])
 
   @@index([orderId])
   @@index([productId])
 }
 
 model StreamViewer {
-  id         String   @id @default(uuid())
-  streamId   String
-  userId     String?
-  sessionId  String   // For anonymous viewers
-  ipAddress  String?
-  userAgent  String?
-  location   String?
-  joinedAt   DateTime @default(now())
-  leftAt     DateTime?
-  stream     Stream   @relation(fields: [streamId], references: [id], onDelete: Cascade)
-  user       User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id        String    @id @default(uuid())
+  streamId  String
+  userId    String?
+  sessionId String
+  ipAddress String?
+  userAgent String?
+  location  String?
+  joinedAt  DateTime  @default(now())
+  leftAt    DateTime?
+  stream    Stream    @relation(fields: [streamId], references: [id], onDelete: Cascade)
+  user      User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([streamId, sessionId])
   @@index([streamId])
@@ -362,10 +338,10 @@ model RefreshToken {
   id        String   @id @default(uuid())
   token     String   @unique
   userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   expiresAt DateTime
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([token])
   @@index([userId])
@@ -373,12 +349,12 @@ model RefreshToken {
 }
 
 model Follow {
-  id         String   @id @default(uuid())
-  followerId String
+  id          String   @id @default(uuid())
+  followerId  String
   followingId String
-  follower   User     @relation("UserFollowing", fields: [followerId], references: [id], onDelete: Cascade)
-  following  User     @relation("UserFollowers", fields: [followingId], references: [id], onDelete: Cascade)
-  createdAt  DateTime @default(now())
+  createdAt   DateTime @default(now())
+  follower    User     @relation("UserFollowing", fields: [followerId], references: [id], onDelete: Cascade)
+  following   User     @relation("UserFollowers", fields: [followingId], references: [id], onDelete: Cascade)
 
   @@unique([followerId, followingId])
   @@index([followerId])
@@ -386,13 +362,13 @@ model Follow {
 }
 
 model MessageReaction {
-  id        String   @id @default(uuid())
+  id        String        @id @default(uuid())
   messageId String
   userId    String
-  emoji     String   // The emoji used for reaction
-  createdAt DateTime @default(now())
-  message   StreamMessage  @relation(fields: [messageId], references: [id], onDelete: Cascade)
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  emoji     String
+  createdAt DateTime      @default(now())
+  message   StreamMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([messageId, userId, emoji])
   @@index([messageId])
@@ -400,18 +376,18 @@ model MessageReaction {
 }
 
 model ChatModeration {
-  id          String   @id @default(uuid())
+  id          String    @id @default(uuid())
   streamId    String
-  userId      String   // User being moderated
-  moderatorId String   // Moderator who took action
-  action      String   // 'timeout', 'ban', 'unban'
+  userId      String
+  moderatorId String
+  action      String
   reason      String?
-  duration    Int?     // Duration in seconds for timeout
-  expiresAt   DateTime? // When the moderation expires
-  createdAt   DateTime @default(now())
-  stream      Stream   @relation(fields: [streamId], references: [id], onDelete: Cascade)
-  user        User     @relation("ModeratedUsers", fields: [userId], references: [id], onDelete: Cascade)
-  moderator   User     @relation("ModeratorActions", fields: [moderatorId], references: [id], onDelete: Cascade)
+  duration    Int?
+  expiresAt   DateTime?
+  createdAt   DateTime  @default(now())
+  moderator   User      @relation("ModeratorActions", fields: [moderatorId], references: [id], onDelete: Cascade)
+  stream      Stream    @relation(fields: [streamId], references: [id], onDelete: Cascade)
+  user        User      @relation("ModeratedUsers", fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([streamId])
   @@index([userId])
@@ -420,21 +396,20 @@ model ChatModeration {
 }
 
 model StreamModerator {
-  id        String   @id @default(uuid())
-  streamId  String
-  userId    String
-  addedBy   String
-  createdAt DateTime @default(now())
-  stream    Stream   @relation(fields: [streamId], references: [id], onDelete: Cascade)
-  user      User     @relation("StreamModeratorUser", fields: [userId], references: [id], onDelete: Cascade)
-  addedByUser User   @relation("StreamModeratorAddedBy", fields: [addedBy], references: [id], onDelete: Cascade)
+  id          String   @id @default(uuid())
+  streamId    String
+  userId      String
+  addedBy     String
+  createdAt   DateTime @default(now())
+  addedByUser User     @relation("StreamModeratorAddedBy", fields: [addedBy], references: [id], onDelete: Cascade)
+  stream      Stream   @relation(fields: [streamId], references: [id], onDelete: Cascade)
+  user        User     @relation("StreamModeratorUser", fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([streamId, userId])
   @@index([streamId])
   @@index([userId])
 }
 
-// Better Auth Tables
 model Session {
   id        String   @id @default(uuid())
   userId    String
@@ -452,18 +427,18 @@ model Session {
 }
 
 model Account {
-  id                      String    @id @default(uuid())
-  userId                  String
-  accountId               String
-  providerId              String
-  accessToken             String?
-  refreshToken            String?
-  accessTokenExpiresAt    DateTime?
-  refreshTokenExpiresAt   DateTime?
-  password                String?
-  createdAt               DateTime  @default(now())
-  updatedAt               DateTime  @default(now()) @updatedAt
-  user                    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                    String    @id @default(uuid())
+  userId                String
+  accountId             String
+  providerId            String
+  accessToken           String?
+  refreshToken          String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @default(now()) @updatedAt
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([providerId, accountId])
   @@index([userId])
@@ -482,54 +457,39 @@ model Verification {
   @@index([expiresAt])
 }
 
-// Stream Analytics Models for VDO.Ninja Integration
-
 model StreamAnalytics {
   id                String   @id @default(uuid())
   streamId          String
-  stream            Stream   @relation(fields: [streamId], references: [id], onDelete: Cascade)
-  
-  // Time window
   timestamp         DateTime @default(now())
-  intervalType      String   // 'minute', '5minutes', '15minutes', 'hour', 'day'
+  intervalType      String
   intervalStart     DateTime
   intervalEnd       DateTime
-  
-  // Viewer metrics
   uniqueViewers     Int      @default(0)
   peakViewers       Int      @default(0)
   averageViewers    Float    @default(0)
-  totalViewTime     Int      @default(0) // in seconds
-  averageViewTime   Float    @default(0) // in seconds
-  
-  // Stream quality metrics
+  totalViewTime     Int      @default(0)
+  averageViewTime   Float    @default(0)
   averageFps        Float    @default(0)
   minFps            Float    @default(0)
   maxFps            Float    @default(0)
-  averageBitrate    Float    @default(0) // in bps
+  averageBitrate    Float    @default(0)
   minBitrate        Float    @default(0)
   maxBitrate        Float    @default(0)
-  averageResolution String?  // e.g., "1920x1080"
-  
-  // Network metrics
-  averageLatency    Float    @default(0) // in ms
+  averageResolution String?
+  averageLatency    Float    @default(0)
   maxLatency        Float    @default(0)
-  averagePacketLoss Float    @default(0) // percentage
+  averagePacketLoss Float    @default(0)
   maxPacketLoss     Float    @default(0)
-  averageJitter     Float    @default(0) // in ms
-  
-  // Connection health
-  connectionScore   Float    @default(100) // 0-100
-  qualityRating     String   @default("good") // 'excellent', 'good', 'fair', 'poor', 'critical'
+  averageJitter     Float    @default(0)
+  connectionScore   Float    @default(100)
+  qualityRating     String   @default("good")
   reconnectCount    Int      @default(0)
-  
-  // Data usage
   totalBytesOut     BigInt   @default(0)
   totalBytesIn      BigInt   @default(0)
-  
   createdAt         DateTime @default(now())
   updatedAt         DateTime @default(now()) @updatedAt
-  
+  stream            Stream   @relation(fields: [streamId], references: [id], onDelete: Cascade)
+
   @@unique([streamId, intervalType, intervalStart])
   @@index([streamId])
   @@index([intervalType])
@@ -540,73 +500,50 @@ model StreamAnalytics {
 model StreamRealtimeStats {
   id                String   @id @default(uuid())
   streamId          String
-  stream            Stream   @relation(fields: [streamId], references: [id], onDelete: Cascade)
-  
-  // Timestamp for this stats snapshot
   timestamp         DateTime @default(now())
-  
-  // Current viewers
   viewerCount       Int      @default(0)
-  
-  // Video stats
   fps               Float    @default(0)
-  resolution        String?  // e.g., "1920x1080"
-  bitrate           Float    @default(0) // in bps
-  
-  // Audio stats
-  audioLevel        Float    @default(0) // 0-100
+  resolution        String?
+  bitrate           Float    @default(0)
+  audioLevel        Float    @default(0)
   audioDropouts     Int      @default(0)
-  
-  // Network stats
-  latency           Float    @default(0) // in ms
-  packetLoss        Float    @default(0) // percentage
-  jitter            Float    @default(0) // in ms
-  uploadSpeed       Float    @default(0) // in bps
-  downloadSpeed     Float    @default(0) // in bps
-  
-  // Connection
-  connectionState   String   @default("connected") // 'connected', 'reconnecting', 'disconnected'
-  connectionQuality String   @default("good") // 'excellent', 'good', 'fair', 'poor', 'critical'
-  
-  // Media states
+  latency           Float    @default(0)
+  packetLoss        Float    @default(0)
+  jitter            Float    @default(0)
+  uploadSpeed       Float    @default(0)
+  downloadSpeed     Float    @default(0)
+  connectionState   String   @default("connected")
+  connectionQuality String   @default("good")
   isAudioMuted      Boolean  @default(false)
   isVideoHidden     Boolean  @default(false)
   isScreenSharing   Boolean  @default(false)
   isRecording       Boolean  @default(false)
-  
   createdAt         DateTime @default(now())
-  
+  stream            Stream   @relation(fields: [streamId], references: [id], onDelete: Cascade)
+
   @@index([streamId])
   @@index([timestamp])
   @@index([createdAt])
 }
 
 model StreamQualityEvent {
-  id                String   @id @default(uuid())
-  streamId          String
-  stream            Stream   @relation(fields: [streamId], references: [id], onDelete: Cascade)
-  
-  timestamp         DateTime @default(now())
-  eventType         String   // 'quality_degraded', 'quality_improved', 'connection_lost', 'connection_restored'
-  severity          String   // 'low', 'medium', 'high', 'critical'
-  
-  // Event details
-  metric            String   // 'fps', 'bitrate', 'latency', 'packet_loss', 'connection'
-  previousValue     Float?
-  currentValue      Float?
-  threshold         Float?
-  
-  // Context
-  message           String?
-  details           Json?    // Additional context as JSON
-  
-  // Resolution
-  resolved          Boolean  @default(false)
-  resolvedAt        DateTime?
-  resolutionTime    Int?     // Time to resolve in seconds
-  
-  createdAt         DateTime @default(now())
-  
+  id             String    @id @default(uuid())
+  streamId       String
+  timestamp      DateTime  @default(now())
+  eventType      String
+  severity       String
+  metric         String
+  previousValue  Float?
+  currentValue   Float?
+  threshold      Float?
+  message        String?
+  details        Json?
+  resolved       Boolean   @default(false)
+  resolvedAt     DateTime?
+  resolutionTime Int?
+  createdAt      DateTime  @default(now())
+  stream         Stream    @relation(fields: [streamId], references: [id], onDelete: Cascade)
+
   @@index([streamId])
   @@index([eventType])
   @@index([severity])
@@ -615,43 +552,31 @@ model StreamQualityEvent {
 }
 
 model ViewerAnalytics {
-  id                String   @id @default(uuid())
+  id                String    @id @default(uuid())
   streamId          String
   userId            String?
-  sessionId         String   // For anonymous viewers
-  
-  stream            Stream   @relation(fields: [streamId], references: [id], onDelete: Cascade)
-  user              User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  // Session info
+  sessionId         String
   joinedAt          DateTime
   leftAt            DateTime?
-  totalWatchTime    Int      @default(0) // in seconds
-  
-  // Engagement metrics
-  chatMessageCount  Int      @default(0)
-  reactionCount     Int      @default(0)
-  
-  // Quality experience
-  averageQuality    String?  // Average quality watched
-  qualityChanges    Int      @default(0) // Number of quality changes
-  bufferingTime     Int      @default(0) // Total buffering time in seconds
-  bufferingEvents   Int      @default(0)
-  
-  // Connection metrics
-  averageLatency    Float    @default(0)
-  averagePacketLoss Float    @default(0)
-  reconnectCount    Int      @default(0)
-  
-  // Device info
-  deviceType        String?  // 'desktop', 'mobile', 'tablet'
+  totalWatchTime    Int       @default(0)
+  chatMessageCount  Int       @default(0)
+  reactionCount     Int       @default(0)
+  averageQuality    String?
+  qualityChanges    Int       @default(0)
+  bufferingTime     Int       @default(0)
+  bufferingEvents   Int       @default(0)
+  averageLatency    Float     @default(0)
+  averagePacketLoss Float     @default(0)
+  reconnectCount    Int       @default(0)
+  deviceType        String?
   browser           String?
   os                String?
   location          String?
-  
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @default(now()) @updatedAt
-  
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @default(now()) @updatedAt
+  stream            Stream    @relation(fields: [streamId], references: [id], onDelete: Cascade)
+  user              User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@unique([streamId, sessionId])
   @@index([streamId])
   @@index([userId])

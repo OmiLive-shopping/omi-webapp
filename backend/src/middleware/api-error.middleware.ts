@@ -44,9 +44,14 @@ const apiErrorHandler = (
 
   next: NextFunction,
 ): void => {
-  if (environment === 'development') {
-    console.log('err', err);
-  }
+  // Always log errors to help with debugging
+  console.error('❌ API Error:', {
+    message: (err as Error)?.message,
+    stack: environment === 'development' ? (err as Error)?.stack : undefined,
+    path: req.path,
+    method: req.method,
+    error: err
+  });
   if (
     err instanceof SyntaxError &&
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

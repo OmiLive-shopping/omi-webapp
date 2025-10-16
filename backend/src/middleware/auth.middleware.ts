@@ -1,4 +1,5 @@
 import type { Session, User } from 'better-auth';
+import { fromNodeHeaders } from 'better-auth/node';
 import { NextFunction, Request, Response } from 'express';
 import { unifiedResponse } from 'uni-response';
 
@@ -35,56 +36,55 @@ declare global {
  */
 export async function authenticate(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    // Better Auth can handle both Authorization header and cookies
-    const headers = {
-      // Forward the authorization header if present
-      authorization: req.headers.authorization || '',
-      // Forward cookies
-      cookie: req.headers.cookie || '',
-    };
+    // Extract cookies for logging
+    const cookieHeader = req.headers.cookie || '';
+    const cookies = cookieHeader
+      .split(';')
+      .map(s => s.trim())
+      .reduce((acc, cookie) => {
+        const [key, value] = cookie.split('=');
+        if (key && value) acc[key] = value;
+        return acc;
+      }, {} as Record<string, string>);
 
-    if (process.env.SOCKET_DEBUG === 'true') {
-      const cookie = headers.cookie || '';
-      const cookieNames = cookie
-        .split(';')
-        .map(s => s.trim().split('=')[0])
-        .filter(Boolean);
-      console.log('Auth middleware - headers (truncated):', {
-        hasAuth: Boolean(headers.authorization),
-        cookies: cookieNames,
-      });
-    }
-
-    // Get session using Better Auth's API
-    const session = await betterAuth.api.getSession({
-      headers,
+    // Log incoming request details
+    console.log('[Auth Middleware] Request:', {
+      method: req.method,
+      path: req.path,
+      hasAuthHeader: Boolean(req.headers.authorization),
+      cookieKeys: Object.keys(cookies),
+      hasSessionToken: Boolean(cookies.better_auth_session_token),
+      tokenPreview: cookies.better_auth_session_token?.substring(0, 10) + '...',
     });
 
-    if (process.env.SOCKET_DEBUG === 'true') {
-      const maskEmail = (email?: string | null) => {
-        if (!email) return email;
-        const [name, domain] = email.split('@');
-        if (!domain) return email;
-        const masked = name.length > 2 ? name[0] + '***' + name.slice(-1) : name[0] + '*';
-        return `${masked}@${domain}`;
-      };
-      const summary = session
-        ? {
-            userId: (session.user as any)?.id,
-            email: maskEmail((session.user as any)?.email),
-            role: (session.user as any)?.role,
-            isAdmin: (session.user as any)?.isAdmin,
-            sessionId: session.session?.id,
-            expiresAt: session.session?.expiresAt,
-          }
-        : 'No session';
-      console.log('Auth middleware - session (summary):', summary);
-    }
+    // Get session using Better Auth's API
+    // IMPORTANT: Use fromNodeHeaders to properly convert Express headers
+    const convertedHeaders = fromNodeHeaders(req.headers);
+    console.log('[Auth Middleware] Converted headers:', {
+      hasAuthHeader: Boolean(convertedHeaders.authorization),
+      hasCookie: Boolean(convertedHeaders.cookie),
+      cookiePreview: convertedHeaders.cookie?.substring(0, 50) + '...',
+    });
+
+    const session = await betterAuth.api.getSession({
+      headers: convertedHeaders,
+    });
+
+    // Log session result
+    console.log('[Auth Middleware] Better Auth response:', {
+      hasSession: Boolean(session),
+      hasUser: Boolean(session?.user),
+      userId: session?.user?.id,
+      sessionId: session?.session?.id,
+    });
 
     if (!session) {
+      console.log('[Auth Middleware] ❌ No session found - returning 401');
       res.status(401).json(unifiedResponse(false, 'No valid session found'));
       return;
     }
+
+    console.log('[Auth Middleware] ✅ Session validated successfully');
 
     // Attach session and user to request
     req.session = session.session;
@@ -116,7 +116,7 @@ export function requireRole(allowedRoles: string[]) {
       };
 
       const session = await betterAuth.api.getSession({
-        headers,
+        headers: fromNodeHeaders(req.headers),
       });
 
       if (!session) {

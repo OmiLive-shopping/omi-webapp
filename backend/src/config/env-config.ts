@@ -2,9 +2,15 @@ import dotenv from 'dotenv';
 
 import { envSchema, EnvVars } from './env-schema.js';
 
-// Load .env file (standard practice)
-dotenv.config({ path: '.env' });
-console.log(`✅ Loaded environment: .env`);
+// Load .env file only in development
+// In production (Cloud Run), environment variables come from GCP Secret Manager
+// eslint-disable-next-line node/no-process-env
+if (process.env.NODE_ENV !== 'production') {
+  dotenv.config({ path: '.env' });
+  console.log(`✅ Loaded environment from .env file`);
+} else {
+  console.log(`✅ Using environment variables from Cloud Run / GCP Secret Manager`);
+}
 
 // eslint-disable-next-line node/no-process-env
 const parsedEnv = envSchema.safeParse(process.env);
@@ -21,11 +27,17 @@ const parsedEnv = envSchema.safeParse(process.env);
 // }
 
 
-// Use parsed data if successful, otherwise fall back to defaults
+// Ensure NODE_ENV respects the actual environment even if parsing fails
+const effectiveNodeEnv =
+  process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'test'
+    ? (process.env.NODE_ENV as 'production' | 'test')
+    : 'development';
+
+// Use parsed data if successful, otherwise fall back to safe defaults
 export const env: EnvVars = parsedEnv.success
   ? parsedEnv.data
   : ({
-      NODE_ENV: 'development',
+      NODE_ENV: effectiveNodeEnv,
       PORT: 9000,
       LOG_LEVEL: 'info',
       DATABASE_URL: '',
@@ -34,6 +46,15 @@ export const env: EnvVars = parsedEnv.success
       WHITE_LIST_URLS: [],
       REDIS_URL: 'redis://localhost:6379',
       API_KEY_HEADER: 'x-api-key',
+      CLIENT_URL: undefined,
+      SOCKET_ADMIN_USERNAME: undefined,
+      SOCKET_ADMIN_PASSWORD: undefined,
+      SECURITY_ENABLE_AUDIT_LOGGING: true,
+      SECURITY_MAX_ANONYMOUS_CONNECTIONS: 1000,
+      SECURITY_SUSPICIOUS_ACTIVITY_THRESHOLD: 10,
+      SECURITY_BLOCK_SUSPICIOUS_IPS: true,
+      SECURITY_MAX_PAYLOAD_SIZE: 1048576,
+      SECURITY_MAX_MESSAGE_LENGTH: 10000,
     } as EnvVars);
 
 // ✅ Get only user-defined env variables from `.env`

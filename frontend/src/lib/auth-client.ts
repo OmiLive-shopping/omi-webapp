@@ -1,12 +1,15 @@
 import { createAuthClient } from 'better-auth/react';
-import type { InferUser, InferSession } from 'better-auth/client';
 
 // Create the auth client with proper configuration
-const serverURL = import.meta.env.VITE_SERVER_URL || 'http://localhost:9000';
-const apiBase = import.meta.env.VITE_API_BASE || '/v1';
-const authPath = `${apiBase}/auth`;
+// In production, use same-origin (relative) URLs so cookies work without cross-site constraints
+const isProd = import.meta.env.PROD;
+const serverURL = isProd ? '' : (import.meta.env.VITE_SERVER_URL || 'http://localhost:9000');
 
-console.log('Auth client config:', { serverURL, authPath });
+// IMPORTANT: In production, use /api/v1/auth (matches Firebase rewrite)
+// In dev, use /v1/auth (direct to backend)
+const authPath = isProd ? '/api/v1/auth' : '/v1/auth';
+
+console.log('Auth client config:', { isProd, serverURL, authPath, fullPath: `${serverURL}${authPath}` });
 
 export const authClient = createAuthClient({
   baseURL: serverURL,
@@ -35,17 +38,27 @@ export const {
   revokeSession,
   revokeSessions,
   revokeOtherSessions,
-  
-  // Organization features (if using organization plugin)
-  organization,
-  
-  // Admin features (if using admin plugin)
-  admin,
 } = authClient;
 
-// Type exports for TypeScript
-export type User = InferUser<typeof authClient>;
-export type Session = InferSession<typeof authClient>;
+// Type definitions for user and session
+// Using Better Auth's session structure directly
+export interface User {
+  id: string;
+  email: string;
+  emailVerified: boolean;
+  name?: string;
+  image?: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface Session {
+  id: string;
+  userId: string;
+  expiresAt: Date;
+  token: string;
+  user: User;
+}
 
 // Custom user fields added in backend auth.ts
 export interface AuthUser extends User {
@@ -119,6 +132,7 @@ export async function signUpWithEmail(data: {
     username: data.username,
   } as any); // Type assertion needed due to Better Auth's strict typing
 }
+
 
 // Check if user has a specific role
 export function hasRole(user: AuthUser | null, role: string): boolean {

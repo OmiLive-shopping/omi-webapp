@@ -131,6 +131,8 @@ class Server {
 }
 
 // Initialize and start the server
-const PORT = Number(env.PORT) || 9000;
+// Cloud Run sets PORT=8080, use it directly, fallback to configured port
+// eslint-disable-next-line node/no-process-env -- Cloud Run requires reading PORT from process.env
+const PORT = Number(process.env.PORT || env.PORT || 9000);
 const server = new Server(PORT);
 server.start();

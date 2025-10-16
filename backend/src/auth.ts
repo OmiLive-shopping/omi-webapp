@@ -1,14 +1,33 @@
 import { betterAuth } from 'better-auth';
 import { prismaAdapter } from 'better-auth/adapters/prisma';
-import { admin, organization } from 'better-auth/plugins';
+// TEMPORARILY DISABLED: These plugins may cause session validation issues
+// import { admin, organization } from 'better-auth/plugins';
 
 import { PrismaService } from './config/prisma.config.js';
 
 const prismaClient = PrismaService.getInstance().client;
 
+console.log('🔧 [AUTH DEBUG] Plugins disabled for testing session validation bug');
+
+// Use BETTER_AUTH_URL from environment, or fallback to old behavior for local dev
+const baseURL = process.env.BETTER_AUTH_URL || (
+  process.env.NODE_ENV === 'production'
+    ? 'https://app.omiliveshopping.com'  // Production uses Firebase Hosting domain
+    : 'http://localhost:9000'
+);
+
+console.log('Better Auth Config:', {
+  baseURL,
+  basePath: '/api/v1/auth',
+  hasSecret: !!(process.env.BETTER_AUTH_SECRET),
+  secretPreview: process.env.BETTER_AUTH_SECRET?.substring(0, 10) + '...',
+  nodeEnv: process.env.NODE_ENV,
+  allEnvKeys: Object.keys(process.env).filter(k => k.includes('AUTH')),
+});
+
 export const auth = betterAuth({
-  baseURL: 'http://localhost:9000',
-  basePath: '/v1/auth',
+  baseURL,
+  basePath: '/api/v1/auth',
   secret: process.env.BETTER_AUTH_SECRET || 'default-secret-change-this-in-production',
 
   database: prismaAdapter(prismaClient, {
@@ -23,6 +42,21 @@ export const auth = betterAuth({
   session: {
     expiresIn: 60 * 60 * 24 * 7, // 7 days
     updateAge: 60 * 60 * 24, // 1 day
+    cookieCache: {
+      enabled: true, // CRITICAL: getSession() requires this to be enabled
+      // Reference: https://www.better-auth.com/docs/concepts/session-management
+      // When enabled, Better Auth sets a signed session_data cookie that getSession() can validate
+    },
+  },
+
+  // Explicit cookie configuration - fixes Better Auth session validation bug
+  // Reference: https://github.com/better-auth/better-auth/issues/3470
+  advanced: {
+    defaultCookieAttributes: {
+      sameSite: 'lax', // Same-origin (Firebase proxy makes us same-origin)
+      secure: true, // Always secure in production
+      httpOnly: true, // Prevent XSS
+    },
   },
 
   rateLimit: {
@@ -61,31 +95,35 @@ export const auth = betterAuth({
     },
   },
 
-  plugins: [
-    organization({
-      async sendInvitationEmail(data) {
-        // TODO: Implement email sending for organization invitations
-        // For streaming channel invites
-        console.log('Organization invitation email:', {
-          organization: data.organization.name,
-          inviter: data.inviter.user.name || data.inviter.user.email,
-          email: data.email,
-          invitationId: data.invitation.id,
-        });
-      },
-    }),
-    admin({
-      impersonationSessionDuration: 60 * 60, // 1 hour
-    }),
-  ],
+  // TEMPORARILY DISABLED: Testing if these plugins cause session validation issues
+  // Reference: GitHub issues #3892, #3470 suggest plugins can cause schema mismatches
+  // plugins: [
+  //   organization({
+  //     async sendInvitationEmail(data) {
+  //       // TODO: Implement email sending for organization invitations
+  //       // For streaming channel invites
+  //       console.log('Organization invitation email:', {
+  //         organization: data.organization.name,
+  //         inviter: data.inviter.user.name || data.inviter.user.email,
+  //         email: data.email,
+  //         invitationId: data.invitation.id,
+  //       });
+  //     },
+  //   }),
+  //   admin({
+  //     impersonationSessionDuration: 60 * 60, // 1 hour
+  //   }),
+  // ],
 
   trustedOrigins: [
     'http://localhost:3000', // Frontend development (if using 3000)
     'http://localhost:8888', // Frontend development (current port)
     'http://localhost:9000', // Backend development
     'http://localhost:5173', // Frontend development (Vite)
-    'https://omi.live', // Production
-    'https://*.omi.live', // Production subdomains
+    'https://app.omiliveshopping.com', // Firebase Hosting (production frontend)
+    'https://omi-backend-355024965259.us-central1.run.app', // Cloud Run backend
+    'https://omi.live', // Production (future)
+    'https://*.omi.live', // Production subdomains (future)
   ],
 });
 

@@ -50,11 +50,17 @@ backend/info.txt
 
 # Frontend specific
 frontend/dist-ssr/
+frontend/.firebase/
+
+# Backend specific (additional)
+backend/cloud-sql-proxy
 
 # Misc
 *.local
 coverage/
 .nyc_output/
+cookies.txt
+backend/src/test-session.ts
 
 .taskmaster/
 
