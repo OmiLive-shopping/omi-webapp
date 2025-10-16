@@ -1,11 +1,11 @@
 import { PrismaService } from '../../config/prisma.config.js';
 import { SocketServer } from '../../config/socket/socket.config.js';
 import type {
+  StatsUpdatedEvent,
   StreamEndedEvent,
   StreamStartedEvent,
-  StreamStatsUpdatedEvent,
-  StreamViewerJoinedEvent,
-  StreamViewerLeftEvent,
+  ViewerJoinedEvent,
+  ViewerLeftEvent,
 } from '../../features/stream/events/stream-event-emitter.js';
 import { SystemMessageData, SystemMessageGenerator } from '../utils/system-messages.js';
 
@@ -150,7 +150,7 @@ export class ChatStreamIntegrationService {
   /**
    * Handle viewer joined event
    */
-  private async handleViewerJoined(event: StreamViewerJoinedEvent): Promise<void> {
+  private async handleViewerJoined(event: ViewerJoinedEvent): Promise<void> {
     const messageData = SystemMessageGenerator.generateMessage('stream:viewer:joined', {
       streamId: event.streamId,
       username: event.viewer?.username,
@@ -171,7 +171,7 @@ export class ChatStreamIntegrationService {
   /**
    * Handle viewer left event
    */
-  private async handleViewerLeft(event: StreamViewerLeftEvent): Promise<void> {
+  private async handleViewerLeft(event: ViewerLeftEvent): Promise<void> {
     const messageData = SystemMessageGenerator.generateMessage('stream:viewer:left', {
       streamId: event.streamId,
       username: event.viewer?.username,
@@ -192,7 +192,7 @@ export class ChatStreamIntegrationService {
   /**
    * Handle stats updated event (periodic viewer count updates)
    */
-  private async handleStatsUpdated(event: StreamStatsUpdatedEvent): Promise<void> {
+  private async handleStatsUpdated(event: StatsUpdatedEvent): Promise<void> {
     // Only send chat message for significant viewer count milestones
     const viewerCount = event.stats.viewerCount || 0;
     const milestones = [10, 25, 50, 100, 250, 500, 1000];

@@ -9,9 +9,9 @@ const getAllowedOrigins = (): string[] => {
   // Production domains (hardcoded for reliability)
   if (env.NODE_ENV === 'production') {
     origins.push(
-      'https://app.omiliveshopping.com',      // Production frontend
-      'https://omiliveshopping.com',          // Alternate domain
-      'https://omi-live-backend.web.app',     // Firebase hosting
+      'https://app.omiliveshopping.com', // Production frontend
+      'https://omiliveshopping.com', // Alternate domain
+      'https://omi-live-backend.web.app', // Firebase hosting
     );
   }
 
@@ -43,7 +43,7 @@ const getAllowedOrigins = (): string[] => {
 
   console.log('🌐 CORS Configuration:', {
     NODE_ENV: env.NODE_ENV,
-    allowedOrigins: uniqueOrigins
+    allowedOrigins: uniqueOrigins,
   });
 
   return uniqueOrigins;

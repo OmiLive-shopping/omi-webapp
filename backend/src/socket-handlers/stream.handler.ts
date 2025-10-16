@@ -31,7 +31,7 @@ export class StreamSocketHandler {
           return;
         }
 
-        const stream = streamResponse.data;
+        const stream = streamResponse.data as any;
         socket.join(`stream:${streamId}`);
         socket.emit('joined_stream', { streamId, stream });
 
@@ -41,7 +41,7 @@ export class StreamSocketHandler {
           const updatedStreamResponse = await this.streamService.getStreamById(streamId);
           this.socketService.emitToRoom(`stream:${streamId}`, 'viewer_count_updated', {
             streamId,
-            viewerCount: updatedStreamResponse.data?.viewerCount || 0,
+            viewerCount: (updatedStreamResponse.data as any)?.viewerCount || 0,
           });
         }
       } catch (error: any) {
@@ -56,12 +56,12 @@ export class StreamSocketHandler {
 
         // Decrement viewer count if stream is live
         const streamResponse = await this.streamService.getStreamById(streamId);
-        if (streamResponse.data?.isLive) {
+        if ((streamResponse.data as any)?.isLive) {
           await this.streamService.updateViewerCount(streamId, { decrement: true });
           const updatedStreamResponse = await this.streamService.getStreamById(streamId);
           this.socketService.emitToRoom(`stream:${streamId}`, 'viewer_count_updated', {
             streamId,
-            viewerCount: updatedStreamResponse.data?.viewerCount || 0,
+            viewerCount: (updatedStreamResponse.data as any)?.viewerCount || 0,
           });
         }
       } catch (error: any) {
@@ -76,7 +76,7 @@ export class StreamSocketHandler {
 
         // Check if stream is live
         const streamResponse = await this.streamService.getStreamById(streamId);
-        if (!streamResponse.data?.isLive) {
+        if (!(streamResponse.data as any)?.isLive) {
           socket.emit('error', { message: 'Stream is not live' });
           return;
         }
@@ -91,7 +91,7 @@ export class StreamSocketHandler {
           return;
         }
 
-        const comment = commentResponse.data;
+        const comment = commentResponse.data as any;
         // Emit to all users in the stream room
         this.socketService.emitToRoom(`stream:${streamId}`, 'new_message', {
           id: comment.id,
@@ -117,12 +117,12 @@ export class StreamSocketHandler {
           const streamId = room.replace('stream:', '');
           try {
             const streamResponse = await this.streamService.getStreamById(streamId);
-            if (streamResponse.data?.isLive) {
+            if ((streamResponse.data as any)?.isLive) {
               await this.streamService.updateViewerCount(streamId, { decrement: true });
               const updatedStreamResponse = await this.streamService.getStreamById(streamId);
               this.socketService.emitToRoom(`stream:${streamId}`, 'viewer_count_updated', {
                 streamId,
-                viewerCount: updatedStreamResponse.data?.viewerCount || 0,
+                viewerCount: (updatedStreamResponse.data as any)?.viewerCount || 0,
               });
             }
           } catch (error) {

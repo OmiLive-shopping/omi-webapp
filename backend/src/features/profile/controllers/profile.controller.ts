@@ -3,14 +3,9 @@ import { z } from 'zod';
 
 import { ProfileService } from '../services/profile.service.js';
 
-// Define authenticated request type
-interface AuthRequest extends Request {
-  user?: {
-    id: string;
-    email: string;
-    role: string;
-  };
-}
+// Note: AuthRequest type is declared globally in auth.middleware.ts
+// Just use Request directly - it has the user property from global declaration
+type AuthRequest = Request;
 
 export class ProfileController {
   private profileService: ProfileService;

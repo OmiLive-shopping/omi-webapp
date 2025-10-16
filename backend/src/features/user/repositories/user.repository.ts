@@ -10,9 +10,6 @@ export class UserRepository {
   async findUserByEmail(email: string) {
     return this.prisma.user.findUnique({
       where: { email },
-      include: {
-        role: true,
-      },
     });
   }
 
@@ -52,9 +49,6 @@ export class UserRepository {
   }) {
     return this.prisma.user.create({
       data,
-      include: {
-        role: true,
-      },
     });
   }
 

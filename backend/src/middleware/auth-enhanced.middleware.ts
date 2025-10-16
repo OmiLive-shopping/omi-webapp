@@ -13,19 +13,7 @@ interface AuthPayload {
   role: string;
 }
 
-declare global {
-  namespace Express {
-    interface Request {
-      user?: {
-        id: string;
-        email: string;
-        username: string;
-        isAdmin: boolean;
-        role?: string;
-      };
-    }
-  }
-}
+// Note: AuthUser type is declared in auth.middleware.ts, don't redeclare here
 
 export const authMiddleware = async (req: Request, res: Response, next: NextFunction) => {
   const token = req.headers.authorization?.split(' ')[1];
@@ -45,10 +33,18 @@ export const authMiddleware = async (req: Request, res: Response, next: NextFunc
         id: true,
         email: true,
         username: true,
+        firstName: true,
+        lastName: true,
+        name: true,
+        bio: true,
+        avatarUrl: true,
         isAdmin: true,
-        role: {
-          select: { name: true },
-        },
+        role: true,
+        streamKey: true,
+        createdAt: true,
+        updatedAt: true,
+        emailVerified: true,
+        image: true,
       },
     });
 
@@ -57,14 +53,24 @@ export const authMiddleware = async (req: Request, res: Response, next: NextFunc
       return;
     }
 
-    // Attach user data to request
+    // Attach user data to request (matching AuthUser type from auth.middleware.ts)
     req.user = {
       id: user.id,
       email: user.email,
       username: user.username,
+      firstName: user.firstName || undefined,
+      lastName: user.lastName || undefined,
+      name: user.name || undefined,
+      bio: user.bio || undefined,
+      avatarUrl: user.avatarUrl || undefined,
       isAdmin: user.isAdmin,
-      role: user.role?.name,
-    };
+      role: user.role,
+      streamKey: user.streamKey || undefined,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+      emailVerified: user.emailVerified,
+      image: user.image || undefined,
+    } as any; // Type assertion needed due to Better Auth User base type
 
     next();
   } catch (error) {

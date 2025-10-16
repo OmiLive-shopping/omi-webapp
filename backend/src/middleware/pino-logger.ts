@@ -6,6 +6,10 @@ import { dirname, join } from 'path';
 import type { Logger } from 'pino';
 import pino from 'pino';
 import pinoHttp from 'pino-http';
+
+// Type assertions for CJS/ESM interop
+const pinoFn = (pino as any).default || pino;
+const pinoHttpFn = (pinoHttp as any).default || pinoHttp;
 import { fileURLToPath } from 'url';
 
 // Extend Express Request interface to include logger
@@ -50,12 +54,12 @@ const transport =
         options: { destination: logFile },
       };
 
-const logger = pino({
+const logger = pinoFn({
   level: process.env.LOG_LEVEL || 'info', // Default to 'info' if not set
   transport,
 });
 
-export const pinoLogger = pinoHttp({
+export const pinoLogger = pinoHttpFn({
   logger,
   // Generate UUID for each request using crypto
   genReqId: (req: Request) => randomUUID(),

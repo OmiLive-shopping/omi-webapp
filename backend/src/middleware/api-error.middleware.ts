@@ -50,7 +50,7 @@ const apiErrorHandler = (
     stack: environment === 'development' ? (err as Error)?.stack : undefined,
     path: req.path,
     method: req.method,
-    error: err
+    error: err,
   });
   if (
     err instanceof SyntaxError &&

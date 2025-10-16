@@ -41,11 +41,14 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
     const cookies = cookieHeader
       .split(';')
       .map(s => s.trim())
-      .reduce((acc, cookie) => {
-        const [key, value] = cookie.split('=');
-        if (key && value) acc[key] = value;
-        return acc;
-      }, {} as Record<string, string>);
+      .reduce(
+        (acc, cookie) => {
+          const [key, value] = cookie.split('=');
+          if (key && value) acc[key] = value;
+          return acc;
+        },
+        {} as Record<string, string>,
+      );
 
     // Log incoming request details
     console.log('[Auth Middleware] Request:', {
@@ -59,7 +62,10 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
 
     // Get session using Better Auth's API
     // IMPORTANT: Use fromNodeHeaders to properly convert Express headers
-    const convertedHeaders = fromNodeHeaders(req.headers);
+    const convertedHeaders = fromNodeHeaders(req.headers) as Headers & {
+      authorization?: string;
+      cookie?: string;
+    };
     console.log('[Auth Middleware] Converted headers:', {
       hasAuthHeader: Boolean(convertedHeaders.authorization),
       hasCookie: Boolean(convertedHeaders.cookie),

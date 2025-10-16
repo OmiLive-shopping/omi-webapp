@@ -88,7 +88,7 @@ export class StreamService {
       title: stream.title,
       description: stream.description,
       thumbnailUrl: stream.thumbnailUrl,
-      scheduledFor: stream.scheduledFor?.toISOString(),
+      scheduledFor: stream.scheduled?.toISOString(),
       tags: stream.tags,
     };
 

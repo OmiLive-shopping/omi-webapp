@@ -1,8 +1,8 @@
 import { betterAuth } from 'better-auth';
 import { prismaAdapter } from 'better-auth/adapters/prisma';
+
 // TEMPORARILY DISABLED: These plugins may cause session validation issues
 // import { admin, organization } from 'better-auth/plugins';
-
 import { PrismaService } from './config/prisma.config.js';
 
 const prismaClient = PrismaService.getInstance().client;
@@ -10,16 +10,16 @@ const prismaClient = PrismaService.getInstance().client;
 console.log('🔧 [AUTH DEBUG] Plugins disabled for testing session validation bug');
 
 // Use BETTER_AUTH_URL from environment, or fallback to old behavior for local dev
-const baseURL = process.env.BETTER_AUTH_URL || (
-  process.env.NODE_ENV === 'production'
-    ? 'https://app.omiliveshopping.com'  // Production uses Firebase Hosting domain
-    : 'http://localhost:9000'
-);
+const baseURL =
+  process.env.BETTER_AUTH_URL ||
+  (process.env.NODE_ENV === 'production'
+    ? 'https://app.omiliveshopping.com' // Production uses Firebase Hosting domain
+    : 'http://localhost:9000');
 
 console.log('Better Auth Config:', {
   baseURL,
   basePath: '/api/v1/auth',
-  hasSecret: !!(process.env.BETTER_AUTH_SECRET),
+  hasSecret: !!process.env.BETTER_AUTH_SECRET,
   secretPreview: process.env.BETTER_AUTH_SECRET?.substring(0, 10) + '...',
   nodeEnv: process.env.NODE_ENV,
   allEnvKeys: Object.keys(process.env).filter(k => k.includes('AUTH')),

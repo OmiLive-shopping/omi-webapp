@@ -7,7 +7,7 @@ import { StreamSocketIntegration } from '../features/stream/events/socket-integr
 import { logger } from '../utils/logger.js';
 import { ChatHandler } from './handlers/chat.handler.js';
 import { StreamHandler } from './handlers/stream.handler.js';
-import { vdoAnalyticsHandler } from './handlers/vdo-analytics.handler.js';
+// import { vdoAnalyticsHandler } from './handlers/vdo-analytics.handler.js'; // Disabled temporarily
 import { RoomManager } from './managers/room.manager.js';
 import { socketAuthMiddleware } from './middleware/auth.middleware.js';
 // Security manager removed - using direct handlers only
@@ -118,7 +118,7 @@ export async function initializeSocketServer(httpServer: HTTPServer): Promise<vo
     streamHandler.registerVdoHandlers(socket);
 
     // Register VDO.Ninja analytics handlers
-    vdoAnalyticsHandler.registerHandlers(socket);
+    // vdoAnalyticsHandler.registerHandlers(socket); // Disabled temporarily
 
     // Chat events - using direct handlers with individual Zod validation
     socket.on('chat:send-message', data => chatHandler.handleSendMessage(socket, data));
@@ -203,7 +203,7 @@ export async function initializeSocketServer(httpServer: HTTPServer): Promise<vo
         `User disconnected: ${socket.id} (${socket.username || 'anonymous'})`,
       );
       streamHandler.unregisterVdoHandlers(socket);
-      await vdoAnalyticsHandler.unregisterHandlers(socket);
+      // await vdoAnalyticsHandler.unregisterHandlers(socket); // Disabled temporarily
       await roomManager.handleDisconnect(socket);
     });
 

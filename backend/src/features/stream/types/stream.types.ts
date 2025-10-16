@@ -20,6 +20,7 @@ export interface StreamFilters {
   upcoming?: boolean;
   past?: boolean;
   search?: string;
+  limit?: number;
 }
 
 export interface GoLiveInput {

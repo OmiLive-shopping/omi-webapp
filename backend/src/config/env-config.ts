@@ -26,7 +26,6 @@ const parsedEnv = envSchema.safeParse(process.env);
 //   process.exit(1); // Stop execution if required env variables are missing
 // }
 
-
 // Ensure NODE_ENV respects the actual environment even if parsing fails
 const effectiveNodeEnv =
   process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'test'

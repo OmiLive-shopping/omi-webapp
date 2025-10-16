@@ -86,6 +86,6 @@ export class RedisClient {
     multi.expire(key, Math.ceil(windowMs / 1000));
 
     const results = await multi.exec();
-    return (results[0] as unknown) as number;
+    return results[0] as unknown as number;
   }
 }
