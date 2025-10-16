@@ -34,12 +34,13 @@ router.get(
   profileController.getUserProfile,
 );
 
+// TODO: Add slug field to Brand model in Prisma schema
 // Get brand profile by slug
-router.get(
-  '/brands/:slug',
-  validationMiddleware(brandSlugParamSchema, 'params'),
-  profileController.getBrandProfile,
-);
+// router.get(
+//   '/brands/:slug',
+//   validationMiddleware(brandSlugParamSchema, 'params'),
+//   profileController.getBrandProfile,
+// );
 
 // Check username availability
 router.get(
@@ -48,12 +49,13 @@ router.get(
   profileController.checkUsernameAvailability,
 );
 
+// TODO: Add slug field to Brand model in Prisma schema
 // Check brand slug availability
-router.get(
-  '/check-brand-slug/:slug',
-  validationMiddleware(brandSlugParamSchema, 'params'),
-  profileController.checkBrandSlugAvailability,
-);
+// router.get(
+//   '/check-brand-slug/:slug',
+//   validationMiddleware(brandSlugParamSchema, 'params'),
+//   profileController.checkBrandSlugAvailability,
+// );
 
 // Protected routes - authentication required
 

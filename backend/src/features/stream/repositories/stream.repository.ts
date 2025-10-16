@@ -257,7 +257,7 @@ export class StreamRepository {
   }
 
   async createComment(userId: string, streamId: string, data: CommentInput) {
-    return this.prisma.comment.create({
+    return this.prisma.streamMessage.create({
       data: {
         content: data.content,
         userId,
@@ -275,7 +275,7 @@ export class StreamRepository {
   }
 
   async getStreamComments(streamId: string, limit = 100) {
-    return this.prisma.comment.findMany({
+    return this.prisma.streamMessage.findMany({
       where: { streamId },
       include: {
         user: {
@@ -306,7 +306,7 @@ export class StreamRepository {
           createdAt: true,
         },
       }),
-      this.prisma.comment.count({
+      this.prisma.streamMessage.count({
         where: { streamId },
       }),
       this.prisma.streamViewer.count({
@@ -400,7 +400,7 @@ export class StreamRepository {
 
     // Cursor-based pagination
     if (cursor) {
-      const cursorComment = await this.prisma.comment.findUnique({
+      const cursorComment = await this.prisma.streamMessage.findUnique({
         where: { id: cursor },
         select: { createdAt: true },
       });
@@ -415,7 +415,7 @@ export class StreamRepository {
       }
     }
 
-    const comments = await this.prisma.comment.findMany({
+    const comments = await this.prisma.streamMessage.findMany({
       where,
       include: {
         user: {
@@ -423,11 +423,7 @@ export class StreamRepository {
             id: true,
             username: true,
             avatarUrl: true,
-            role: {
-              select: {
-                name: true,
-              },
-            },
+            role: true, // This is a string field, not a relation
           },
         },
         replyTo: {
@@ -470,7 +466,7 @@ export class StreamRepository {
       userId: msg.user.id,
       username: msg.user.username,
       avatarUrl: msg.user.avatarUrl,
-      role: msg.user.role?.name || 'viewer',
+      role: msg.user.role || 'viewer', // role is a string field, not an object
       timestamp: msg.createdAt,
       type: 'message' as const,
       isPinned: msg.isPinned,

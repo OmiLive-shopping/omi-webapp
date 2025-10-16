@@ -10,6 +10,8 @@ export interface UpdateStreamInput {
   description?: string;
   scheduled?: string | Date;
   vdoRoomId?: string;
+  thumbnailUrl?: string;
+  tags?: string[];
 }
 
 export interface StreamFilters {

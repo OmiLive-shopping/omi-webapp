@@ -26,7 +26,7 @@ export class UserService {
       return unifiedResponse(false, 'Invalid credentials');
     }
 
-    const token = generateToken(user.id, user.role?.name || 'user');
+    const token = generateToken(user.id, user.role || 'user');
 
     // Return user data along with token (excluding sensitive fields)
     const { password: userPassword, ...userWithoutPassword } = user;
@@ -62,7 +62,7 @@ export class UserService {
       firstName,
     });
 
-    const token = generateToken(newUser.id, newUser.role?.name || 'user');
+    const token = generateToken(newUser.id, newUser.role || 'user');
 
     // Return user data along with token (excluding sensitive fields)
     const { password: newUserPassword, ...userWithoutPassword } = newUser;
@@ -186,7 +186,7 @@ export class UserService {
     }
 
     // Only return stream key if user has streamer role
-    if (user.role?.name !== 'streamer' && user.role?.name !== 'admin') {
+    if (user.role !== 'streamer' && user.role !== 'admin') {
       return unifiedResponse(false, 'Only streamers can access stream keys');
     }
 
@@ -204,7 +204,7 @@ export class UserService {
     }
 
     // Only allow streamers and admins to regenerate stream keys
-    if (user.role?.name !== 'streamer' && user.role?.name !== 'admin') {
+    if (user.role !== 'streamer' && user.role !== 'admin') {
       return unifiedResponse(false, 'Only streamers can regenerate stream keys');
     }
 

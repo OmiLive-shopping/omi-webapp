@@ -45,7 +45,7 @@ export class StreamService {
           username: user.username,
           avatarUrl: user.avatarUrl,
         },
-        scheduledFor: stream.scheduledFor?.toISOString(),
+        scheduledFor: stream.scheduled?.toISOString(),
         tags: stream.tags,
       });
     }
@@ -107,7 +107,7 @@ export class StreamService {
           ...(input.title && { title: input.title }),
           ...(input.description && { description: input.description }),
           ...(input.thumbnailUrl && { thumbnailUrl: input.thumbnailUrl }),
-          ...(input.scheduledFor && { scheduledFor: input.scheduledFor.toISOString() }),
+          ...(input.scheduled && { scheduledFor: new Date(input.scheduled).toISOString() }),
           ...(input.tags && { tags: input.tags }),
         },
         previousValues,
