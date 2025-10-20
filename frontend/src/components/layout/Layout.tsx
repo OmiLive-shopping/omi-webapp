@@ -1,27 +1,30 @@
 import React from 'react';
 import { Outlet } from 'react-router-dom';
-import { useAuthState, signOut } from '@/lib/auth-client';
-import { Navigation } from './Navigation';
+import { useAuthState, signOutUser } from '@/lib/auth-client';
+import { MainNavigation } from './Navigation';
 
 const Layout: React.FC = () => {
-  const { isAuthenticated, user } = useAuthState();
-  
+  const { user } = useAuthState();
+
   const handleLogout = async () => {
-    await signOut();
+    await signOutUser();
+    // Redirect to home after logout
+    window.location.href = '/';
   };
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Navigation Header */}
-      <Navigation 
-        isAuthenticated={isAuthenticated}
+      <MainNavigation
         user={user ? {
+          id: user.id,
           name: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.username || user.name || '',
           email: user.email,
           avatar: user.avatarUrl,
-          role: user.role
-        } : undefined}
+          role: user.role as 'viewer' | 'streamer' | 'admin'
+        } : null}
         onLogout={handleLogout}
+        onSearch={(query) => console.log('Search:', query)}
       />
 
       {/* Main Content */}

@@ -25,7 +25,7 @@ const baseURL =
 
 console.log('Better Auth Config:', {
   baseURL,
-  basePath: '/v1/auth',
+  basePath: '/api/v1/auth',
   hasSecret: !!process.env.BETTER_AUTH_SECRET,
   secretPreview: process.env.BETTER_AUTH_SECRET?.substring(0, 10) + '...',
   nodeEnv: process.env.NODE_ENV,
@@ -34,7 +34,7 @@ console.log('Better Auth Config:', {
 
 export const auth = betterAuth({
   baseURL,
-  basePath: '/v1/auth',
+  basePath: '/api/v1/auth',
   secret: process.env.BETTER_AUTH_SECRET || 'default-secret-change-this-in-production',
 
   database: prismaAdapter(prismaClient, {

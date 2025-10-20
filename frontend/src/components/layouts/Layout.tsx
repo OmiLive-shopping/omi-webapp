@@ -1,6 +1,6 @@
 import { Outlet } from 'react-router-dom';
 import Navigation from '../navigation/Navigation';
-import { useAuthState, signOut } from '@/lib/auth-client';
+import { useAuthState, signOutUser } from '@/lib/auth-client';
 
 interface LayoutProps {
   children?: React.ReactNode;
@@ -10,9 +10,11 @@ interface LayoutProps {
 const Layout = ({ children, type }: LayoutProps) => {
   const layoutType = type ?? 'responsive';
   const { isAuthenticated, user } = useAuthState();
-  
+
   const logout = async () => {
-    await signOut();
+    await signOutUser();
+    // Redirect to home after logout
+    window.location.href = '/';
   };
 
   return (

@@ -39,7 +39,7 @@ export const tokenStorage = {
 // ========================================
 const isProd = import.meta.env.PROD;
 const serverURL = isProd ? '' : (import.meta.env.VITE_SERVER_URL || 'http://localhost:9000');
-const authPath = isProd ? '/api/v1/auth' : '/v1/auth';
+const authPath = '/api/v1/auth'; // Use same path for all environments
 
 console.log('[Auth Client] Config:', { isProd, serverURL, authPath, fullPath: `${serverURL}${authPath}` });
 

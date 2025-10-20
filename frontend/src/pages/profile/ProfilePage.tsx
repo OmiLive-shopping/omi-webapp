@@ -30,7 +30,7 @@ import {
 } from 'lucide-react';
 // Layout is already provided by the router, no need to import it
 import { useProfile, UpdateProfileData } from '@/hooks/useProfile';
-import { signOut } from '@/lib/auth-client';
+import { signOutUser } from '@/lib/auth-client';
 import clsx from 'clsx';
 
 interface Order {
@@ -121,7 +121,7 @@ const ProfilePage: React.FC = () => {
   };
 
   const handleLogout = async () => {
-    await signOut();
+    await signOutUser();
     navigate('/');
   };
 
