@@ -48,5 +48,6 @@ ENV PORT=8080
 
 EXPOSE 8080
 
-# Start with compiled JavaScript
-CMD ["node", "dist/server.js"]
+# Start with migrations then server
+# Using sh -c to run multiple commands
+CMD sh -c "npx prisma migrate deploy && node dist/server.js"
