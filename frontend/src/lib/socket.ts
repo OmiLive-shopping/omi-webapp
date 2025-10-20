@@ -1,4 +1,5 @@
 import { io, Socket } from 'socket.io-client';
+import { getCurrentToken } from './auth-client';
 
 export interface ServerToClientEvents {
   'chat:message': (message: ChatMessage) => void;
@@ -93,20 +94,32 @@ class SocketManager {
     this.isConnecting = true;
     console.log('[SocketManager] Creating new socket connection to:', url);
 
-    console.log(`[SocketManager] Creating socket with URL: ${url}`);
-    
+    // Get Bearer token for authentication
+    const authToken = token || getCurrentToken();
+
+    if (authToken) {
+      console.log('[SocketManager] Connecting with Bearer token');
+    } else {
+      console.log('[SocketManager] Connecting without token (anonymous)');
+    }
+
     this.socket = io(url, {
       reconnection: true,
       reconnectionAttempts: this.maxReconnectAttempts,
       reconnectionDelay: this.reconnectDelay,
       reconnectionDelayMax: 10000,
-      timeout: 30000, // Increased from 20000
+      timeout: 30000,
       transports: ['websocket', 'polling'],
       autoConnect: true,
-      withCredentials: true,
-      upgrade: true, // Allow transport upgrades
-      rememberUpgrade: true, // Remember the successful transport
-      // Don't send token in auth, let cookies handle authentication
+      upgrade: true,
+      rememberUpgrade: true,
+
+      // Send Bearer token in auth for authentication
+      auth: authToken ? {
+        token: authToken
+      } : undefined,
+
+      // NO withCredentials - using Bearer tokens instead
     });
     
     console.log(`[SocketManager] Socket instance created, connecting...`);

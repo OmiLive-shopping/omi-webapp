@@ -31,62 +31,51 @@ declare global {
 }
 
 /**
- * Authentication Middleware using Better Auth
- * Validates session from either Bearer token or cookies
+ * Authentication Middleware using Better Auth Bearer Tokens
+ * Validates JWT Bearer tokens from Authorization header
  */
 export async function authenticate(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    // Extract cookies for logging
-    const cookieHeader = req.headers.cookie || '';
-    const cookies = cookieHeader
-      .split(';')
-      .map(s => s.trim())
-      .reduce(
-        (acc, cookie) => {
-          const [key, value] = cookie.split('=');
-          if (key && value) acc[key] = value;
-          return acc;
-        },
-        {} as Record<string, string>,
-      );
+    // Extract Authorization header
+    const authHeader = req.headers.authorization;
 
     // Log incoming request details
     console.log('[Auth Middleware] Request:', {
       method: req.method,
       path: req.path,
-      hasAuthHeader: Boolean(req.headers.authorization),
-      cookieKeys: Object.keys(cookies),
-      hasSessionToken: Boolean(cookies.better_auth_session_token),
-      tokenPreview: cookies.better_auth_session_token?.substring(0, 10) + '...',
+      hasAuthHeader: Boolean(authHeader),
+      authType: authHeader?.split(' ')[0],
+      tokenPreview: authHeader?.startsWith('Bearer ') ? authHeader.substring(0, 20) + '...' : 'N/A',
     });
+
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      console.log('[Auth Middleware] ❌ No Bearer token found');
+      res.status(401).json(unifiedResponse(false, 'No valid authentication token'));
+      return;
+    }
 
     // Get session using Better Auth's API
     // IMPORTANT: Use fromNodeHeaders to properly convert Express headers
     const convertedHeaders = fromNodeHeaders(req.headers) as Headers & {
       authorization?: string;
-      cookie?: string;
     };
-    console.log('[Auth Middleware] Converted headers:', {
-      hasAuthHeader: Boolean(convertedHeaders.authorization),
-      hasCookie: Boolean(convertedHeaders.cookie),
-      cookiePreview: convertedHeaders.cookie?.substring(0, 50) + '...',
-    });
+    console.log('[Auth Middleware] Validating Bearer token...');
 
     const session = await betterAuth.api.getSession({
       headers: convertedHeaders,
     });
 
     // Log session result
-    console.log('[Auth Middleware] Better Auth response:', {
+    console.log('[Auth Middleware] Token validation result:', {
       hasSession: Boolean(session),
       hasUser: Boolean(session?.user),
       userId: session?.user?.id,
-      sessionId: session?.session?.id,
+      username: (session?.user as AuthUser)?.username,
     });
 
-    if (!session) {
-      console.log('[Auth Middleware] ❌ No session found - returning 401');
-      res.status(401).json(unifiedResponse(false, 'No valid session found'));
+    if (!session || !session.user) {
+      console.log('[Auth Middleware] ❌ Invalid or expired token');
+      res.status(401).json(unifiedResponse(false, 'Invalid or expired token'));
       return;
     }
 
@@ -115,18 +104,21 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
 export function requireRole(allowedRoles: string[]) {
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      // First authenticate the user
-      const headers = {
-        authorization: req.headers.authorization || '',
-        cookie: req.headers.cookie || '',
-      };
+      // Extract Authorization header
+      const authHeader = req.headers.authorization;
 
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        res.status(401).json(unifiedResponse(false, 'No valid authentication token'));
+        return;
+      }
+
+      // Validate Bearer token
       const session = await betterAuth.api.getSession({
         headers: fromNodeHeaders(req.headers),
       });
 
-      if (!session) {
-        res.status(401).json(unifiedResponse(false, 'No valid session found'));
+      if (!session || !session.user) {
+        res.status(401).json(unifiedResponse(false, 'Invalid or expired token'));
         return;
       }
 

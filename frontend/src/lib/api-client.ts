@@ -1,5 +1,4 @@
-// TODO: Replace with Better Auth
-// import { useAuthStore } from '@/stores/auth.store';
+import { getCurrentToken, tokenStorage } from './auth-client';
 
 export class ApiError extends Error {
   constructor(
@@ -48,12 +47,10 @@ class ApiClient {
       }
     }
 
-    // Get auth token
-    // TODO: Replace with Better Auth
-    // const authToken = token || useAuthStore.getState().token;
-    const authToken = token || null; // Temporary placeholder
+    // Get auth token from parameter or localStorage
+    const authToken = token || getCurrentToken();
 
-    // Build headers
+    // Build headers with Bearer token
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
       ...requestOptions.headers,
@@ -67,8 +64,16 @@ class ApiClient {
       const response = await fetch(url, {
         ...requestOptions,
         headers,
-        credentials: 'include', // Include cookies for Better Auth sessions
+        // NO credentials - using Bearer tokens instead
       });
+
+      // Handle 401 errors by clearing token and redirecting
+      if (response.status === 401) {
+        console.log('[API Client] Received 401, clearing token and redirecting');
+        tokenStorage.remove();
+        window.location.href = '/auth';
+        throw new ApiError(401, 'Unauthorized - please sign in again');
+      }
 
       // Handle non-2xx responses
       if (!response.ok) {

@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { socketManager, StreamStatus } from '@/lib/socket';
 import { ChatMessage } from '@/types/chat';
 import { useChatStore } from './chat-store';
+import { getCurrentToken } from '@/lib/auth-client';
 
 interface SocketState {
   isConnected: boolean;
@@ -42,7 +43,7 @@ export const useSocketStore = create<SocketState>((set, get) => ({
     if (get().isConnected) {
       return;
     }
-    
+
     // Check if socket manager is already connected
     if (socketManager.isConnected()) {
       set({ isConnected: true });
@@ -51,9 +52,17 @@ export const useSocketStore = create<SocketState>((set, get) => ({
       }
       return;
     }
-    
-    // Don't pass token - cookies will be sent with withCredentials
-    const socket = socketManager.connect();
+
+    // Get Bearer token for authentication
+    const token = getCurrentToken();
+
+    if (token) {
+      console.log('[Socket Store] Connecting with Bearer token');
+    } else {
+      console.log('[Socket Store] Connecting without token (anonymous)');
+    }
+
+    const socket = socketManager.connect(undefined, token);
     
     // Ensure socket exists
     if (!socket) {

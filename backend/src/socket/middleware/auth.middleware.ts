@@ -6,29 +6,30 @@ import { SocketWithAuth } from '../../config/socket/socket.config.js';
 
 export const socketAuthMiddleware = async (socket: SocketWithAuth, next: (err?: Error) => void) => {
   try {
-    // Try to get cookies from handshake headers (sent with withCredentials: true)
-    const cookies = socket.handshake.headers.cookie || '';
+    // Extract Bearer token from handshake auth
+    const token = socket.handshake.auth?.token;
 
     if (process.env.SOCKET_DEBUG === 'true') {
-      console.log('Socket auth middleware - cookies available:', cookies ? 'yes' : 'no');
+      console.log('[Socket Auth] Token available:', token ? 'yes' : 'no');
+      console.log('[Socket Auth] Handshake auth:', socket.handshake.auth);
     }
 
-    if (!cookies) {
-      // No cookies - allow anonymous connection
+    if (!token) {
+      // No token - allow anonymous connection
       socket.userId = undefined;
       socket.username = undefined;
       socket.role = 'anonymous';
       if (process.env.SOCKET_DEBUG === 'true') {
-        console.log('Socket auth: No cookies - anonymous connection');
+        console.log('[Socket Auth] No token - anonymous connection');
       }
       return next();
     }
 
-    // Validate session with Better Auth using the cookies
+    // Validate Bearer token with Better Auth
     const headers = new Headers();
-    headers.set('cookie', cookies);
+    headers.set('authorization', `Bearer ${token}`);
     if (process.env.SOCKET_DEBUG === 'true') {
-      console.log('Socket auth: Using cookies from handshake headers');
+      console.log('[Socket Auth] Validating Bearer token...');
     }
 
     const session = await auth.api.getSession({
@@ -37,18 +38,18 @@ export const socketAuthMiddleware = async (socket: SocketWithAuth, next: (err?: 
 
     if (process.env.SOCKET_DEBUG === 'true') {
       console.log(
-        'Socket auth: Better Auth session result:',
-        session ? 'Valid session' : 'Invalid session',
+        '[Socket Auth] Token validation result:',
+        session ? 'Valid token' : 'Invalid token',
       );
     }
 
     if (!session || !session.user) {
-      // Invalid session - treat as anonymous
+      // Invalid token - treat as anonymous
       socket.userId = undefined;
       socket.username = undefined;
       socket.role = 'anonymous';
       if (process.env.SOCKET_DEBUG === 'true') {
-        console.log('Socket auth: Invalid session - treating as anonymous');
+        console.log('[Socket Auth] Invalid token - treating as anonymous');
       }
       return next();
     }
@@ -95,7 +96,7 @@ export const socketAuthMiddleware = async (socket: SocketWithAuth, next: (err?: 
     }
 
     if (process.env.SOCKET_DEBUG === 'true') {
-      console.log(`Socket auth: Authenticated as ${socket.username} (${socket.role})`);
+      console.log(`[Socket Auth] ✅ Authenticated as ${socket.username} (${socket.role})`);
     }
 
     next();

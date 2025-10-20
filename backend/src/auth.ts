@@ -6,6 +6,7 @@ if (typeof globalThis.crypto === 'undefined') {
 
 import { betterAuth } from 'better-auth';
 import { prismaAdapter } from 'better-auth/adapters/prisma';
+import { bearer } from 'better-auth/plugins';
 
 // TEMPORARILY DISABLED: These plugins may cause session validation issues
 // import { admin, organization } from 'better-auth/plugins';
@@ -13,7 +14,7 @@ import { PrismaService } from './config/prisma.config.js';
 
 const prismaClient = PrismaService.getInstance().client;
 
-console.log('🔧 [AUTH DEBUG] Plugins disabled for testing session validation bug');
+console.log('🔧 [AUTH] Bearer token authentication enabled');
 
 // Use BETTER_AUTH_URL from environment, or fallback to old behavior for local dev
 const baseURL =
@@ -24,7 +25,7 @@ const baseURL =
 
 console.log('Better Auth Config:', {
   baseURL,
-  basePath: '/api/v1/auth',
+  basePath: '/v1/auth',
   hasSecret: !!process.env.BETTER_AUTH_SECRET,
   secretPreview: process.env.BETTER_AUTH_SECRET?.substring(0, 10) + '...',
   nodeEnv: process.env.NODE_ENV,
@@ -33,7 +34,7 @@ console.log('Better Auth Config:', {
 
 export const auth = betterAuth({
   baseURL,
-  basePath: '/api/v1/auth',
+  basePath: '/v1/auth',
   secret: process.env.BETTER_AUTH_SECRET || 'default-secret-change-this-in-production',
 
   database: prismaAdapter(prismaClient, {
@@ -51,23 +52,6 @@ export const auth = betterAuth({
   session: {
     expiresIn: 60 * 60 * 24 * 7, // 7 days
     updateAge: 60 * 60 * 24, // 1 day
-    // IMPORTANT: cookieCache is disabled because it conflicts with custom cookie names
-    // Firebase Hosting requires __session cookie, but cookieCache uses __Secure-better-auth.* names
-    cookieCache: {
-      enabled: false,
-    },
-  },
-
-  // CRITICAL: Firebase Hosting only forwards cookies named "__session"
-  // All other cookies are stripped before reaching Cloud Run
-  // Reference: https://firebase.google.com/docs/hosting/manage-cache#using_cookies
-  advanced: {
-    cookies: {
-      // Use __session as the primary cookie name to work with Firebase Hosting
-      sessionToken: {
-        name: '__session',
-      },
-    },
   },
 
   rateLimit: {
@@ -106,25 +90,10 @@ export const auth = betterAuth({
     },
   },
 
-  // TEMPORARILY DISABLED: Testing if these plugins cause session validation issues
-  // Reference: GitHub issues #3892, #3470 suggest plugins can cause schema mismatches
-  // plugins: [
-  //   organization({
-  //     async sendInvitationEmail(data) {
-  //       // TODO: Implement email sending for organization invitations
-  //       // For streaming channel invites
-  //       console.log('Organization invitation email:', {
-  //         organization: data.organization.name,
-  //         inviter: data.inviter.user.name || data.inviter.user.email,
-  //         email: data.email,
-  //         invitationId: data.invitation.id,
-  //       });
-  //     },
-  //   }),
-  //   admin({
-  //     impersonationSessionDuration: 60 * 60, // 1 hour
-  //   }),
-  // ],
+  // Enable Bearer token authentication for JWT-based auth
+  plugins: [
+    bearer(),
+  ],
 
   trustedOrigins: [
     'http://localhost:3000', // Frontend development (if using 3000)
