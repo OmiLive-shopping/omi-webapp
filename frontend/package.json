@@ -104,5 +104,8 @@
     "**/*.{js,jsx,ts,tsx,html,css,json}": [
       "pnpm prettier --write"
     ]
+  },
+  "engines": {
+    "node": ">=22.0.0"
   }
 }

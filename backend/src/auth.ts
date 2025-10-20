@@ -1,3 +1,9 @@
+// Polyfill crypto for Better Auth in ESM Node.js environment
+import crypto from 'crypto';
+if (typeof globalThis.crypto === 'undefined') {
+  globalThis.crypto = crypto as any;
+}
+
 import { betterAuth } from 'better-auth';
 import { prismaAdapter } from 'better-auth/adapters/prisma';
 
@@ -37,25 +43,30 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
     requireEmailVerification: false, // Enable later in production
+    // CRITICAL: Enable sendToken to receive token in sign-in response
+    // This allows both cookie and token-based auth
+    sendToken: true,
   },
 
   session: {
     expiresIn: 60 * 60 * 24 * 7, // 7 days
     updateAge: 60 * 60 * 24, // 1 day
+    // IMPORTANT: cookieCache is disabled because it conflicts with custom cookie names
+    // Firebase Hosting requires __session cookie, but cookieCache uses __Secure-better-auth.* names
     cookieCache: {
-      enabled: true, // CRITICAL: getSession() requires this to be enabled
-      // Reference: https://www.better-auth.com/docs/concepts/session-management
-      // When enabled, Better Auth sets a signed session_data cookie that getSession() can validate
+      enabled: false,
     },
   },
 
-  // Explicit cookie configuration - fixes Better Auth session validation bug
-  // Reference: https://github.com/better-auth/better-auth/issues/3470
+  // CRITICAL: Firebase Hosting only forwards cookies named "__session"
+  // All other cookies are stripped before reaching Cloud Run
+  // Reference: https://firebase.google.com/docs/hosting/manage-cache#using_cookies
   advanced: {
-    defaultCookieAttributes: {
-      sameSite: 'lax', // Same-origin (Firebase proxy makes us same-origin)
-      secure: true, // Always secure in production
-      httpOnly: true, // Prevent XSS
+    cookies: {
+      // Use __session as the primary cookie name to work with Firebase Hosting
+      sessionToken: {
+        name: '__session',
+      },
     },
   },
 

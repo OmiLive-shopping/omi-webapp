@@ -3,10 +3,10 @@ import { SocketWithAuth } from '../../config/socket/socket.config.js';
 import { SocketServer } from '../../config/socket/socket.config.js';
 import { streamEventEmitter } from '../../features/stream/events/stream-event-emitter.js';
 import { logger } from '../../utils/logger.js';
-import {
-  createRateLimitedHandler as createEnhancedRateLimitedHandler,
-  EnhancedRateLimiter,
-} from '../managers/enhanced-rate-limiter.js';
+// import {
+//   createRateLimitedHandler as createEnhancedRateLimitedHandler,
+//   EnhancedRateLimiter,
+// } from '../managers/enhanced-rate-limiter.js'; // Disabled temporarily
 import { RoomManager } from '../managers/room.manager.js';
 import {
   createPermissionValidatedHandler,
@@ -28,7 +28,7 @@ import { VdoStreamHandler } from './vdo-stream.handler.js';
 
 export class StreamHandler {
   private roomManager = RoomManager.getInstance();
-  private enhancedRateLimiter = EnhancedRateLimiter.getInstance();
+  // private enhancedRateLimiter = EnhancedRateLimiter.getInstance(); // Disabled - module not available
   private socketServer = SocketServer.getInstance();
   private prisma = PrismaService.getInstance().client;
   private vdoHandler = new VdoStreamHandler();
@@ -408,37 +408,37 @@ export class StreamHandler {
    * Register all VDO.Ninja event handlers for a socket
    */
   registerVdoHandlers(socket: SocketWithAuth) {
-    // VDO.Ninja stream events with enhanced rate limiting
+    // VDO.Ninja stream events
     socket.on('vdo:stream:event', data =>
-      this.vdoHandler.handleVdoStreamEventEnhanced(socket, data),
+      this.vdoHandler.handleVdoStreamEvent(socket, data),
     );
 
     // VDO.Ninja statistics
     socket.on('vdo:stats:update', data =>
-      this.vdoHandler.handleVdoStatsUpdateEnhanced(socket, data),
+      this.vdoHandler.handleVdoStatsUpdate(socket, data),
     );
 
     // VDO.Ninja viewer events
     socket.on('vdo:viewer:event', data =>
-      this.vdoHandler.handleVdoViewerEventEnhanced(socket, data),
+      this.vdoHandler.handleVdoViewerEvent(socket, data),
     );
 
     // VDO.Ninja media control events
-    socket.on('vdo:media:event', data => this.vdoHandler.handleVdoMediaEventEnhanced(socket, data));
+    socket.on('vdo:media:event', data => this.vdoHandler.handleVdoMediaEvent(socket, data));
 
     // VDO.Ninja quality events
     socket.on('vdo:quality:event', data =>
-      this.vdoHandler.handleVdoQualityEventEnhanced(socket, data),
+      this.vdoHandler.handleVdoQualityEvent(socket, data),
     );
 
     // VDO.Ninja recording events
     socket.on('vdo:recording:event', data =>
-      this.vdoHandler.handleVdoRecordingEventEnhanced(socket, data),
+      this.vdoHandler.handleVdoRecordingEvent(socket, data),
     );
 
     // Get VDO.Ninja analytics
     socket.on('vdo:get:analytics', data =>
-      this.vdoHandler.handleGetVdoAnalyticsEnhanced(socket, data),
+      this.vdoHandler.handleGetVdoAnalytics(socket, data),
     );
   }
 
@@ -456,24 +456,25 @@ export class StreamHandler {
   }
 
   // Enhanced rate-limited stream handlers
-  handleJoinStreamEnhanced = createEnhancedRateLimitedHandler(
-    'stream:join',
-    async (socket: SocketWithAuth, data: any) => {
-      await this.handleJoinStream(socket, data);
-    },
-  );
+  // Disabled - EnhancedRateLimiter module not available
+  // handleJoinStreamEnhanced = createEnhancedRateLimitedHandler(
+  //   'stream:join',
+  //   async (socket: SocketWithAuth, data: any) => {
+  //     await this.handleJoinStream(socket, data);
+  //   },
+  // );
 
-  handleLeaveStreamEnhanced = createEnhancedRateLimitedHandler(
-    'stream:leave',
-    async (socket: SocketWithAuth, data: any) => {
-      await this.handleLeaveStream(socket, data);
-    },
-  );
+  // handleLeaveStreamEnhanced = createEnhancedRateLimitedHandler(
+  //   'stream:leave',
+  //   async (socket: SocketWithAuth, data: any) => {
+  //     await this.handleLeaveStream(socket, data);
+  //   },
+  // );
 
-  handleGetStreamStatsEnhanced = createEnhancedRateLimitedHandler(
-    'stream:get:stats',
-    async (socket: SocketWithAuth, data: any) => {
-      await this.handleGetStreamStats(socket, data);
-    },
-  );
+  // handleGetStreamStatsEnhanced = createEnhancedRateLimitedHandler(
+  //   'stream:get:stats',
+  //   async (socket: SocketWithAuth, data: any) => {
+  //     await this.handleGetStreamStats(socket, data);
+  //   },
+  // );
 }

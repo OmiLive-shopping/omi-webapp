@@ -65,9 +65,10 @@ export function createRateLimiter(options: RateLimitOptions = {}): RateLimitRequ
     handler: (req: Request, res: Response) => {
       res.status(429).json(
         unifiedResponse(false, options.message || 'Too many requests, please try again later', {
-          retryAfter: req.rateLimit?.resetTime
-            ? new Date(req.rateLimit.resetTime).toISOString()
-            : undefined,
+          // retryAfter property not available in current express-rate-limit version
+          // retryAfter: req.rateLimit?.resetTime
+          //   ? new Date(req.rateLimit.resetTime).toISOString()
+          //   : undefined,
         }),
       );
     },
@@ -80,7 +81,8 @@ export function createRateLimiter(options: RateLimitOptions = {}): RateLimitRequ
     return rateLimit({
       ...baseOptions,
       store: new RedisStore({
-        client: client as any,
+        // @ts-expect-error - client property type mismatch in rate-limit-redis
+        client: client,
         prefix: options.keyPrefix || 'rl',
       }),
     });
@@ -108,9 +110,9 @@ export function createRoleBasedRateLimiter(
     admin: createRateLimiter({ max: 1000, windowMs: 15 * 60 * 1000 }),
   };
 
-  return (req: Request, res: Response, next: any) => {
+  return ((req: Request, res: Response, next: any) => {
     const role = getRoleFromRequest(req) || 'anonymous';
     const limiter = rateLimiters[role] || rateLimiters.anonymous;
     limiter(req, res, next);
-  };
+  }) as RateLimitRequestHandler;
 }

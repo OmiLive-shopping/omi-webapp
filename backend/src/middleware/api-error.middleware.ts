@@ -46,8 +46,8 @@ const apiErrorHandler = (
 ): void => {
   // Always log errors to help with debugging
   console.error('❌ API Error:', {
-    message: (err as Error)?.message,
-    stack: environment === 'development' ? (err as Error)?.stack : undefined,
+    message: (err as unknown as Error)?.message,
+    stack: environment === 'development' ? (err as unknown as Error)?.stack : undefined,
     path: req.path,
     method: req.method,
     error: err,

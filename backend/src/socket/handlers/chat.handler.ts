@@ -1,12 +1,12 @@
-import { ChatMessage } from '@omi-live/shared-types';
+// import { ChatMessage } from '@omi-live/shared-types'; // Package doesn't exist
 import { z } from 'zod';
 
 import { PrismaService } from '../../config/prisma.config.js';
 import { SocketWithAuth } from '../../config/socket/socket.config.js';
-import {
-  createRateLimitedHandler as createEnhancedRateLimitedHandler,
-  EnhancedRateLimiter,
-} from '../managers/enhanced-rate-limiter.js';
+// import {
+//   createRateLimitedHandler as createEnhancedRateLimitedHandler,
+//   EnhancedRateLimiter,
+// } from '../managers/enhanced-rate-limiter.js'; // Disabled temporarily
 import { ChatRateLimiter, SlowModeManager } from '../managers/rate-limiter.js';
 import { RoomManager } from '../managers/room.manager.js';
 import {
@@ -44,7 +44,7 @@ import { ChatCommandHandler } from './chat-commands.js';
 export class ChatHandler {
   private roomManager = RoomManager.getInstance();
   private rateLimiter = ChatRateLimiter.getInstance();
-  private enhancedRateLimiter = EnhancedRateLimiter.getInstance();
+  // private enhancedRateLimiter = EnhancedRateLimiter.getInstance(); // Disabled - module not available
   private slowModeManager = SlowModeManager.getInstance();
   private commandHandler = new ChatCommandHandler();
   private chatIntegration = ChatStreamIntegrationService.getInstance();
@@ -1234,112 +1234,116 @@ export class ChatHandler {
   };
 
   // Enhanced rate-limited handlers using the new system
-  handleSendMessageEnhanced = createEnhancedRateLimitedHandler(
-    'chat:message',
-    async (socket: SocketWithAuth, data: any) => {
-      await this.handleSendMessage(socket, data);
-    },
-  );
+  // Disabled - EnhancedRateLimiter module not available
+  // handleSendMessageEnhanced = createEnhancedRateLimitedHandler(
+  //   'chat:message',
+  //   async (socket: SocketWithAuth, data: any) => {
+  //     await this.handleSendMessage(socket, data);
+  //   },
+  // );
 
-  handleDeleteMessageEnhanced = createEnhancedRateLimitedHandler(
-    'chat:delete',
-    async (socket: SocketWithAuth, data: any) => {
-      await this.handleDeleteMessage(socket, data);
-    },
-  );
+  // handleDeleteMessageEnhanced = createEnhancedRateLimitedHandler(
+  //   'chat:delete',
+  //   async (socket: SocketWithAuth, data: any) => {
+  //     await this.handleDeleteMessage(socket, data);
+  //   },
+  // );
 
-  handleModerateUserEnhanced = createEnhancedRateLimitedHandler(
-    'chat:moderate',
-    async (socket: SocketWithAuth, data: any) => {
-      await this.handleModerateUser(socket, data);
-    },
-  );
+  // handleModerateUserEnhanced = createEnhancedRateLimitedHandler(
+  //   'chat:moderate',
+  //   async (socket: SocketWithAuth, data: any) => {
+  //     await this.handleModerateUser(socket, data);
+  //   },
+  // );
 
-  handleTypingEnhanced = createEnhancedRateLimitedHandler(
-    'chat:typing',
-    async (socket: SocketWithAuth, data: any) => {
-      await this.handleTyping(socket, data);
-    },
-  );
+  // handleTypingEnhanced = createEnhancedRateLimitedHandler(
+  //   'chat:typing',
+  //   async (socket: SocketWithAuth, data: any) => {
+  //     await this.handleTyping(socket, data);
+  //   },
+  // );
 
-  handleReactToMessageEnhanced = createEnhancedRateLimitedHandler(
-    'chat:reaction',
-    async (socket: SocketWithAuth, data: any) => {
-      await this.handleReactToMessage(socket, data);
-    },
-  );
+  // handleReactToMessageEnhanced = createEnhancedRateLimitedHandler(
+  //   'chat:reaction',
+  //   async (socket: SocketWithAuth, data: any) => {
+  //     await this.handleReactToMessage(socket, data);
+  //   },
+  // );
 
   /**
    * Get rate limit status for a user
+   * Disabled - EnhancedRateLimiter module not available
    */
-  async getRateLimitStatus(socket: SocketWithAuth, eventType: string): Promise<void> {
-    if (!socket.userId) {
-      socket.emit('error', { message: 'Authentication required' });
-      return;
-    }
+  // async getRateLimitStatus(socket: SocketWithAuth, eventType: string): Promise<void> {
+  //   if (!socket.userId) {
+  //     socket.emit('error', { message: 'Authentication required' });
+  //     return;
+  //   }
 
-    try {
-      const status = await this.enhancedRateLimiter.getLimitStatus(
-        eventType,
-        socket.userId,
-        socket.role || 'viewer',
-      );
+  //   try {
+  //     const status = await this.enhancedRateLimiter.getLimitStatus(
+  //       eventType,
+  //       socket.userId,
+  //       socket.role || 'viewer',
+  //     );
 
-      socket.emit('rate_limit_status', {
-        eventType,
-        ...status,
-      });
-    } catch (error) {
-      console.error('Error getting rate limit status:', error);
-      socket.emit('error', { message: 'Failed to get rate limit status' });
-    }
-  }
+  //     socket.emit('rate_limit_status', {
+  //       eventType,
+  //       ...status,
+  //     });
+  //   } catch (error) {
+  //     console.error('Error getting rate limit status:', error);
+  //     socket.emit('error', { message: 'Failed to get rate limit status' });
+  //   }
+  // }
 
   /**
    * Admin method to reset rate limits for a user
+   * Disabled - EnhancedRateLimiter module not available
    */
-  async resetUserRateLimits(
-    socket: SocketWithAuth,
-    data: { userId: string; eventType?: string },
-  ): Promise<void> {
-    // Check admin permissions
-    if (socket.role !== 'admin') {
-      socket.emit('error', { message: 'Admin permissions required' });
-      return;
-    }
+  // async resetUserRateLimits(
+  //   socket: SocketWithAuth,
+  //   data: { userId: string; eventType?: string },
+  // ): Promise<void> {
+  //   // Check admin permissions
+  //   if (socket.role !== 'admin') {
+  //     socket.emit('error', { message: 'Admin permissions required' });
+  //     return;
+  //   }
 
-    try {
-      await this.enhancedRateLimiter.resetLimits(data.userId, data.eventType);
+  //   try {
+  //     await this.enhancedRateLimiter.resetLimits(data.userId, data.eventType);
 
-      socket.emit('admin:rate_limit_reset:success', {
-        userId: data.userId,
-        eventType: data.eventType || 'all',
-      });
+  //     socket.emit('admin:rate_limit_reset:success', {
+  //       userId: data.userId,
+  //       eventType: data.eventType || 'all',
+  //     });
 
-      console.log(
-        `Rate limits reset by admin ${socket.userId} for user ${data.userId}, event: ${data.eventType || 'all'}`,
-      );
-    } catch (error) {
-      console.error('Error resetting rate limits:', error);
-      socket.emit('error', { message: 'Failed to reset rate limits' });
-    }
-  }
+  //     console.log(
+  //       `Rate limits reset by admin ${socket.userId} for user ${data.userId}, event: ${data.eventType || 'all'}`,
+  //     );
+  //   } catch (error) {
+  //     console.error('Error resetting rate limits:', error);
+  //     socket.emit('error', { message: 'Failed to reset rate limits' });
+  //   }
+  // }
 
   /**
    * Get rate limiting statistics (admin only)
+   * Disabled - EnhancedRateLimiter module not available
    */
-  async getRateLimitStats(socket: SocketWithAuth): Promise<void> {
-    if (socket.role !== 'admin') {
-      socket.emit('error', { message: 'Admin permissions required' });
-      return;
-    }
+  // async getRateLimitStats(socket: SocketWithAuth): Promise<void> {
+  //   if (socket.role !== 'admin') {
+  //     socket.emit('error', { message: 'Admin permissions required' });
+  //     return;
+  //   }
 
-    try {
-      const stats = await this.enhancedRateLimiter.getStats();
-      socket.emit('admin:rate_limit_stats', stats);
-    } catch (error) {
-      console.error('Error getting rate limit stats:', error);
-      socket.emit('error', { message: 'Failed to get rate limit statistics' });
-    }
-  }
+  //   try {
+  //     const stats = await this.enhancedRateLimiter.getStats();
+  //     socket.emit('admin:rate_limit_stats', stats);
+  //   } catch (error) {
+  //     console.error('Error getting rate limit stats:', error);
+  //     socket.emit('error', { message: 'Failed to get rate limit statistics' });
+  //   }
+  // }
 }

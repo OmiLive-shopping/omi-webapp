@@ -4,7 +4,7 @@ import { PrismaService } from '../../../config/prisma.config.js';
 import { ROLES } from '../../../constants/roles.js';
 import { authenticate } from '../../../middleware/auth.middleware.js';
 import { requirePermission, requireRole } from '../../../middleware/role.middleware.js';
-import { validateRequest } from '../../../middleware/validation.middleware.js';
+import { validateRequest, validationMiddleware } from '../../../middleware/validation.middleware.js';
 import { ProductRepository } from '../../product/repositories/product.repository.js';
 import { UserRepository } from '../../user/repositories/user.repository.js';
 import { StreamController } from '../controllers/stream.controller.js';
@@ -35,12 +35,12 @@ const streamService = new StreamService(streamRepository, productRepository, use
 const streamController = new StreamController(streamService);
 
 // Public routes
-router.get('/', validateRequest(streamFiltersSchema, 'query'), streamController.getStreams);
+router.get('/', validationMiddleware(streamFiltersSchema, 'query'), streamController.getStreams);
 router.get('/:id', streamController.getStreamById);
 router.get('/:id/products', streamController.getStreamProducts);
 router.get(
   '/:id/comments',
-  validateRequest(commentHistorySchema, 'query'),
+  validationMiddleware(commentHistorySchema, 'query'),
   streamController.getStreamComments,
 );
 router.get('/:id/stats', streamController.getStreamStats);

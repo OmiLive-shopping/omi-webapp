@@ -76,7 +76,7 @@ export interface VdoViewerEvent {
   streamId: string;
   action: 'joined' | 'left' | 'reconnected' | 'disconnected';
   viewer: {
-    id: string;
+    id?: string;
     username?: string;
     connectionQuality?: 'excellent' | 'good' | 'fair' | 'poor' | 'critical';
     joinTime?: string;

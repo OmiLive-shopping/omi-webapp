@@ -23,22 +23,62 @@ const authHandler = toNodeHandler(auth);
 console.log('Auth handler type:', typeof authHandler);
 console.log('Auth handler:', authHandler);
 
+// Debug endpoint to manually check session
+router.get('/debug-session-check', async (req, res) => {
+  console.log('🧪 DEBUG: Manual session check');
+  console.log('🧪 Cookies:', req.headers.cookie);
+
+  try {
+    // Convert Node.js headers to Web Headers
+    const headers = new Headers();
+    Object.entries(req.headers).forEach(([key, value]) => {
+      if (typeof value === 'string') {
+        headers.set(key, value);
+      } else if (Array.isArray(value)) {
+        value.forEach(v => headers.append(key, v));
+      }
+    });
+
+    const session = await auth.api.getSession({ headers });
+    console.log('🧪 Session from api.getSession:', JSON.stringify(session, null, 2));
+    res.json({
+      success: true,
+      session,
+      cookies: req.headers.cookie,
+      rawHeaders: Object.fromEntries(headers.entries())
+    });
+  } catch (error: any) {
+    console.error('🧪 Error checking session:', error);
+    res.json({
+      success: false,
+      error: error?.message || String(error),
+      stack: error?.stack,
+      cookies: req.headers.cookie
+    });
+  }
+});
+
 router.all('/*', async (req, res, next) => {
-  console.log('Better Auth route hit:', req.method, req.originalUrl, req.url);
-  console.log('Request path:', req.path);
-  console.log('Base URL:', req.baseUrl);
+  console.log('🔵 Better Auth route hit:', req.method, req.originalUrl, req.url);
+  console.log('🔵 Request path:', req.path);
+  console.log('🔵 Base URL:', req.baseUrl);
+  console.log('🔵 Cookies:', req.headers.cookie);
+  console.log('🔵 Headers:', JSON.stringify(req.headers, null, 2));
 
   try {
     const result = await authHandler(req, res);
-    console.log('Handler result:', result);
+    console.log('🟢 Handler result:', result);
+    console.log('🟢 Response sent:', res.headersSent);
 
     // If handler doesn't send response, pass to next middleware
     if (!res.headersSent) {
-      console.log('Headers not sent, returning 404');
+      console.log('🔴 Headers not sent, returning 404');
       res.status(404).send('Not Found');
+    } else {
+      console.log('✅ Response successfully sent by Better Auth');
     }
   } catch (error) {
-    console.error('Better Auth handler error:', error);
+    console.error('🔴 Better Auth handler error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

@@ -1,4 +1,3 @@
-import { instrument } from '@socket.io/admin-ui';
 import { Server as HTTPServer } from 'http';
 import { Server as SocketIOServer, Socket } from 'socket.io';
 
@@ -9,6 +8,7 @@ export interface SocketWithAuth extends Socket {
   userId?: string;
   username?: string;
   role?: string;
+  avatarUrl?: string;
 }
 
 export class SocketServer {
@@ -71,12 +71,17 @@ export class SocketServer {
     // Enable admin UI in development with enhanced security
     if (env.NODE_ENV === 'development') {
       console.log('🔧 Initializing Socket.IO Admin UI...');
-      instrument(this.io, {
-        auth: false, // Temporarily disable auth for testing
-        mode: 'development',
-        namespaceName: '/admin',
+      // Dynamic import to avoid loading in production
+      import('@socket.io/admin-ui').then(({ instrument }) => {
+        instrument(this.io, {
+          auth: false, // Temporarily disable auth for testing
+          mode: 'development',
+          namespaceName: '/admin',
+        });
+        console.log('✅ Socket.IO Admin UI initialized at /admin');
+      }).catch(err => {
+        console.warn('⚠️ Socket.IO Admin UI not available:', err.message);
       });
-      console.log('✅ Socket.IO Admin UI initialized at /admin');
     }
   }
 

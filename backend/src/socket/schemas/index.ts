@@ -362,7 +362,7 @@ export function createValidationMiddleware<T>(schema: z.ZodSchema<T>) {
   return (data: unknown): T => {
     const result = validateSocketEvent(schema, data);
     if (!result.success) {
-      throw new Error(result.error);
+      throw new Error((result as { success: false; error: string }).error);
     }
     return result.data;
   };

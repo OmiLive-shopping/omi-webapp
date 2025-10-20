@@ -122,7 +122,7 @@ export class ChatStreamIntegrationService {
   private async handleStreamStarted(event: StreamStartedEvent): Promise<void> {
     const messageData = SystemMessageGenerator.generateMessage('stream:started', {
       streamId: event.streamId,
-      username: event.user?.username,
+      username: event.stream?.user?.username,
     });
 
     await this.sendSystemMessage(event.streamId, messageData, {
@@ -137,8 +137,8 @@ export class ChatStreamIntegrationService {
   private async handleStreamEnded(event: StreamEndedEvent): Promise<void> {
     const messageData = SystemMessageGenerator.generateMessage('stream:ended', {
       streamId: event.streamId,
-      username: event.user?.username,
-      duration: event.metadata?.duration,
+      username: undefined, // StreamEndedEvent doesn't include user info
+      duration: event.stream?.duration,
     });
 
     await this.sendSystemMessage(event.streamId, messageData, {
@@ -155,7 +155,7 @@ export class ChatStreamIntegrationService {
       streamId: event.streamId,
       username: event.viewer?.username,
       userId: event.viewer?.id,
-      viewerCount: event.viewerCount,
+      viewerCount: event.currentViewerCount,
     });
 
     // Only announce viewer joins for named users (not anonymous)
@@ -176,7 +176,7 @@ export class ChatStreamIntegrationService {
       streamId: event.streamId,
       username: event.viewer?.username,
       userId: event.viewer?.id,
-      viewerCount: event.viewerCount,
+      viewerCount: event.currentViewerCount,
     });
 
     // Only announce viewer leaves for named users (not anonymous)
@@ -430,7 +430,10 @@ export class ChatStreamIntegrationService {
 
       const messagesByType = messages.reduce(
         (acc, msg) => {
-          const type = msg.metadata?.systemType || 'unknown';
+          const type =
+            msg.metadata && typeof msg.metadata === 'object' && 'systemType' in msg.metadata
+              ? (msg.metadata.systemType as string)
+              : 'unknown';
           acc[type] = (acc[type] || 0) + 1;
           return acc;
         },

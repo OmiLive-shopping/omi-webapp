@@ -1,12 +1,8 @@
 import { createAuthClient } from 'better-auth/react';
 
 // Create the auth client with proper configuration
-// In production, use same-origin (relative) URLs so cookies work without cross-site constraints
 const isProd = import.meta.env.PROD;
 const serverURL = isProd ? '' : (import.meta.env.VITE_SERVER_URL || 'http://localhost:9000');
-
-// IMPORTANT: In production, use /api/v1/auth (matches Firebase rewrite)
-// In dev, use /v1/auth (direct to backend)
 const authPath = isProd ? '/api/v1/auth' : '/v1/auth';
 
 console.log('Auth client config:', { isProd, serverURL, authPath, fullPath: `${serverURL}${authPath}` });

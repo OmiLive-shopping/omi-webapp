@@ -262,6 +262,7 @@ export class AnalyticsService {
         reconnectCount: 0,
         totalBytesOut: BigInt(0),
         totalBytesIn: BigInt(0),
+        averageResolution: null,
       };
 
       // Update with new stats

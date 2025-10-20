@@ -1,8 +1,6 @@
-import { toNodeHandler } from 'better-auth/node';
 import express, { Application, Request, Response } from 'express';
 import helmet from 'helmet';
 
-import { auth } from './auth.js';
 import { corsMiddleware } from './config/cors.config.js';
 import { env } from './config/env-config.js';
 import analyticsRoutes from './features/analytics/routes/analytics.routes.js';
@@ -19,6 +17,7 @@ import { logger, requestIdMiddleware } from './middleware/morgan-logger.middlewa
 import { loggerMiddleware, pinoLogger } from './middleware/pino-logger.js';
 import { apiRateLimiter } from './middleware/rate-limit.middleware.js';
 import { hostWhitelist } from './middleware/security.middleware.js';
+import authRoutes from './routes/auth.routes.js';
 
 const app: Application = express();
 
@@ -52,11 +51,11 @@ app.use(corsMiddleware);
 
 // Better Auth routes MUST be mounted BEFORE body parsing middleware
 // Mount at BOTH paths:
-// - /v1/auth/* for local development (direct backend access)
-// - /api/v1/auth/* for production (Firebase Hosting proxy keeps /api/ prefix)
+// - /v1/auth for local development (direct backend access)
+// - /api/v1/auth for production (Firebase Hosting proxy keeps /api/ prefix)
 console.log('Mounting Better Auth routes at /v1/auth and /api/v1/auth');
-app.all('/v1/auth/*', toNodeHandler(auth));
-app.all('/api/v1/auth/*', toNodeHandler(auth));
+app.use('/v1/auth', authRoutes);
+app.use('/api/v1/auth', authRoutes);
 
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));

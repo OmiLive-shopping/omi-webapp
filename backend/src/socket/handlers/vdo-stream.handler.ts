@@ -5,10 +5,10 @@ import { PrismaService } from '../../config/prisma.config.js';
 import { SocketWithAuth } from '../../config/socket/socket.config.js';
 import { SocketServer } from '../../config/socket/socket.config.js';
 import { AnalyticsService } from '../../features/analytics/services/analytics.service.js';
-import {
-  createRateLimitedHandler as createEnhancedRateLimitedHandler,
-  EnhancedRateLimiter,
-} from '../managers/enhanced-rate-limiter.js';
+// import {
+//   createRateLimitedHandler as createEnhancedRateLimitedHandler,
+//   EnhancedRateLimiter,
+// } from '../managers/enhanced-rate-limiter.js'; // Disabled temporarily
 import { RoomManager } from '../managers/room.manager.js';
 import type { VdoQualityEvent, VdoStreamEvent, VdoViewerEvent } from '../types/vdo-events.types.js';
 import { ChatHandler } from './chat.handler.js';
@@ -67,7 +67,7 @@ const vdoViewerEventSchema = z.object({
   streamId: z.string().uuid(),
   action: z.enum(['joined', 'left', 'reconnected', 'disconnected']),
   viewer: z.object({
-    id: z.string(),
+    id: z.string().optional(),
     username: z.string().optional(),
     connectionQuality: z.enum(['excellent', 'good', 'fair', 'poor', 'critical']).optional(),
     joinTime: z.string().datetime().optional(),
@@ -139,7 +139,7 @@ const vdoAnalyticsSchema = z.object({
 
 export class VdoStreamHandler {
   private roomManager = RoomManager.getInstance();
-  private enhancedRateLimiter = EnhancedRateLimiter.getInstance();
+  // private enhancedRateLimiter = EnhancedRateLimiter.getInstance(); // Disabled - module not available
   private socketServer = SocketServer.getInstance();
   private prisma = PrismaService.getInstance().client;
   private chatHandler = new ChatHandler();
@@ -712,9 +712,10 @@ export class VdoStreamHandler {
       where: { id: streamId },
       data: {
         viewerCount: this.roomManager.getViewerCount(streamId),
-        totalViewers: {
-          increment: 1,
-        },
+        // totalViewers field doesn't exist in Stream model
+        // totalViewers: {
+        //   increment: 1,
+        // },
       },
     });
   }
@@ -994,52 +995,53 @@ export class VdoStreamHandler {
   }
 
   // Enhanced rate-limited VDO handlers
-  handleVdoStreamEventEnhanced = createEnhancedRateLimitedHandler(
-    'vdo:stream:event',
-    async (socket: SocketWithAuth, data: any) => {
-      await this.handleVdoStreamEvent(socket, data);
-    },
-  );
+  // Disabled - EnhancedRateLimiter module not available
+  // handleVdoStreamEventEnhanced = createEnhancedRateLimitedHandler(
+  //   'vdo:stream:event',
+  //   async (socket: SocketWithAuth, data: any) => {
+  //     await this.handleVdoStreamEvent(socket, data);
+  //   },
+  // );
 
-  handleVdoStatsUpdateEnhanced = createEnhancedRateLimitedHandler(
-    'vdo:stats:update',
-    async (socket: SocketWithAuth, data: any) => {
-      await this.handleVdoStatsUpdate(socket, data);
-    },
-  );
+  // handleVdoStatsUpdateEnhanced = createEnhancedRateLimitedHandler(
+  //   'vdo:stats:update',
+  //   async (socket: SocketWithAuth, data: any) => {
+  //     await this.handleVdoStatsUpdate(socket, data);
+  //   },
+  // );
 
-  handleVdoViewerEventEnhanced = createEnhancedRateLimitedHandler(
-    'vdo:viewer:event',
-    async (socket: SocketWithAuth, data: any) => {
-      await this.handleVdoViewerEvent(socket, data);
-    },
-  );
+  // handleVdoViewerEventEnhanced = createEnhancedRateLimitedHandler(
+  //   'vdo:viewer:event',
+  //   async (socket: SocketWithAuth, data: any) => {
+  //     await this.handleVdoViewerEvent(socket, data);
+  //   },
+  // );
 
-  handleVdoMediaEventEnhanced = createEnhancedRateLimitedHandler(
-    'vdo:media:event',
-    async (socket: SocketWithAuth, data: any) => {
-      await this.handleVdoMediaEvent(socket, data);
-    },
-  );
+  // handleVdoMediaEventEnhanced = createEnhancedRateLimitedHandler(
+  //   'vdo:media:event',
+  //   async (socket: SocketWithAuth, data: any) => {
+  //     await this.handleVdoMediaEvent(socket, data);
+  //   },
+  // );
 
-  handleVdoQualityEventEnhanced = createEnhancedRateLimitedHandler(
-    'vdo:quality:event',
-    async (socket: SocketWithAuth, data: any) => {
-      await this.handleVdoQualityEvent(socket, data);
-    },
-  );
+  // handleVdoQualityEventEnhanced = createEnhancedRateLimitedHandler(
+  //   'vdo:quality:event',
+  //   async (socket: SocketWithAuth, data: any) => {
+  //     await this.handleVdoQualityEvent(socket, data);
+  //   },
+  // );
 
-  handleVdoRecordingEventEnhanced = createEnhancedRateLimitedHandler(
-    'vdo:recording:event',
-    async (socket: SocketWithAuth, data: any) => {
-      await this.handleVdoRecordingEvent(socket, data);
-    },
-  );
+  // handleVdoRecordingEventEnhanced = createEnhancedRateLimitedHandler(
+  //   'vdo:recording:event',
+  //   async (socket: SocketWithAuth, data: any) => {
+  //     await this.handleVdoRecordingEvent(socket, data);
+  //   },
+  // );
 
-  handleGetVdoAnalyticsEnhanced = createEnhancedRateLimitedHandler(
-    'vdo:get:analytics',
-    async (socket: SocketWithAuth, data: any) => {
-      await this.handleGetVdoAnalytics(socket, data);
-    },
-  );
+  // handleGetVdoAnalyticsEnhanced = createEnhancedRateLimitedHandler(
+  //   'vdo:get:analytics',
+  //   async (socket: SocketWithAuth, data: any) => {
+  //     await this.handleGetVdoAnalytics(socket, data);
+  //   },
+  // );
 }

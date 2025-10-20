@@ -112,7 +112,7 @@ export async function initializeSocketServer(httpServer: HTTPServer): Promise<vo
     socket.on('stream:feature-product', data => streamHandler.handleFeatureProduct(socket, data));
     socket.on('stream:get-analytics', data => streamHandler.handleGetAnalytics(socket, data));
     socket.on('stream:stats:update', data => streamHandler.handleStreamStats(socket, data));
-    socket.on('stream:stats:get', data => streamHandler.handleGetStreamStatsEnhanced(socket, data));
+    socket.on('stream:stats:get', data => streamHandler.handleGetStreamStats(socket, data));
 
     // Register VDO.Ninja event handlers
     streamHandler.registerVdoHandlers(socket);
@@ -131,11 +131,12 @@ export async function initializeSocketServer(httpServer: HTTPServer): Promise<vo
     socket.on('chat:slowmode', data => chatHandler.handleSlowMode(socket, data));
 
     // Rate limit management events
-    socket.on('rate_limit:get_status', data =>
-      chatHandler.getRateLimitStatus(socket, data.eventType),
-    );
-    socket.on('admin:rate_limit:reset', data => chatHandler.resetUserRateLimits(socket, data));
-    socket.on('admin:rate_limit:stats', () => chatHandler.getRateLimitStats(socket));
+    // Disabled - EnhancedRateLimiter module not available
+    // socket.on('rate_limit:get_status', data =>
+    //   chatHandler.getRateLimitStatus(socket, data.eventType),
+    // );
+    // socket.on('admin:rate_limit:reset', data => chatHandler.resetUserRateLimits(socket, data));
+    // socket.on('admin:rate_limit:stats', () => chatHandler.getRateLimitStats(socket));
 
     // Connection health monitoring
     socket.on('ping', (timestamp: number) => {

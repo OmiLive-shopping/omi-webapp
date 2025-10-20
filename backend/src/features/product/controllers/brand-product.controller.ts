@@ -59,7 +59,7 @@ export class BrandProductController {
         tags: req.query.tags ? (req.query.tags as string).split(',').filter(Boolean) : undefined,
       };
 
-      const response = await this.productService.getBrandProducts(brand.id, filters);
+      const response = await this.productService.getBrandProducts(brand.id, filters as any);
 
       if (response.success) {
         res.status(200).json(response);

@@ -1,5 +1,5 @@
 # Multi-stage build - compile TypeScript then run compiled JS
-FROM node:18-alpine AS builder
+FROM node:22-alpine AS builder
 
 WORKDIR /app
 
@@ -17,11 +17,11 @@ RUN npx prisma generate
 # Copy source code
 COPY . .
 
-# Build TypeScript to JavaScript (22 minor errors remaining but build succeeds)
+# Build TypeScript to JavaScript
 RUN rm -rf dist && npx tsc --project tsconfig.build.json && npx tsc-alias -p tsconfig.build.json
 
 # Production stage
-FROM node:18-alpine
+FROM node:22-alpine
 
 WORKDIR /app
 
