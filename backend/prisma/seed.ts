@@ -14,22 +14,7 @@ async function main() {
     console.log('⏩ Skipping cleanup (SKIP_CLEANUP=true)');
   }
 
-  // Create roles
-  const adminRole = await prisma.roles.create({
-    data: {
-      name: 'admin',
-      active: 1,
-    },
-  });
-
-  const userRole = await prisma.roles.create({
-    data: {
-      name: 'user',
-      active: 1,
-    },
-  });
-
-  console.log('✅ Roles created');
+  console.log('✅ Using UserRole enum (no separate Roles table needed)');
 
   // Create users
   const hashedPassword = await bcrypt.hash('password123', 10); // For User table (legacy)
@@ -44,7 +29,7 @@ async function main() {
       firstName: 'Admin',
       lastName: 'User',
       isAdmin: true,
-      roleId: adminRole.id,
+      role: 'admin', // Using UserRole enum
     },
   });
 
@@ -67,7 +52,7 @@ async function main() {
         password: hashedPassword,
         firstName: 'John',
         lastName: 'Doe',
-        roleId: userRole.id,
+        role: 'user', // Using UserRole enum
       },
     }),
     prisma.user.create({
@@ -77,7 +62,7 @@ async function main() {
         password: hashedPassword,
         firstName: 'Jane',
         lastName: 'Smith',
-        roleId: userRole.id,
+        role: 'user', // Using UserRole enum
       },
     }),
     prisma.user.create({
@@ -87,7 +72,7 @@ async function main() {
         password: hashedPassword,
         firstName: 'Stream',
         lastName: 'Master',
-        roleId: userRole.id,
+        role: 'streamer', // Using UserRole enum - make this user a streamer!
       },
     }),
   ]);
@@ -277,8 +262,7 @@ async function main() {
 
   // Summary
   console.log('\n📊 Seed Summary:');
-  console.log(`- Roles: ${await prisma.roles.count()}`);
-  console.log(`- Users: ${await prisma.user.count()} (1 admin, 3 regular)`);
+  console.log(`- Users: ${await prisma.user.count()} (1 admin, 1 streamer, 2 regular)`);
   console.log(`- Products: ${await prisma.product.count()} (4 active, 1 inactive)`);
   console.log(`- Streams: ${await prisma.stream.count()} (1 past, 1 live, 3 upcoming)`);
   console.log(`- Stream Products: ${await prisma.streamProduct.count()}`);
@@ -303,7 +287,7 @@ async function cleanup() {
   await prisma.account.deleteMany(); // Clean Better Auth accounts
   await prisma.session.deleteMany(); // Clean sessions
   await prisma.user.deleteMany();
-  await prisma.roles.deleteMany();
+  // Roles table no longer exists - using UserRole enum instead
 
   console.log('✅ Cleanup completed');
 }
