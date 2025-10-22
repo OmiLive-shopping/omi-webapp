@@ -4,14 +4,13 @@
  */
 
 import type { BetterAuthSessionResponse } from '@/types/better-auth';
-import { getBetterAuthSessionCookie } from './cookie-helper';
 
 /**
  * Type guard to check if the response has session data
  */
 export function hasSessionData(
   response: any
-): response is { data: NonNullable<BetterAuthSessionResponse['data']> } {
+): response is { data: { session: any; user: any; token?: string } } {
   return (
     response &&
     typeof response === 'object' &&
@@ -39,24 +38,17 @@ export function isSessionError(
 
 /**
  * Helper to extract session token from Better Auth response
+ * Returns the Bearer token from the response data
  */
 export function extractSessionToken(response: any): string | undefined {
   console.log('Extracting token from response:', response);
-  
-  // First try to get the actual session cookie value
-  const cookieToken = getBetterAuthSessionCookie();
-  if (cookieToken) {
-    console.log('Using session token from cookie:', cookieToken.substring(0, 20) + '...');
-    return cookieToken;
-  }
-  
-  // Fallback to session data if available
-  if (hasSessionData(response)) {
-    // Better Auth uses session.id as the token
-    const token = response.data.session.id || response.data.session.token;
-    console.log('Using session ID as fallback:', token);
+
+  // Extract token from response data (Better Auth with bearer plugin)
+  if (hasSessionData(response) && response.data.token) {
+    const token = response.data.token;
+    console.log('Using Bearer token from response');
     return token;
   }
-  
+
   return undefined;
 }

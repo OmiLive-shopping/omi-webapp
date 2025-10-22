@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Package, 
-  Plus, 
-  Edit, 
-  Trash2, 
-  Eye, 
+import {
+  Package,
+  Plus,
+  Edit,
+  Trash2,
+  Eye,
   EyeOff,
   Store,
   TrendingUp,
@@ -14,6 +14,7 @@ import {
   DollarSign
 } from 'lucide-react';
 import { CreateProductModal, EditProductModal, ProductFormData } from '../../components/modals';
+import { apiClient } from '@/lib/api-client';
 
 interface Product {
   id: string;
@@ -79,27 +80,16 @@ export const BrandDashboard: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
-      
-      console.log('🔄 Testing GET /v1/brands/products...');
-      const response = await fetch('/v1/brands/products', {
-        credentials: 'include' // Include session cookies
-      });
 
-      console.log('📊 Response status:', response.status);
-      
-      if (!response.ok) {
-        const errorData = await response.text();
-        console.error('❌ Error response:', errorData);
-        throw new Error(`HTTP ${response.status}: ${errorData}`);
-      }
+      console.log('🔄 Testing GET /brands/products...');
+      const data = await apiClient.get<{ success: boolean; data: { products: Product[] } }>('/brands/products');
 
-      const data = await response.json();
       console.log('✅ API Response:', data);
-      
+
       if (data.success && data.data) {
         const productList = Array.isArray(data.data.products) ? data.data.products : [];
         setProducts(productList);
-        
+
         // Calculate stats
         const stats = calculateStats(productList);
         setStats(stats);
@@ -193,7 +183,7 @@ export const BrandDashboard: React.FC = () => {
       setIsCreating(true);
       setError(null);
       console.log('🔄 Creating product:', formData);
-      
+
       // Clean up the data
       const productData = {
         ...formData,
@@ -205,26 +195,9 @@ export const BrandDashboard: React.FC = () => {
         categoryId: formData.categoryId && formData.categoryId.trim() !== '' ? formData.categoryId : undefined
       };
 
-      const response = await fetch('/v1/brands/products', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify(productData)
-      });
-
-      console.log('📊 Create response status:', response.status);
-
-      if (!response.ok) {
-        const errorData = await response.text();
-        console.error('❌ Create error:', errorData);
-        throw new Error(`HTTP ${response.status}: ${errorData}`);
-      }
-
-      const data = await response.json();
+      const data = await apiClient.post('/brands/products', productData);
       console.log('✅ Product created:', data);
-      
+
       // Refresh the product list and close modal
       fetchProducts();
       setShowCreateModal(false);
@@ -244,7 +217,7 @@ export const BrandDashboard: React.FC = () => {
       setIsUpdating(true);
       setError(null);
       console.log('🔄 Updating product:', editingProduct.id, formData);
-      
+
       // Clean up the data
       const productData = {
         ...formData,
@@ -256,26 +229,9 @@ export const BrandDashboard: React.FC = () => {
         categoryId: formData.categoryId && formData.categoryId.trim() !== '' ? formData.categoryId : undefined
       };
 
-      const response = await fetch(`/v1/brands/products/${editingProduct.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify(productData)
-      });
-
-      console.log('📊 Update response status:', response.status);
-
-      if (!response.ok) {
-        const errorData = await response.text();
-        console.error('❌ Update error:', errorData);
-        throw new Error(`HTTP ${response.status}: ${errorData}`);
-      }
-
-      const data = await response.json();
+      const data = await apiClient.put(`/brands/products/${editingProduct.id}`, productData);
       console.log('✅ Product updated:', data);
-      
+
       // Refresh the product list and close modal
       fetchProducts();
       closeEditModal();
@@ -291,24 +247,11 @@ export const BrandDashboard: React.FC = () => {
     if (!confirm('Are you sure you want to delete this product?')) return;
 
     try {
-      console.log(`🔄 Testing DELETE /v1/brands/products/${productId}...`);
-      
-      const response = await fetch(`/v1/brands/products/${productId}`, {
-        method: 'DELETE',
-        credentials: 'include'
-      });
+      console.log(`🔄 Testing DELETE /brands/products/${productId}...`);
 
-      console.log('📊 Delete response status:', response.status);
-
-      if (!response.ok) {
-        const errorData = await response.text();
-        console.error('❌ Delete error:', errorData);
-        throw new Error(`HTTP ${response.status}: ${errorData}`);
-      }
-
-      const data = await response.json();
+      const data = await apiClient.delete(`/brands/products/${productId}`);
       console.log('✅ Product deleted:', data);
-      
+
       // Refresh the product list
       fetchProducts();
     } catch (err) {

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { User, MapPin, Link as LinkIcon, Calendar, Video, Heart, Settings } from 'lucide-react';
 import { useAuthState } from '@/lib/auth-client';
+import { apiClient } from '@/lib/api-client';
 
 interface UserProfile {
   id: string;
@@ -43,14 +44,9 @@ const PublicProfilePage: React.FC = () => {
   const fetchProfile = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:9000'}/v1/profiles/users/${username}`, {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-      });
-
-      const result = await response.json();
+      const result = await apiClient.get<{ success: boolean; data: UserProfile; message?: string }>(
+        `/profiles/users/${username}`
+      );
 
       if (result.success) {
         setProfile(result.data);

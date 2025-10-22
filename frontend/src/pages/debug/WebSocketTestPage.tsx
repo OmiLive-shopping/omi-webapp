@@ -113,8 +113,8 @@ export default function WebSocketTestPage() {
       // Create new socket
       console.log('🔌 DEBUG: Creating new socket connection...');
       const socket = io(backendBaseUrl, {
-        withCredentials: true,
         transports: ['websocket'],
+        // NO withCredentials - using Bearer tokens instead
       });
       socketRef.current = socket;
 
@@ -272,9 +272,7 @@ export default function WebSocketTestPage() {
     if (!selectedStreamId) return;
     try {
       const res = await axios.post(
-        `${backendBaseUrl}/v1/streams/${selectedStreamId}/go-live`,
-        undefined,
-        { withCredentials: true }
+        `${backendBaseUrl}/v1/streams/${selectedStreamId}/go-live`
       );
       const minimal = {
         streamId: selectedStreamId,
@@ -319,9 +317,7 @@ export default function WebSocketTestPage() {
     if (!targetId) return;
     try {
       const res = await axios.post(
-        `${backendBaseUrl}/v1/streams/${targetId}/end`,
-        undefined,
-        { withCredentials: true }
+        `${backendBaseUrl}/v1/streams/${targetId}/end`
       );
       const minimal = { streamId: targetId, ok: true };
       logEvent('rest:end:success', minimal, 'system');

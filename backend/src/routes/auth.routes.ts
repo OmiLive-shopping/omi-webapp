@@ -26,7 +26,6 @@ console.log('Auth handler:', authHandler);
 // Debug endpoint to manually check session
 router.get('/debug-session-check', async (req, res) => {
   console.log('🧪 DEBUG: Manual session check');
-  console.log('🧪 Cookies:', req.headers.cookie);
 
   try {
     // Convert Node.js headers to Web Headers
@@ -44,7 +43,7 @@ router.get('/debug-session-check', async (req, res) => {
     res.json({
       success: true,
       session,
-      cookies: req.headers.cookie,
+      authorization: req.headers.authorization,
       rawHeaders: Object.fromEntries(headers.entries())
     });
   } catch (error: any) {
@@ -52,17 +51,16 @@ router.get('/debug-session-check', async (req, res) => {
     res.json({
       success: false,
       error: error?.message || String(error),
-      stack: error?.stack,
-      cookies: req.headers.cookie
+      stack: error?.stack
     });
   }
 });
 
-router.all('/*', async (req, res, next) => {
+router.all('/*', async (req, res) => {
   console.log('🔵 Better Auth route hit:', req.method, req.originalUrl, req.url);
   console.log('🔵 Request path:', req.path);
   console.log('🔵 Base URL:', req.baseUrl);
-  console.log('🔵 Cookies:', req.headers.cookie);
+  console.log('🔵 Authorization:', req.headers.authorization ? 'Bearer ***' : 'none');
   console.log('🔵 Headers:', JSON.stringify(req.headers, null, 2));
 
   try {

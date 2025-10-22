@@ -52,6 +52,18 @@ export const auth = betterAuth({
   session: {
     expiresIn: 60 * 60 * 24 * 7, // 7 days
     updateAge: 60 * 60 * 24, // 1 day
+    // Disable cookie-based sessions - Firebase strips cookies anyway
+    cookieCache: {
+      enabled: false,
+      maxAge: 0, // Don't cache in cookies
+    },
+  },
+
+  // Advanced configuration - disable cookie storage
+  advanced: {
+    // Disable session cookies entirely - use Bearer tokens only
+    useSecureCookies: false,
+    cookiePrefix: 'disabled',
   },
 
   rateLimit: {

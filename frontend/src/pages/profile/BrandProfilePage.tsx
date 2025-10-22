@@ -14,6 +14,7 @@ import {
   Phone
 } from 'lucide-react';
 import { useAuthState } from '@/lib/auth-client';
+import { apiClient } from '@/lib/api-client';
 import clsx from 'clsx';
 
 interface BrandProfile {
@@ -64,17 +65,9 @@ const BrandProfilePage: React.FC = () => {
   const fetchBrandProfile = async () => {
     try {
       setLoading(true);
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:9000'}/v1/profiles/brands/${slug}`,
-        {
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          credentials: 'include',
-        }
+      const result = await apiClient.get<{ success: boolean; data: BrandProfile; message?: string }>(
+        `/profiles/brands/${slug}`
       );
-
-      const result = await response.json();
 
       if (result.success) {
         setProfile(result.data);

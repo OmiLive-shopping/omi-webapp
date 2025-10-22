@@ -72,7 +72,7 @@ export const corsOptions: CorsOptions = {
     }
   },
 
-  credentials: true, // Allow cookies and auth headers
+  credentials: true, // Required for CORS with Authorization headers
 
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
 

@@ -21,13 +21,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
       error: session.error,
       fullData: session.data,
     });
-
-    // Log cookies for debugging
-    console.log('🍪 Cookies:', document.cookie);
   }, [session.isPending, session.data, session.error]);
 
   // The session hook from Better Auth automatically:
-  // 1. Checks for existing session cookie on mount
+  // 1. Checks for existing session token on mount
   // 2. Fetches session data from /v1/auth/get-session
   // 3. Maintains session state across the app
   

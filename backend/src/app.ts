@@ -35,11 +35,32 @@ app.use(
         styleSrc: ["'self'", "'unsafe-inline'"],
         scriptSrc: ["'self'"],
         imgSrc: ["'self'", 'data:', 'https:'],
-        connectSrc: ["'self'"],
+
+        // Allow connections to your backend and VDO.ninja for streaming
+        connectSrc: [
+          "'self'",
+          'https://omi-backend-355024965259.us-central1.run.app',
+          'https://*.vdo.ninja',
+          'wss://*.vdo.ninja', // WebSocket for VDO.ninja
+        ],
+
         fontSrc: ["'self'"],
         objectSrc: ["'none'"],
-        mediaSrc: ["'self'"],
-        frameSrc: ["'none'"],
+
+        // Allow media from VDO.ninja for streaming
+        mediaSrc: ["'self'", 'https://*.vdo.ninja', 'blob:'],
+
+        // Allow iframes from VDO.ninja for streaming embed
+        frameSrc: ["'self'", 'https://*.vdo.ninja'],
+
+        // Prevent your site from being embedded in other sites (clickjacking protection)
+        frameAncestors: ["'none'"],
+
+        // Only allow forms to submit to your own backend
+        formAction: ["'self'"],
+
+        // Upgrade HTTP to HTTPS in production
+        ...(env.NODE_ENV === 'production' ? { upgradeInsecureRequests: [] } : {}),
       },
     },
     crossOriginEmbedderPolicy: env.NODE_ENV === 'production',

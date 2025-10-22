@@ -141,7 +141,7 @@ export class EnhancedSocketManager {
       timeout: 20000,
       transports: ['websocket', 'polling'],
       autoConnect: true,
-      withCredentials: true,
+      // NO withCredentials - using Bearer tokens in auth instead
       auth: token ? { token } : undefined,
     });
 

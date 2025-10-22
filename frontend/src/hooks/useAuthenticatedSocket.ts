@@ -41,7 +41,7 @@ export function useStreamSocket() {
 
   const connectWithAuth = async () => {
     try {
-      // Just connect - cookies will be sent automatically
+      // Connect with Bearer token authentication
       connect();
       return true;
     } catch (error) {
