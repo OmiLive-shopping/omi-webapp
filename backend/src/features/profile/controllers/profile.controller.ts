@@ -39,24 +39,23 @@ export class ProfileController {
   /**
    * Get brand profile by slug
    * GET /v1/profiles/brands/:slug
-   * TODO: Add slug field to Brand model in Prisma schema
    */
-  // getBrandProfile = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-  //   try {
-  //     const { slug } = req.params;
+  getBrandProfile = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { slug } = req.params;
 
-  //     const result = await this.profileService.getBrandProfile(slug);
+      const result = await this.profileService.getBrandProfile(slug);
 
-  //     if (!result.success) {
-  //       res.status(404).json(result);
-  //       return;
-  //     }
+      if (!result.success) {
+        res.status(404).json(result);
+        return;
+      }
 
-  //     res.status(200).json(result);
-  //   } catch (error) {
-  //     next(error);
-  //   }
-  // };
+      res.status(200).json(result);
+    } catch (error) {
+      next(error);
+    }
+  };
 
   /**
    * Update current user's profile
@@ -153,31 +152,30 @@ export class ProfileController {
   /**
    * Check if brand slug is available
    * GET /v1/profiles/check-brand-slug/:slug
-   * TODO: Add slug field to Brand model in Prisma schema
    */
-  // checkBrandSlugAvailability = async (
-  //   req: Request,
-  //   res: Response,
-  //   next: NextFunction,
-  // ): Promise<void> => {
-  //   try {
-  //     const { slug } = req.params;
+  checkBrandSlugAvailability = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
+    try {
+      const { slug } = req.params;
 
-  //     // Validate slug format
-  //     const slugRegex = /^[a-z0-9-]{3,50}$/;
-  //     if (!slugRegex.test(slug)) {
-  //       res.status(400).json({
-  //         success: false,
-  //         message: 'Invalid brand URL format',
-  //         available: false,
-  //       });
-  //       return;
-  //     }
+      // Validate slug format
+      const slugRegex = /^[a-z0-9-]{3,50}$/;
+      if (!slugRegex.test(slug)) {
+        res.status(400).json({
+          success: false,
+          message: 'Invalid brand URL format',
+          available: false,
+        });
+        return;
+      }
 
-  //     const result = await this.profileService.checkBrandSlugAvailability(slug);
-  //     res.status(200).json(result);
-  //   } catch (error) {
-  //     next(error);
-  //   }
-  // };
+      const result = await this.profileService.checkBrandSlugAvailability(slug);
+      res.status(200).json(result);
+    } catch (error) {
+      next(error);
+    }
+  };
 }

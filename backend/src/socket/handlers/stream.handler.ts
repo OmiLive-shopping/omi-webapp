@@ -409,37 +409,25 @@ export class StreamHandler {
    */
   registerVdoHandlers(socket: SocketWithAuth) {
     // VDO.Ninja stream events
-    socket.on('vdo:stream:event', data =>
-      this.vdoHandler.handleVdoStreamEvent(socket, data),
-    );
+    socket.on('vdo:stream:event', data => this.vdoHandler.handleVdoStreamEvent(socket, data));
 
     // VDO.Ninja statistics
-    socket.on('vdo:stats:update', data =>
-      this.vdoHandler.handleVdoStatsUpdate(socket, data),
-    );
+    socket.on('vdo:stats:update', data => this.vdoHandler.handleVdoStatsUpdate(socket, data));
 
     // VDO.Ninja viewer events
-    socket.on('vdo:viewer:event', data =>
-      this.vdoHandler.handleVdoViewerEvent(socket, data),
-    );
+    socket.on('vdo:viewer:event', data => this.vdoHandler.handleVdoViewerEvent(socket, data));
 
     // VDO.Ninja media control events
     socket.on('vdo:media:event', data => this.vdoHandler.handleVdoMediaEvent(socket, data));
 
     // VDO.Ninja quality events
-    socket.on('vdo:quality:event', data =>
-      this.vdoHandler.handleVdoQualityEvent(socket, data),
-    );
+    socket.on('vdo:quality:event', data => this.vdoHandler.handleVdoQualityEvent(socket, data));
 
     // VDO.Ninja recording events
-    socket.on('vdo:recording:event', data =>
-      this.vdoHandler.handleVdoRecordingEvent(socket, data),
-    );
+    socket.on('vdo:recording:event', data => this.vdoHandler.handleVdoRecordingEvent(socket, data));
 
     // Get VDO.Ninja analytics
-    socket.on('vdo:get:analytics', data =>
-      this.vdoHandler.handleGetVdoAnalytics(socket, data),
-    );
+    socket.on('vdo:get:analytics', data => this.vdoHandler.handleGetVdoAnalytics(socket, data));
   }
 
   /**

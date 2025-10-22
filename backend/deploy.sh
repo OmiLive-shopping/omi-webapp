@@ -63,14 +63,20 @@ tsc --project tsconfig.build.json && tsc-alias --project tsconfig.build.json || 
 echo -e "${GREEN}✓ Build completed${NC}"
 echo ""
 
-# Step 4: Generate Prisma Client
-echo -e "${YELLOW}[4/6] Generating Prisma Client...${NC}"
+# Step 4: Run Database Migrations
+echo -e "${YELLOW}[4/7] Running database migrations...${NC}"
+npx prisma migrate deploy
+echo -e "${GREEN}✓ Migrations applied${NC}"
+echo ""
+
+# Step 5: Generate Prisma Client
+echo -e "${YELLOW}[5/7] Generating Prisma Client...${NC}"
 npx prisma generate
 echo -e "${GREEN}✓ Prisma Client generated${NC}"
 echo ""
 
-# Step 5: Deploy to Cloud Run
-echo -e "${YELLOW}[5/6] Deploying to Cloud Run...${NC}"
+# Step 6: Deploy to Cloud Run
+echo -e "${YELLOW}[6/7] Deploying to Cloud Run...${NC}"
 
 # Check if we should use secrets or env vars
 if gcloud secrets describe database-url --project="$PROJECT_ID" &> /dev/null; then
@@ -121,8 +127,8 @@ gcloud run services update-traffic "$SERVICE_NAME" \
 echo -e "${GREEN}✓ Traffic routed to latest revision${NC}"
 echo ""
 
-# Step 6: Get service URL
-echo -e "${YELLOW}[6/6] Getting service URL...${NC}"
+# Step 7: Get service URL
+echo -e "${YELLOW}[7/7] Getting service URL...${NC}"
 SERVICE_URL=$(gcloud run services describe "$SERVICE_NAME" --region="$REGION" --format="value(status.url)")
 echo ""
 echo -e "${GREEN}========================================${NC}"

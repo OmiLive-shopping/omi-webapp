@@ -103,9 +103,7 @@ export const auth = betterAuth({
   },
 
   // Enable Bearer token authentication for JWT-based auth
-  plugins: [
-    bearer(),
-  ],
+  plugins: [bearer()],
 
   trustedOrigins: [
     'http://localhost:3000', // Frontend development (if using 3000)

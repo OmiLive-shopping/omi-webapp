@@ -4,7 +4,10 @@ import { PrismaService } from '../../../config/prisma.config.js';
 import { ROLES } from '../../../constants/roles.js';
 import { authenticate } from '../../../middleware/auth.middleware.js';
 import { requirePermission, requireRole } from '../../../middleware/role.middleware.js';
-import { validateRequest, validationMiddleware } from '../../../middleware/validation.middleware.js';
+import {
+  validateRequest,
+  validationMiddleware,
+} from '../../../middleware/validation.middleware.js';
 import { ProductRepository } from '../../product/repositories/product.repository.js';
 import { UserRepository } from '../../user/repositories/user.repository.js';
 import { StreamController } from '../controllers/stream.controller.js';

@@ -44,14 +44,14 @@ router.get('/debug-session-check', async (req, res) => {
       success: true,
       session,
       authorization: req.headers.authorization,
-      rawHeaders: Object.fromEntries(headers.entries())
+      rawHeaders: Object.fromEntries(headers.entries()),
     });
   } catch (error: any) {
     console.error('🧪 Error checking session:', error);
     res.json({
       success: false,
       error: error?.message || String(error),
-      stack: error?.stack
+      stack: error?.stack,
     });
   }
 });

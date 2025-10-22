@@ -72,16 +72,18 @@ export class SocketServer {
     if (env.NODE_ENV === 'development') {
       console.log('🔧 Initializing Socket.IO Admin UI...');
       // Dynamic import to avoid loading in production
-      import('@socket.io/admin-ui').then(({ instrument }) => {
-        instrument(this.io, {
-          auth: false, // Temporarily disable auth for testing
-          mode: 'development',
-          namespaceName: '/admin',
+      import('@socket.io/admin-ui')
+        .then(({ instrument }) => {
+          instrument(this.io, {
+            auth: false, // Temporarily disable auth for testing
+            mode: 'development',
+            namespaceName: '/admin',
+          });
+          console.log('✅ Socket.IO Admin UI initialized at /admin');
+        })
+        .catch(err => {
+          console.warn('⚠️ Socket.IO Admin UI not available:', err.message);
         });
-        console.log('✅ Socket.IO Admin UI initialized at /admin');
-      }).catch(err => {
-        console.warn('⚠️ Socket.IO Admin UI not available:', err.message);
-      });
     }
   }
 

@@ -297,13 +297,13 @@ const ProfilePage: React.FC = () => {
               <div className="space-y-6">
                 {/* Edit Profile Form */}
                 {isEditing && (
-                  <div className="bg-gray-900 rounded-xl p-6 space-y-4">
-                    <h2 className="text-xl font-bold mb-4">Edit Profile</h2>
+                  <div className="bg-white dark:bg-gray-900 rounded-xl p-6 space-y-4 shadow-lg">
+                    <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">Edit Profile</h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-medium mb-2">First Name</label>
-                        <input 
-                          type="text" 
+                        <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">First Name</label>
+                        <input
+                          type="text"
                           value={formData.firstName}
                           onChange={(e) => setFormData({...formData, firstName: e.target.value})}
                           className="w-full bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 border border-gray-300 dark:border-gray-700"
@@ -311,8 +311,8 @@ const ProfilePage: React.FC = () => {
                       </div>
                       <div>
                         <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Last Name</label>
-                        <input 
-                          type="text" 
+                        <input
+                          type="text"
                           value={formData.lastName}
                           onChange={(e) => setFormData({...formData, lastName: e.target.value})}
                           className="w-full bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 border border-gray-300 dark:border-gray-700"
@@ -320,8 +320,8 @@ const ProfilePage: React.FC = () => {
                       </div>
                       <div>
                         <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Username</label>
-                        <input 
-                          type="text" 
+                        <input
+                          type="text"
                           value={profile.username}
                           disabled
                           className="w-full bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg px-4 py-2 opacity-50 cursor-not-allowed border border-gray-300 dark:border-gray-700"
@@ -329,8 +329,8 @@ const ProfilePage: React.FC = () => {
                       </div>
                       <div>
                         <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Email</label>
-                        <input 
-                          type="email" 
+                        <input
+                          type="email"
                           value={profile.email}
                           disabled
                           className="w-full bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg px-4 py-2 opacity-50 cursor-not-allowed border border-gray-300 dark:border-gray-700"
@@ -339,11 +339,11 @@ const ProfilePage: React.FC = () => {
                     </div>
                     <div>
                       <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Bio</label>
-                      <textarea 
+                      <textarea
                         value={formData.bio}
                         onChange={(e) => setFormData({...formData, bio: e.target.value})}
                         rows={3}
-                        className="w-full bg-gray-800 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        className="w-full bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 border border-gray-300 dark:border-gray-700"
                         placeholder="Tell us about yourself..."
                       />
                     </div>

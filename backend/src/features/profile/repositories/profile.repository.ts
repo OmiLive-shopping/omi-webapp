@@ -6,10 +6,9 @@ export interface UserProfileData {
   name: string | null;
   avatarUrl: string | null;
   bio: string | null;
-  // TODO: Add these fields to User model in Prisma schema
-  location?: string | null;
-  socialLinks?: Prisma.JsonValue;
-  publicProfile?: boolean;
+  location: string | null;
+  socialLinks: Prisma.JsonValue;
+  publicProfile: boolean;
   createdAt: Date;
   role: string;
   verified?: boolean;
@@ -46,10 +45,9 @@ export class ProfileRepository {
         name: true,
         avatarUrl: true,
         bio: true,
-        // TODO: Add these fields to User model in Prisma schema
-        // location: true,
-        // socialLinks: true,
-        // publicProfile: true,
+        location: true,
+        socialLinks: true,
+        publicProfile: true,
         createdAt: true,
         role: true,
         brand: {
@@ -138,63 +136,62 @@ export class ProfileRepository {
 
   /**
    * Get brand profile by slug
-   * TODO: Add slug field to Brand model in Prisma schema
    */
-  // async getBrandProfileBySlug(slug: string) {
-  //   return await this.prisma.brand.findUnique({
-  //     where: { slug },
-  //     include: {
-  //       user: {
-  //         select: {
-  //           id: true,
-  //           username: true,
-  //           avatarUrl: true,
-  //           _count: {
-  //             select: {
-  //               followers: true,
-  //             },
-  //           },
-  //         },
-  //       },
-  //       products: {
-  //         where: {
-  //           active: true,
-  //           public: true,
-  //           approvalStatus: 'approved',
-  //         },
-  //         orderBy: {
-  //           createdAt: 'desc',
-  //         },
-  //         take: 12,
-  //         select: {
-  //           id: true,
-  //           name: true,
-  //           description: true,
-  //           price: true,
-  //           originalPrice: true,
-  //           imageUrl: true,
-  //           images: true,
-  //           url: true,
-  //           tags: true,
-  //           rating: true,
-  //           reviewCount: true,
-  //           inStock: true,
-  //         },
-  //       },
-  //       _count: {
-  //         select: {
-  //           products: {
-  //             where: {
-  //               active: true,
-  //               public: true,
-  //               approvalStatus: 'approved',
-  //             },
-  //           },
-  //         },
-  //       },
-  //     },
-  //   });
-  // }
+  async getBrandProfileBySlug(slug: string) {
+    return await this.prisma.brand.findUnique({
+      where: { slug },
+      include: {
+        user: {
+          select: {
+            id: true,
+            username: true,
+            avatarUrl: true,
+            _count: {
+              select: {
+                followers: true,
+              },
+            },
+          },
+        },
+        products: {
+          where: {
+            active: true,
+            public: true,
+            approvalStatus: 'approved',
+          },
+          orderBy: {
+            createdAt: 'desc',
+          },
+          take: 12,
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            price: true,
+            originalPrice: true,
+            imageUrl: true,
+            images: true,
+            url: true,
+            tags: true,
+            rating: true,
+            reviewCount: true,
+            inStock: true,
+          },
+        },
+        _count: {
+          select: {
+            products: {
+              where: {
+                active: true,
+                public: true,
+                approvalStatus: 'approved',
+              },
+            },
+          },
+        },
+      },
+    });
+  }
 
   /**
    * Check if a username exists
@@ -209,15 +206,14 @@ export class ProfileRepository {
 
   /**
    * Check if a brand slug exists
-   * TODO: Add slug field to Brand model in Prisma schema
    */
-  // async checkBrandSlugExists(slug: string): Promise<boolean> {
-  //   const brand = await this.prisma.brand.findUnique({
-  //     where: { slug },
-  //     select: { id: true },
-  //   });
-  //   return !!brand;
-  // }
+  async checkBrandSlugExists(slug: string): Promise<boolean> {
+    const brand = await this.prisma.brand.findUnique({
+      where: { slug },
+      select: { id: true },
+    });
+    return !!brand;
+  }
 
   /**
    * Update user profile fields
@@ -241,10 +237,9 @@ export class ProfileRepository {
         username: true,
         name: true,
         bio: true,
-        // TODO: Add these fields to User model in Prisma schema
-        // location: true,
-        // socialLinks: true,
-        // publicProfile: true,
+        location: true,
+        socialLinks: true,
+        publicProfile: true,
         avatarUrl: true,
       },
     });

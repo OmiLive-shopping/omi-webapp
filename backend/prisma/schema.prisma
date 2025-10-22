@@ -33,6 +33,9 @@ model User {
   role                   UserRole          @default(user)
   streamKey              String            @unique @default(cuid())
   username               String            @unique
+  location               String?
+  socialLinks            Json?
+  publicProfile          Boolean           @default(true)
   accounts               Account[]
   brand                  Brand?
   cart                   Cart?
@@ -73,6 +76,11 @@ model Brand {
   approvedAt         DateTime?
   rejectedAt         DateTime?
   rejectionReason    String?
+  slug               String?   @unique
+  socialLinks        Json?
+  logoUrl            String?
+  coverImageUrl      String?
+  location           String?
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @default(now()) @updatedAt
   user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -82,6 +90,7 @@ model Brand {
   @@index([approvalStatus])
   @@index([verified])
   @@index([approvalStatus, verified])
+  @@index([slug])
 }
 
 model Category {

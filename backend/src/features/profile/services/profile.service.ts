@@ -87,43 +87,42 @@ export class ProfileService {
 
   /**
    * Get brand profile by slug
-   * TODO: Add slug field to Brand model in Prisma schema
    */
-  // async getBrandProfile(slug: string): Promise<{
-  //   success: boolean;
-  //   data?: any;
-  //   message?: string;
-  // }> {
-  //   try {
-  //     const profile = await this.profileRepository.getBrandProfileBySlug(slug);
+  async getBrandProfile(slug: string): Promise<{
+    success: boolean;
+    data?: any;
+    message?: string;
+  }> {
+    try {
+      const profile = await this.profileRepository.getBrandProfileBySlug(slug);
 
-  //     if (!profile) {
-  //       return {
-  //         success: false,
-  //         message: 'Brand profile not found',
-  //       };
-  //     }
+      if (!profile) {
+        return {
+          success: false,
+          message: 'Brand profile not found',
+        };
+      }
 
-  //     // Only show approved brands publicly
-  //     if (profile.approvalStatus !== 'approved' && !profile.verified) {
-  //       return {
-  //         success: false,
-  //         message: 'Brand profile is not available',
-  //       };
-  //     }
+      // Only show approved brands publicly
+      if (profile.approvalStatus !== 'approved' && !profile.verified) {
+        return {
+          success: false,
+          message: 'Brand profile is not available',
+        };
+      }
 
-  //     return {
-  //       success: true,
-  //       data: profile,
-  //     };
-  //   } catch (error) {
-  //     console.error('Error fetching brand profile:', error);
-  //     return {
-  //       success: false,
-  //       message: 'Failed to fetch brand profile',
-  //     };
-  //   }
-  // }
+      return {
+        success: true,
+        data: profile,
+      };
+    } catch (error) {
+      console.error('Error fetching brand profile:', error);
+      return {
+        success: false,
+        message: 'Failed to fetch brand profile',
+      };
+    }
+  }
 
   /**
    * Update user profile
@@ -327,24 +326,23 @@ export class ProfileService {
 
   /**
    * Check if brand slug is available
-   * TODO: Add slug field to Brand model in Prisma schema
    */
-  // async checkBrandSlugAvailability(slug: string): Promise<{
-  //   success: boolean;
-  //   available: boolean;
-  // }> {
-  //   try {
-  //     const exists = await this.profileRepository.checkBrandSlugExists(slug);
-  //     return {
-  //       success: true,
-  //       available: !exists,
-  //     };
-  //   } catch (error) {
-  //     console.error('Error checking brand slug:', error);
-  //     return {
-  //       success: false,
-  //       available: false,
-  //     };
-  //   }
-  // }
+  async checkBrandSlugAvailability(slug: string): Promise<{
+    success: boolean;
+    available: boolean;
+  }> {
+    try {
+      const exists = await this.profileRepository.checkBrandSlugExists(slug);
+      return {
+        success: true,
+        available: !exists,
+      };
+    } catch (error) {
+      console.error('Error checking brand slug:', error);
+      return {
+        success: false,
+        available: false,
+      };
+    }
+  }
 }
