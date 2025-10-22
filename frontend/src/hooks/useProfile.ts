@@ -6,10 +6,14 @@ export interface UserProfile {
   id: string;
   firstName?: string;
   lastName?: string;
+  name?: string;
   email: string;
   username: string;
   avatarUrl?: string;
   bio?: string;
+  location?: string;
+  socialLinks?: Record<string, string>;
+  publicProfile?: boolean;
   role: string;
   streamKey?: string;
   createdAt: string;
@@ -22,9 +26,11 @@ export interface UserProfile {
 }
 
 export interface UpdateProfileData {
-  firstName?: string;
-  lastName?: string;
+  name?: string;
   bio?: string;
+  location?: string;
+  socialLinks?: Record<string, string>;
+  publicProfile?: boolean;
   avatarUrl?: string;
 }
 
@@ -46,8 +52,9 @@ export function useProfile() {
     try {
       setLoading(true);
       setError(null);
-      const response = await apiClient.get('/users/profile');
-      
+      // Use the new profile endpoint
+      const response = await apiClient.get(`/profiles/users/${authUser?.username}`);
+
       if (response.success && response.data) {
         setProfile(response.data);
       } else {
@@ -63,8 +70,35 @@ export function useProfile() {
 
   const updateProfile = async (data: UpdateProfileData) => {
     try {
-      const response = await apiClient.patch('/users/profile', data);
+      // Clean up the data - remove empty strings and empty objects
+      const cleanedData: Partial<UpdateProfileData> = {};
       
+      if (data.name && data.name.trim()) cleanedData.name = data.name.trim();
+      if (data.bio !== undefined) cleanedData.bio = data.bio; // Allow empty string for bio
+      if (data.location !== undefined) cleanedData.location = data.location; // Allow empty string for location
+      if (data.publicProfile !== undefined) cleanedData.publicProfile = data.publicProfile;
+      
+      // Only include avatarUrl if it's a non-empty string
+      if (data.avatarUrl && data.avatarUrl.trim()) {
+        cleanedData.avatarUrl = data.avatarUrl.trim();
+      }
+      
+      // Only include socialLinks if it has actual values
+      if (data.socialLinks && Object.keys(data.socialLinks).length > 0) {
+        const cleanedLinks: Record<string, string> = {};
+        Object.entries(data.socialLinks).forEach(([key, value]) => {
+          if (value && value.trim()) {
+            cleanedLinks[key] = value.trim();
+          }
+        });
+        if (Object.keys(cleanedLinks).length > 0) {
+          cleanedData.socialLinks = cleanedLinks;
+        }
+      }
+
+      // Use the new profile endpoint
+      const response = await apiClient.patch('/profiles/me', cleanedData);
+
       if (response.success && response.data) {
         setProfile(response.data);
         return { success: true, data: response.data };

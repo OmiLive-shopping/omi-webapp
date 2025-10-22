@@ -73,9 +73,11 @@ const ProfilePage: React.FC = () => {
 
   // Form state for editing
   const [formData, setFormData] = useState<UpdateProfileData>({
-    firstName: '',
-    lastName: '',
+    name: '',
     bio: '',
+    location: '',
+    socialLinks: {},
+    publicProfile: true,
     avatarUrl: ''
   });
 
@@ -83,9 +85,11 @@ const ProfilePage: React.FC = () => {
   React.useEffect(() => {
     if (profile) {
       setFormData({
-        firstName: profile.firstName || '',
-        lastName: profile.lastName || '',
+        name: profile.name || `${profile.firstName || ''} ${profile.lastName || ''}`.trim(),
         bio: profile.bio || '',
+        location: profile.location || '',
+        socialLinks: profile.socialLinks || {},
+        publicProfile: profile.publicProfile ?? true,
         avatarUrl: profile.avatarUrl || ''
       });
     }
@@ -178,7 +182,7 @@ const ProfilePage: React.FC = () => {
     );
   }
 
-  const displayName = `${profile.firstName || ''} ${profile.lastName || ''}`.trim() || profile.username;
+  const displayName = profile.name || `${profile.firstName || ''} ${profile.lastName || ''}`.trim() || profile.username;
   const memberSince = new Date(profile.createdAt).toLocaleDateString('en-US', { 
     month: 'long', 
     year: 'numeric' 
@@ -301,21 +305,23 @@ const ProfilePage: React.FC = () => {
                     <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">Edit Profile</h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">First Name</label>
+                        <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Display Name</label>
                         <input
                           type="text"
-                          value={formData.firstName}
-                          onChange={(e) => setFormData({...formData, firstName: e.target.value})}
+                          value={formData.name}
+                          onChange={(e) => setFormData({...formData, name: e.target.value})}
                           className="w-full bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 border border-gray-300 dark:border-gray-700"
+                          placeholder="Your display name"
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Last Name</label>
+                        <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Location</label>
                         <input
                           type="text"
-                          value={formData.lastName}
-                          onChange={(e) => setFormData({...formData, lastName: e.target.value})}
+                          value={formData.location}
+                          onChange={(e) => setFormData({...formData, location: e.target.value})}
                           className="w-full bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 border border-gray-300 dark:border-gray-700"
+                          placeholder="City, Country"
                         />
                       </div>
                       <div>
@@ -337,6 +343,7 @@ const ProfilePage: React.FC = () => {
                         />
                       </div>
                     </div>
+
                     <div>
                       <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Bio</label>
                       <textarea
@@ -347,6 +354,48 @@ const ProfilePage: React.FC = () => {
                         placeholder="Tell us about yourself..."
                       />
                     </div>
+
+                    {/* Social Links */}
+                    <div>
+                      <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Social Links</label>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {['twitter', 'instagram', 'youtube', 'twitch', 'tiktok', 'website'].map((platform) => (
+                          <div key={platform}>
+                            <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1 capitalize">{platform}</label>
+                            <input
+                              type="url"
+                              value={formData.socialLinks?.[platform] || ''}
+                              onChange={(e) => setFormData({
+                                ...formData,
+                                socialLinks: { ...formData.socialLinks, [platform]: e.target.value }
+                              })}
+                              className="w-full bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 border border-gray-300 dark:border-gray-700"
+                              placeholder={`https://${platform}.com/...`}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Public Profile Toggle */}
+                    <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                      <div>
+                        <p className="font-medium text-gray-900 dark:text-white">Public Profile</p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">Allow others to view your profile</p>
+                      </div>
+                      <button
+                        onClick={() => setFormData({ ...formData, publicProfile: !formData.publicProfile })}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                          formData.publicProfile ? 'bg-primary-600' : 'bg-gray-300 dark:bg-gray-700'
+                        }`}
+                      >
+                        <span
+                          className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${
+                            formData.publicProfile ? 'translate-x-6' : 'translate-x-1'
+                          }`}
+                        />
+                      </button>
+                    </div>
                     <div className="flex gap-4">
                       <button 
                         onClick={handleSaveProfile}
@@ -356,13 +405,15 @@ const ProfilePage: React.FC = () => {
                         {isSaving && <Loader className="w-4 h-4 animate-spin" />}
                         Save Changes
                       </button>
-                      <button 
+                      <button
                         onClick={() => {
                           setIsEditing(false);
                           setFormData({
-                            firstName: profile.firstName || '',
-                            lastName: profile.lastName || '',
+                            name: profile.name || `${profile.firstName || ''} ${profile.lastName || ''}`.trim(),
                             bio: profile.bio || '',
+                            location: profile.location || '',
+                            socialLinks: profile.socialLinks || {},
+                            publicProfile: profile.publicProfile ?? true,
                             avatarUrl: profile.avatarUrl || ''
                           });
                         }}
@@ -374,7 +425,7 @@ const ProfilePage: React.FC = () => {
                   </div>
                 )}
 
-                {/* Contact Information */}
+                {/* Contact Information & Social Links */}
                 <div className="bg-white dark:bg-gray-900 rounded-xl p-6 shadow-lg">
                   <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">Contact Information</h2>
                   <div className="space-y-3">
@@ -382,6 +433,33 @@ const ProfilePage: React.FC = () => {
                       <Mail className="w-5 h-5 text-gray-600 dark:text-gray-400" />
                       <span className="text-gray-700 dark:text-gray-300">{profile.email}</span>
                     </div>
+                    {profile.location && (
+                      <div className="flex items-center gap-3">
+                        <MapPin className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                        <span className="text-gray-700 dark:text-gray-300">{profile.location}</span>
+                      </div>
+                    )}
+                    {profile.socialLinks && Object.keys(profile.socialLinks).length > 0 && (
+                      <div className="pt-3 border-t border-gray-200 dark:border-gray-800">
+                        <p className="text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Social Links</p>
+                        <div className="flex flex-wrap gap-2">
+                          {Object.entries(profile.socialLinks).map(([platform, url]) => (
+                            url && (
+                              <a
+                                key={platform}
+                                href={url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 px-3 py-1 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-sm"
+                              >
+                                <Globe className="w-3 h-3" />
+                                {platform}
+                              </a>
+                            )
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 
