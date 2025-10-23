@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import {
   Package,
   Plus,
@@ -11,7 +12,8 @@ import {
   AlertTriangle,
   CheckCircle,
   Clock,
-  DollarSign
+  DollarSign,
+  Settings
 } from 'lucide-react';
 import { CreateProductModal, EditProductModal, ProductFormData } from '../../components/modals';
 import { apiClient } from '@/lib/api-client';
@@ -283,13 +285,24 @@ export const BrandDashboard: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
-          <div className="flex items-center gap-3 mb-2">
-            <Store className="w-8 h-8 text-blue-600" />
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Brand Dashboard</h1>
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="flex items-center gap-3 mb-2">
+                <Store className="w-8 h-8 text-blue-600" />
+                <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Brand Dashboard</h1>
+              </div>
+              <p className="text-gray-600 dark:text-gray-400">
+                Manage your products and test API endpoints
+              </p>
+            </div>
+            <Link
+              to="/brand/settings"
+              className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+            >
+              <Settings className="w-4 h-4" />
+              Brand Settings
+            </Link>
           </div>
-          <p className="text-gray-600 dark:text-gray-400">
-            Manage your products and test API endpoints
-          </p>
         </div>
 
         {/* Stats Cards */}

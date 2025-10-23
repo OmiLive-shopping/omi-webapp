@@ -8,6 +8,7 @@ export { default as PublicProfilePage } from './profile/PublicProfilePage';
 export { default as BrandProfilePage } from './profile/BrandProfilePage';
 export { default as WishlistPage } from './wishlist/WishlistPage';
 export { default as SchedulePage } from './schedule/SchedulePage';
-export { default as AuthPage } from './auth/AuthPage';
+export { default as LoginPage } from './auth/LoginPage';
+export { default as RegisterPage } from './auth/RegisterPage';
 export { default as LiveStreamsPage } from './live-streams/LiveStreamsPage';
 export { default as AboutPage } from './about/AboutPage';

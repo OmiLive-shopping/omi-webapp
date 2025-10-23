@@ -20,11 +20,13 @@ import {
   BrandProfilePage,
   WishlistPage,
   SchedulePage,
-  AuthPage,
+  LoginPage,
+  RegisterPage,
   LiveStreamsPage,
   AboutPage
 } from '@/pages';
 import BrandDashboard from '@/pages/brand/BrandDashboard';
+import BrandProfileSettingsPage from '@/pages/brand/BrandProfileSettingsPage';
 import ChatInputDemo from '@/components/chat/ChatInputDemo';
 import ViewerCountDemo from '@/components/stream/ViewerCountDemo';
 import ChatInputDebug from '@/components/chat/ChatInputDebug';
@@ -59,7 +61,8 @@ function App() {
             <Route path="/" element={<Layout type="responsive" />}>
               {/* Public Routes */}
               <Route index element={<HomePage />} />
-              <Route path="auth" element={<AuthPage />} />
+              <Route path="login" element={<LoginPage />} />
+              <Route path="register" element={<RegisterPage />} />
               <Route path="about" element={<AboutPage />} />
               <Route path="live-streams" element={<LiveStreamsPage />} />
               <Route path="products" element={<ProductsPage />} />
@@ -98,7 +101,12 @@ function App() {
                   <BrandDashboard />
                 </ProtectedRoute>
               } />
-              
+              <Route path="brand/settings" element={
+                <ProtectedRoute>
+                  <BrandProfileSettingsPage />
+                </ProtectedRoute>
+              } />
+
               {/* Catch all - 404 */}
               <Route path="*" element={<NotFound />} />
             </Route>

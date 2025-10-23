@@ -151,14 +151,14 @@ export const UserMenu: React.FC<UserMenuProps> = ({
           ) : (
             <>
               <Link
-                to="/auth?mode=login"
+                to="/login"
                 onClick={() => setIsDropdownOpen(false)}
                 className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
               >
                 Login
               </Link>
               <Link
-                to="/auth?mode=register"
+                to="/register"
                 onClick={() => setIsDropdownOpen(false)}
                 className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
               >
