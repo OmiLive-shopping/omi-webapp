@@ -237,7 +237,8 @@ const ProfilePage: React.FC = () => {
           </div>
 
           {/* Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 pt-6 border-t border-gray-200 dark:border-gray-800">
+          {/* Uncomment when stats are real and ready */}
+          {/* <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 pt-6 border-t border-gray-200 dark:border-gray-800">
             <div className="text-center">
               <p className="text-2xl font-bold text-gray-900 dark:text-white">0</p>
               <p className="text-sm text-gray-600 dark:text-gray-400">Orders</p>
@@ -262,7 +263,7 @@ const ProfilePage: React.FC = () => {
                 </div>
               </>
             )}
-          </div>
+          </div> */}
         </div>
 
         {/* Main Content */}
