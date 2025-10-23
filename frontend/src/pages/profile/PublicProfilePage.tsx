@@ -169,8 +169,8 @@ const PublicProfilePage: React.FC = () => {
                 {/* Social Links */}
                 {socialPlatforms.length > 0 && (
                   <div className="mt-4 flex flex-wrap gap-3">
-                    {socialPlatforms.map(([platform, url]) => (
-                      url && (
+                    {socialPlatforms.map(([platform, url]) =>
+                      url ? (
                         <a
                           key={platform}
                           href={url as string}
@@ -181,8 +181,8 @@ const PublicProfilePage: React.FC = () => {
                           <LinkIcon className="h-4 w-4 mr-1" />
                           {platform}
                         </a>
-                      )
-                    ))}
+                      ) : null
+                    )}
                   </div>
                 )}
               </div>
