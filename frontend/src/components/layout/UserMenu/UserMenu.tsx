@@ -75,12 +75,18 @@ export const UserMenu: React.FC<UserMenuProps> = ({
               </div>
               
               <Link
-                to={user?.username ? `/profile/${user.username}` : '/profile'}
+                to={
+                  isBrand && user?.brandSlug
+                    ? `/profiles/brands/${user.brandSlug}`
+                    : user?.username
+                    ? `/profile/${user.username}`
+                    : '/profile'
+                }
                 onClick={() => setIsDropdownOpen(false)}
                 className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
               >
                 <User className="w-4 h-4" />
-                Profile
+                {isBrand ? 'Brand Profile' : 'Profile'}
               </Link>
               
               {/* Admin Dashboard - Only for admins */}

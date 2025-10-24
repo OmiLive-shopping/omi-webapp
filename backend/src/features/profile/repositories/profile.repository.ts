@@ -53,6 +53,8 @@ export class ProfileRepository {
         brand: {
           select: {
             verified: true,
+            slug: true,
+            companyName: true,
           },
         },
         _count: {

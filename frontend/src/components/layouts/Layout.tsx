@@ -1,6 +1,7 @@
 import { Outlet } from 'react-router-dom';
 import Navigation from '../navigation/Navigation';
 import { useAuthState, signOutUser } from '@/lib/auth-client';
+import { useAuthContext } from '@/providers/AuthProvider';
 
 interface LayoutProps {
   children?: React.ReactNode;
@@ -10,6 +11,7 @@ interface LayoutProps {
 const Layout = ({ children, type }: LayoutProps) => {
   const layoutType = type ?? 'responsive';
   const { isAuthenticated, user } = useAuthState();
+  const { extendedUser } = useAuthContext();
 
   const logout = async () => {
     await signOutUser();
@@ -26,7 +28,8 @@ const Layout = ({ children, type }: LayoutProps) => {
           email: user.email,
           username: user.username,
           avatar: user.avatarUrl,
-          role: user.role
+          role: user.role,
+          brandSlug: extendedUser.brandSlug
         } : undefined}
         onLogout={logout}
       />

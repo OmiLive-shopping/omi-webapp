@@ -7,6 +7,7 @@ export interface UserMenuProps {
     avatar?: string;
     role?: string;
     isAdmin?: boolean;
+    brandSlug?: string; // Brand's public profile slug
   };
   onLogout?: () => void;
   className?: string;

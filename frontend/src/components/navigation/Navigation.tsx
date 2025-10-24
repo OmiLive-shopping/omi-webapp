@@ -16,6 +16,7 @@ interface NavigationProps {
     username?: string;
     avatar?: string;
     role?: string;
+    brandSlug?: string;
   };
   onLogout?: () => void;
 }
