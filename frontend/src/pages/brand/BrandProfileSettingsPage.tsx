@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import {
   Building,
   Save,
@@ -47,7 +47,6 @@ interface BrandProfileFormData {
 }
 
 const BrandProfileSettingsPage: React.FC = () => {
-  const navigate = useNavigate();
   const { user } = useAuthState();
   const [profile, setProfile] = useState<BrandProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -80,9 +79,25 @@ const BrandProfileSettingsPage: React.FC = () => {
       setLoading(true);
       setError(null);
 
-      // Get the current user's brand profile
+      // Better Auth may use 'name' (display name) or custom fields
+      // We need to access the actual username field from the user object
+      console.log('User data:', user);
+
+      // Try to get username - Better Auth stores it in a custom field
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const username = (user as any)?.username || user?.email?.split('@')[0];
+
+      if (!username) {
+        setError('User information not available');
+        setLoading(false);
+        return;
+      }
+
+      console.log('Fetching profile for username:', username);
+
+      // Get the current user's profile with brand data using the username
       const result = await apiClient.get<{ success: boolean; data: { brand: BrandProfile }; message?: string }>(
-        '/users/me'
+        `/profiles/users/${username}`
       );
 
       if (result.success && result.data?.brand) {
@@ -160,7 +175,10 @@ const BrandProfileSettingsPage: React.FC = () => {
         )
       };
 
-      const result = await apiClient.patch('/profiles/my-brand', updateData);
+      const result = await apiClient.patch<{ success: boolean; message?: string }>(
+        '/profiles/my-brand',
+        updateData
+      );
 
       if (result.success) {
         setSuccess('Profile updated successfully!');
