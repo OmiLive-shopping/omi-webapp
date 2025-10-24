@@ -97,10 +97,12 @@ export class ProductService {
 
   async createBrandProduct(input: CreateProductInput, brandId: string) {
     // Auto-assign the brandId and set initial approval status
+    // MVP: Auto-approve all products submitted by brands
     const brandProductInput = {
       ...input,
       brandId,
-      approvalStatus: 'pending',
+      approvalStatus: 'approved', // MVP: Auto-approve for now
+      approvedAt: new Date(), // Set approval timestamp
     };
 
     const product = await this.productRepository.createProduct(brandProductInput);
