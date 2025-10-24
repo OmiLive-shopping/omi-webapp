@@ -1,6 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import bcrypt from 'bcrypt';
-import { hashPassword } from 'better-auth/crypto';
+import { auth } from '../src/auth.js';
 
 const prisma = new PrismaClient();
 
@@ -16,83 +15,86 @@ async function main() {
 
   console.log('✅ Using UserRole enum (no separate Roles table needed)');
 
-  // Create users
-  const hashedPassword = await bcrypt.hash('password123', 10); // For User table (legacy)
-  const betterAuthPassword = await hashPassword('password123'); // For Better Auth Account table
-
-  // Admin user
-  const adminUser = await prisma.user.create({
-    data: {
+  // Create users using Better Auth API (ensures consistency with real signup flow)
+  console.log('👤 Creating admin user via Better Auth...');
+  const adminSignup = await auth.api.signUpEmail({
+    body: {
       email: 'admin@omi.live',
-      username: 'admin',
-      password: hashedPassword,
-      firstName: 'Admin',
-      lastName: 'User',
-      isAdmin: true,
-      role: 'admin', // Using UserRole enum
+      password: 'password123',
+      name: 'Admin User',
+      username: 'admin', // Custom field from additionalFields
     },
   });
 
-  // Create Better Auth Account for admin
-  await prisma.account.create({
+  if (!adminSignup || !adminSignup.user) {
+    throw new Error('Failed to create admin user');
+  }
+
+  // Update admin user with additional fields and admin privileges
+  const adminUser = await prisma.user.update({
+    where: { id: adminSignup.user.id },
     data: {
-      userId: adminUser.id,
-      accountId: adminUser.email,
-      providerId: 'credential',
-      password: betterAuthPassword, // Use Better Auth's password format
+      firstName: 'Admin',
+      lastName: 'User',
+      isAdmin: true,
+      role: 'admin',
     },
   });
 
   // Regular users
-  const regularUsers = await Promise.all([
-    prisma.user.create({
-      data: {
+  console.log('👥 Creating regular users via Better Auth...');
+  const userSignups = await Promise.all([
+    auth.api.signUpEmail({
+      body: {
         email: 'john@example.com',
-        username: 'johndoe',
-        password: hashedPassword,
-        firstName: 'John',
-        lastName: 'Doe',
-        role: 'user', // Using UserRole enum
+        password: 'password123',
+        name: 'John Doe',
+        username: 'johndoe', // Custom field from additionalFields
       },
     }),
-    prisma.user.create({
-      data: {
+    auth.api.signUpEmail({
+      body: {
         email: 'jane@example.com',
-        username: 'janesmith',
-        password: hashedPassword,
-        firstName: 'Jane',
-        lastName: 'Smith',
-        role: 'user', // Using UserRole enum
+        password: 'password123',
+        name: 'Jane Smith',
+        username: 'janesmith', // Custom field from additionalFields
       },
     }),
-    prisma.user.create({
-      data: {
+    auth.api.signUpEmail({
+      body: {
         email: 'streamer@example.com',
-        username: 'thestreamer',
-        password: hashedPassword,
-        firstName: 'Stream',
-        lastName: 'Master',
-        role: 'streamer', // Using UserRole enum - make this user a streamer!
+        password: 'password123',
+        name: 'Stream Master',
+        username: 'thestreamer', // Custom field from additionalFields
       },
     }),
   ]);
 
-  // Create Better Auth Accounts for regular users
-  await Promise.all(
-    regularUsers.map((user) =>
-      prisma.account.create({
-        data: {
-          userId: user.id,
-          accountId: user.email,
-          providerId: 'credential',
-          password: betterAuthPassword, // Use Better Auth's password format
-        },
-      }),
-    ),
+  // Extract user objects and update with additional fields
+  const regularUsers = await Promise.all(
+    userSignups.map(async (signup, index) => {
+      if (!signup || !signup.user) {
+        throw new Error(`Failed to create user at index ${index}`);
+      }
+
+      const userData: { firstName: string; lastName: string; role?: 'streamer' } = {
+        firstName: ['John', 'Jane', 'Stream'][index],
+        lastName: ['Doe', 'Smith', 'Master'][index],
+      };
+
+      // Update the third user (index 2) to be a streamer
+      if (index === 2) {
+        userData.role = 'streamer';
+      }
+
+      return prisma.user.update({
+        where: { id: signup.user.id },
+        data: userData,
+      });
+    }),
   );
 
-  console.log('✅ Users created');
-  console.log('✅ Better Auth Accounts created');
+  console.log('✅ Users created via Better Auth (accounts automatically created)');
 
   // Create products
   const products = await Promise.all([

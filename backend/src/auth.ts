@@ -80,12 +80,7 @@ export const auth = betterAuth({
       streamKey: {
         type: 'string',
         required: false,
-        defaultValue: (() => {
-          // Generate a unique stream key using cuid pattern
-          const timestamp = Date.now().toString(36);
-          const randomStr = Math.random().toString(36).substring(2, 15);
-          return `sk_${timestamp}${randomStr}`;
-        })(),
+        // No defaultValue - let Prisma's @default(cuid()) handle generation
       },
       username: { type: 'string', required: true },
       firstName: { type: 'string', required: false },
