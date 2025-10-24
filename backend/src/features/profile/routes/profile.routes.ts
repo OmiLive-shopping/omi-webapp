@@ -10,6 +10,7 @@ import { ProfileController } from '../controllers/profile.controller.js';
 import { ProfileRepository } from '../repositories/profile.repository.js';
 import {
   brandSlugParamSchema,
+  createBrandProfileSchema,
   updateBrandProfileSchema,
   updateUserProfileSchema,
   usernameParamSchema,
@@ -57,6 +58,14 @@ router.get(
 
 // Protected routes - authentication required
 
+// Create brand profile (admin only - permission check in controller)
+router.post(
+  '/brands',
+  authenticate,
+  validateRequest(createBrandProfileSchema),
+  profileController.createBrandProfile,
+);
+
 // Update current user's profile
 router.patch(
   '/me',
@@ -72,5 +81,8 @@ router.patch(
   validateRequest(updateBrandProfileSchema),
   profileController.updateMyBrandProfile,
 );
+
+// Update user role (admin only)
+router.patch('/users/role', authenticate, profileController.updateUserRole);
 
 export default router;

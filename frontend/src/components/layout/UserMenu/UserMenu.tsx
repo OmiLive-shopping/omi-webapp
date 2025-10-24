@@ -1,13 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  User, 
-  LogOut, 
-  Settings, 
-  Package, 
+import {
+  User,
+  LogOut,
+  Settings,
+  Package,
   Video,
   Store,
-  Crown
+  Shield
 } from 'lucide-react';
 import clsx from 'clsx';
 import { UserMenuProps } from './UserMenu.types';
@@ -90,7 +90,7 @@ export const UserMenu: React.FC<UserMenuProps> = ({
                   onClick={() => setIsDropdownOpen(false)}
                   className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                 >
-                  <Crown className="w-4 h-4" />
+                  <Shield className="w-4 h-4" />
                   Admin Dashboard
                 </Link>
               )}

@@ -206,6 +206,114 @@ export class ProfileService {
   }
 
   /**
+   * Create brand profile
+   */
+  async createBrandProfile(data: {
+    userId: string;
+    companyName: string;
+    businessEmail: string;
+    slug?: string;
+    companyDescription?: string;
+    websiteUrl?: string;
+    businessPhone?: string;
+    location?: string;
+    socialLinks?: any;
+    logoUrl?: string;
+    coverImageUrl?: string;
+    approvalStatus?: string;
+    verified?: boolean;
+  }): Promise<{
+    success: boolean;
+    data?: any;
+    message?: string;
+  }> {
+    try {
+      // Check if user already has a brand profile
+      const existingBrand = await this.profileRepository.getBrandProfileByUserId(data.userId);
+      if (existingBrand) {
+        return {
+          success: false,
+          message: 'User already has a brand profile',
+        };
+      }
+
+      // Validate slug if provided
+      if (data.slug) {
+        const slugExists = await this.profileRepository.checkBrandSlugExists(data.slug);
+        if (slugExists) {
+          return {
+            success: false,
+            message: 'This brand URL is already taken',
+          };
+        }
+
+        // Validate slug format
+        const slugRegex = /^[a-z0-9-]+$/;
+        if (!slugRegex.test(data.slug)) {
+          return {
+            success: false,
+            message: 'Brand URL can only contain lowercase letters, numbers, and hyphens',
+          };
+        }
+      }
+
+      // Validate social links if provided
+      if (data.socialLinks) {
+        const validPlatforms = [
+          'twitter',
+          'instagram',
+          'linkedin',
+          'youtube',
+          'facebook',
+          'website',
+        ];
+
+        const socialLinks = data.socialLinks;
+
+        if (typeof socialLinks !== 'object' || Array.isArray(socialLinks)) {
+          return {
+            success: false,
+            message: 'Social links must be an object',
+          };
+        }
+
+        for (const [platform, url] of Object.entries(socialLinks)) {
+          if (!validPlatforms.includes(platform)) {
+            return {
+              success: false,
+              message: `Invalid social platform: ${platform}`,
+            };
+          }
+
+          if (url && typeof url === 'string' && url.length > 0) {
+            try {
+              new URL(url);
+            } catch {
+              return {
+                success: false,
+                message: `Invalid URL for ${platform}`,
+              };
+            }
+          }
+        }
+      }
+
+      const brand = await this.profileRepository.createBrandProfile(data);
+
+      return {
+        success: true,
+        data: brand,
+      };
+    } catch (error) {
+      console.error('Error creating brand profile:', error);
+      return {
+        success: false,
+        message: 'Failed to create brand profile',
+      };
+    }
+  }
+
+  /**
    * Update brand profile
    */
   async updateBrandProfile(
@@ -342,6 +450,42 @@ export class ProfileService {
       return {
         success: false,
         available: false,
+      };
+    }
+  }
+
+  /**
+   * Update user role (admin only)
+   */
+  async updateUserRole(
+    userId: string,
+    role: 'user' | 'brand' | 'streamer' | 'admin',
+  ): Promise<{
+    success: boolean;
+    data?: any;
+    message?: string;
+  }> {
+    try {
+      // Validate role
+      const validRoles = ['user', 'brand', 'streamer', 'admin'];
+      if (!validRoles.includes(role)) {
+        return {
+          success: false,
+          message: 'Invalid role',
+        };
+      }
+
+      const updated = await this.profileRepository.updateUserRole(userId, role);
+
+      return {
+        success: true,
+        data: updated,
+      };
+    } catch (error) {
+      console.error('Error updating user role:', error);
+      return {
+        success: false,
+        message: 'Failed to update user role',
       };
     }
   }

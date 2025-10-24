@@ -1,24 +1,27 @@
 // Polyfill crypto for Better Auth in ESM Node.js environment
-import crypto from 'crypto';
-if (typeof globalThis.crypto === 'undefined') {
-  globalThis.crypto = crypto as any;
-}
-
 import { betterAuth } from 'better-auth';
 import { prismaAdapter } from 'better-auth/adapters/prisma';
-import { bearer } from 'better-auth/plugins';
+import { createAuthMiddleware } from 'better-auth/api';
+import { admin, bearer } from 'better-auth/plugins';
+import crypto from 'crypto';
 
-// TEMPORARILY DISABLED: These plugins may cause session validation issues
-// import { admin, organization } from 'better-auth/plugins';
 import { PrismaService } from './config/prisma.config.js';
+
+if (typeof globalThis.crypto === 'undefined') {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  globalThis.crypto = crypto as any;
+}
 
 const prismaClient = PrismaService.getInstance().client;
 
 console.log('🔧 [AUTH] Bearer token authentication enabled');
 
 // Use BETTER_AUTH_URL from environment, or fallback to old behavior for local dev
+// eslint-disable-next-line node/no-process-env
 const baseURL =
+  // eslint-disable-next-line node/no-process-env
   process.env.BETTER_AUTH_URL ||
+  // eslint-disable-next-line node/no-process-env
   (process.env.NODE_ENV === 'production'
     ? 'https://app.omiliveshopping.com' // Production uses Firebase Hosting domain
     : 'http://localhost:9000');
@@ -26,15 +29,20 @@ const baseURL =
 console.log('Better Auth Config:', {
   baseURL,
   basePath: '/api/v1/auth',
+  // eslint-disable-next-line node/no-process-env
   hasSecret: !!process.env.BETTER_AUTH_SECRET,
+  // eslint-disable-next-line node/no-process-env
   secretPreview: process.env.BETTER_AUTH_SECRET?.substring(0, 10) + '...',
+  // eslint-disable-next-line node/no-process-env
   nodeEnv: process.env.NODE_ENV,
+  // eslint-disable-next-line node/no-process-env
   allEnvKeys: Object.keys(process.env).filter(k => k.includes('AUTH')),
 });
 
 export const auth = betterAuth({
   baseURL,
   basePath: '/api/v1/auth',
+  // eslint-disable-next-line node/no-process-env
   secret: process.env.BETTER_AUTH_SECRET || 'default-secret-change-this-in-production',
 
   database: prismaAdapter(prismaClient, {
@@ -44,9 +52,8 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
     requireEmailVerification: false, // Enable later in production
-    // CRITICAL: Enable sendToken to receive token in sign-in response
-    // This allows both cookie and token-based auth
-    sendToken: true,
+    // CRITICAL: sendToken has been removed in newer better-auth versions
+    // Token is now sent by default when using bearer plugin
   },
 
   session: {
@@ -97,8 +104,44 @@ export const auth = betterAuth({
     },
   },
 
-  // Enable Bearer token authentication for JWT-based auth
-  plugins: [bearer()],
+  // Enable Bearer token authentication for JWT-based auth and admin management
+  plugins: [
+    bearer(),
+    admin({
+      defaultRole: 'user',
+    }),
+  ],
+
+  // Hooks to enrich user data with brand information
+  hooks: {
+    after: createAuthMiddleware(async ctx => {
+      if (ctx.path === '/admin/list-users') {
+        // Enrich users with brand data
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const returned = ctx.context.returned as any;
+        if (returned?.users && Array.isArray(returned.users)) {
+          const enrichedUsers = await Promise.all(
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            returned.users.map(async (user: any) => {
+              if (user.role === 'brand') {
+                const brand = await prismaClient.brand.findUnique({
+                  where: { userId: user.id },
+                  select: {
+                    companyName: true,
+                    verified: true,
+                    slug: true,
+                  },
+                });
+                return { ...user, brand };
+              }
+              return user;
+            }),
+          );
+          ctx.context.returned = { ...returned, users: enrichedUsers };
+        }
+      }
+    }),
+  },
 
   trustedOrigins: [
     'http://localhost:3000', // Frontend development (if using 3000)

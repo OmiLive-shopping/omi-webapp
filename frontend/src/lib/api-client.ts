@@ -22,7 +22,7 @@ class ApiClient {
   constructor(baseUrl?: string) {
     const isProd = import.meta.env.PROD;
     const serverURL = isProd ? '' : (import.meta.env.VITE_SERVER_URL || 'http://localhost:9000');
-    const apiBase = import.meta.env.VITE_API_BASE || '/v1';
+    const apiBase = import.meta.env.VITE_API_BASE || '/api/v1';
     this.baseUrl = baseUrl || `${serverURL}${apiBase}`;
   }
 

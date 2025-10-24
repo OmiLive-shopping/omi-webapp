@@ -194,6 +194,15 @@ export class ProfileRepository {
   }
 
   /**
+   * Get brand profile by userId
+   */
+  async getBrandProfileByUserId(userId: string) {
+    return await this.prisma.brand.findUnique({
+      where: { userId },
+    });
+  }
+
+  /**
    * Check if a username exists
    */
   async checkUsernameExists(username: string): Promise<boolean> {
@@ -246,6 +255,53 @@ export class ProfileRepository {
   }
 
   /**
+   * Create brand profile for a user
+   */
+  async createBrandProfile(data: {
+    userId: string;
+    companyName: string;
+    businessEmail: string;
+    slug?: string;
+    companyDescription?: string;
+    websiteUrl?: string;
+    businessPhone?: string;
+    location?: string;
+    socialLinks?: Prisma.InputJsonValue | Prisma.NullableJsonNullValueInput;
+    logoUrl?: string;
+    coverImageUrl?: string;
+    approvalStatus?: string;
+    verified?: boolean;
+  }) {
+    return await this.prisma.brand.create({
+      data: {
+        userId: data.userId,
+        companyName: data.companyName,
+        businessEmail: data.businessEmail,
+        slug: data.slug,
+        companyDescription: data.companyDescription,
+        websiteUrl: data.websiteUrl,
+        businessPhone: data.businessPhone,
+        location: data.location,
+        socialLinks: data.socialLinks,
+        logoUrl: data.logoUrl,
+        coverImageUrl: data.coverImageUrl,
+        approvalStatus: data.approvalStatus || 'pending',
+        verified: data.verified || false,
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            username: true,
+            email: true,
+            name: true,
+          },
+        },
+      },
+    });
+  }
+
+  /**
    * Update brand profile fields
    */
   async updateBrandProfile(
@@ -262,6 +318,23 @@ export class ProfileRepository {
     return await this.prisma.brand.update({
       where: { id: brandId },
       data,
+    });
+  }
+
+  /**
+   * Update user role
+   */
+  async updateUserRole(userId: string, role: 'user' | 'brand' | 'streamer' | 'admin') {
+    return await this.prisma.user.update({
+      where: { id: userId },
+      data: { role },
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        name: true,
+        role: true,
+      },
     });
   }
 }

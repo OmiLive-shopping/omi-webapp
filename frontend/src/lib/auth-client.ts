@@ -1,4 +1,5 @@
 import { createAuthClient } from 'better-auth/react';
+import { adminClient } from 'better-auth/client/plugins';
 
 // ========================================
 // Token Storage Utilities
@@ -70,7 +71,10 @@ export const authClient = createAuthClient({
       type: 'Bearer',
       token: () => tokenStorage.get() || '',
     },
-  }
+  },
+
+  // Enable admin plugin for admin management features
+  plugins: [adminClient()],
 });
 
 // Export Better Auth hooks and functions
@@ -233,3 +237,7 @@ export function isAdmin(user: AuthUser | null): boolean {
 export function getCurrentToken(): string | null {
   return tokenStorage.get();
 }
+
+// Admin functions - available when admin plugin is enabled
+// Access via authClient.admin.* methods
+export const admin = authClient.admin;

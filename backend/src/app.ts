@@ -71,11 +71,8 @@ app.use(
 app.use(corsMiddleware);
 
 // Better Auth routes MUST be mounted BEFORE body parsing middleware
-// Mount at BOTH paths:
-// - /v1/auth for local development (direct backend access)
-// - /api/v1/auth for production (Firebase Hosting proxy keeps /api/ prefix)
-console.log('Mounting Better Auth routes at /v1/auth and /api/v1/auth');
-app.use('/v1/auth', authRoutes);
+// Mounted at /api/v1/auth (frontend uses /api prefix, production Firebase proxy keeps it)
+console.log('Mounting Better Auth routes at /api/v1/auth');
 app.use('/api/v1/auth', authRoutes);
 
 // Body parsing middleware
@@ -126,15 +123,15 @@ app.get('/', hostWhitelist(allowedURLs), (_req: Request, res: Response): void =>
   return;
 });
 
-// API Routes
-app.use('/v1/users', userRoutes);
-app.use('/v1/profiles', profileRoutes); // Public profile endpoints
-app.use('/v1/products', productRoutes);
-app.use('/v1/brands/products', brandProductRoutes); // Brand-specific product management
-// app.use('/v1/streams/test', streamTestRoutes); // Disabled temporarily - Test/simulation endpoints
-app.use('/v1/streams', streamRoutes);
-app.use('/v1/api-keys', apiKeyRoutes);
-app.use('/v1/analytics', analyticsRoutes);
+// API Routes (using /api/v1/* prefix - matches frontend calls and production proxy)
+app.use('/api/v1/users', userRoutes);
+app.use('/api/v1/profiles', profileRoutes); // Public profile endpoints
+app.use('/api/v1/products', productRoutes);
+app.use('/api/v1/brands/products', brandProductRoutes); // Brand-specific product management
+// app.use('/api/v1/streams/test', streamTestRoutes); // Disabled temporarily - Test/simulation endpoints
+app.use('/api/v1/streams', streamRoutes);
+app.use('/api/v1/api-keys', apiKeyRoutes);
+app.use('/api/v1/analytics', analyticsRoutes);
 
 // External API endpoints (require API key)
 // NOTE: /api/v1/auth/* is handled by Better Auth routes above (lines 58-59)

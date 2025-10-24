@@ -83,6 +83,39 @@ export class ProfileController {
   };
 
   /**
+   * Create brand profile for a user (admin only)
+   * POST /v1/profiles/brands
+   */
+  createBrandProfile = async (
+    req: AuthRequest,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
+    try {
+      if (!req.user) {
+        res.status(401).json({ success: false, message: 'Unauthorized' });
+        return;
+      }
+
+      const createData = req.body;
+      console.log('[Create Brand] Request data:', JSON.stringify(createData, null, 2));
+
+      const result = await this.profileService.createBrandProfile(createData);
+
+      if (!result.success) {
+        console.log('[Create Brand] Validation failed:', result.message);
+        res.status(400).json(result);
+        return;
+      }
+
+      res.status(201).json(result);
+    } catch (error) {
+      console.error('[Create Brand] Error:', error);
+      next(error);
+    }
+  };
+
+  /**
    * Update current user's brand profile
    * PATCH /v1/profiles/my-brand
    */
@@ -107,6 +140,43 @@ export class ProfileController {
       }
 
       const result = await this.profileService.updateBrandProfile(brandId, req.user.id, updateData);
+
+      if (!result.success) {
+        res.status(400).json(result);
+        return;
+      }
+
+      res.status(200).json(result);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * Update user role (admin only)
+   * PATCH /v1/profiles/users/role
+   */
+  updateUserRole = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      if (!req.user) {
+        res.status(401).json({ success: false, message: 'Unauthorized' });
+        return;
+      }
+
+      // Check if user is admin
+      if (!req.user.isAdmin && req.user.role !== 'admin') {
+        res.status(403).json({ success: false, message: 'Forbidden - Admin access required' });
+        return;
+      }
+
+      const { userId, role } = req.body;
+
+      if (!userId || !role) {
+        res.status(400).json({ success: false, message: 'User ID and role are required' });
+        return;
+      }
+
+      const result = await this.profileService.updateUserRole(userId, role);
 
       if (!result.success) {
         res.status(400).json(result);

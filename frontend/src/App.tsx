@@ -27,6 +27,7 @@ import {
 } from '@/pages';
 import BrandDashboard from '@/pages/brand/BrandDashboard';
 import BrandProfileSettingsPage from '@/pages/brand/BrandProfileSettingsPage';
+import AdminDashboard from '@/pages/admin/AdminDashboard';
 import ChatInputDemo from '@/components/chat/ChatInputDemo';
 import ViewerCountDemo from '@/components/stream/ViewerCountDemo';
 import ChatInputDebug from '@/components/chat/ChatInputDebug';
@@ -104,6 +105,11 @@ function App() {
               <Route path="brand/settings" element={
                 <ProtectedRoute>
                   <BrandProfileSettingsPage />
+                </ProtectedRoute>
+              } />
+              <Route path="admin" element={
+                <ProtectedRoute>
+                  <AdminDashboard />
                 </ProtectedRoute>
               } />
 
