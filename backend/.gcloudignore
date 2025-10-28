@@ -19,10 +19,9 @@ npm-debug.log
 yarn-error.log
 
 # TypeScript
-*.ts
+# Note: *.ts source files are needed for Docker build (multi-stage compilation)
+# Only exclude test files (handled below)
 !*.d.ts
-tsconfig.json
-tsconfig.build.json
 
 # Tests
 **/__tests__/

@@ -148,7 +148,9 @@ export const auth = betterAuth({
     'http://localhost:8888', // Frontend development (current port)
     'http://localhost:9000', // Backend development
     'http://localhost:5173', // Frontend development (Vite)
-    'https://app.omiliveshopping.com', // Firebase Hosting (production frontend)
+    'https://omiliveshopping.com', // Firebase Hosting (production frontend - main domain)
+    'https://www.omiliveshopping.com', // Firebase Hosting (www variant)
+    'https://app.omiliveshopping.com', // Firebase Hosting (app subdomain)
     'https://omi-backend-355024965259.us-central1.run.app', // Cloud Run backend
     'https://omi.live', // Production (future)
     'https://*.omi.live', // Production subdomains (future)

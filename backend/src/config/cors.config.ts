@@ -9,8 +9,9 @@ const getAllowedOrigins = (): string[] => {
   // Production domains (hardcoded for reliability)
   if (env.NODE_ENV === 'production') {
     origins.push(
-      'https://app.omiliveshopping.com', // Production frontend
-      'https://omiliveshopping.com', // Alternate domain
+      'https://app.omiliveshopping.com', // Production frontend (with subdomain)
+      'https://omiliveshopping.com', // Main domain (NO SUBDOMAIN)
+      'https://www.omiliveshopping.com', // WWW variant
       'https://omi-live-backend.web.app', // Firebase hosting
     );
   }
