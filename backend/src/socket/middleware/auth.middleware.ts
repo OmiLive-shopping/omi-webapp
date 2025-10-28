@@ -64,11 +64,6 @@ export const socketAuthMiddleware = async (socket: SocketWithAuth, next: (err?: 
         active: true,
         isAdmin: true,
         role: true,
-        roleRelation: {
-          select: {
-            name: true,
-          },
-        },
       },
     });
 
@@ -84,11 +79,9 @@ export const socketAuthMiddleware = async (socket: SocketWithAuth, next: (err?: 
     socket.userId = user.id;
     socket.username = user.username;
 
-    // Determine role: admin > roleRelation > Better Auth role > default viewer
+    // Determine role: admin > Better Auth role > default viewer
     if (user.isAdmin) {
       socket.role = 'admin';
-    } else if (user.roleRelation?.name) {
-      socket.role = user.roleRelation.name;
     } else if (user.role) {
       socket.role = user.role;
     } else {

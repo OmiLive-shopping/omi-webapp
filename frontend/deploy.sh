@@ -89,8 +89,13 @@ echo ""
 # Step 5: Deploy to Firebase
 echo -e "${YELLOW}[5/5] Deploying to Firebase Hosting...${NC}"
 
+# Load FIREBASE_TOKEN from .env.development
+if [ -f .env.development ]; then
+    export $(grep -v '^#' .env.development | xargs)
+fi
+
 firebase use "$FIREBASE_PROJECT"
-firebase deploy --only hosting
+firebase deploy --only hosting --token "$FIREBASE_TOKEN"
 
 echo -e "${GREEN}✓ Deployment completed${NC}"
 echo ""
