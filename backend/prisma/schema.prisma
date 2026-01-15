@@ -55,7 +55,10 @@ model User {
   streamViewers          StreamViewer[]
   viewerAnalytics        ViewerAnalytics[]
   wishlist               Product[]         @relation("UserWishlist")
-
+  posts    Post[]
+  comments Comment[]
+  banned    Boolean  @default(false)   // <-- new line added
+  
   @@index([email])
   @@index([username])
   @@index([streamKey])
@@ -590,3 +593,34 @@ model ViewerAnalytics {
   @@index([sessionId])
   @@index([joinedAt])
 }
+
+model Post {
+  id              String   @id @default(uuid())
+  userId          String
+  postDescription String
+  postImage       String?
+  likes           Int      @default(0)
+  createdAt       DateTime @default(now())
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  comments Comment[]
+
+  @@index([userId])
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  postId    String
+  userId    String
+  comment   String
+  likes     Int      @default(0)
+  createdAt DateTime @default(now())
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([postId])
+  @@index([userId])
+}
+
+

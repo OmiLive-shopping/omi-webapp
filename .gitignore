@@ -24,7 +24,7 @@ testem.log
 # Environment files
 .env
 .env.*
-!.env.example
+.env.example
 
 # IDE and Editor files
 .vscode/*

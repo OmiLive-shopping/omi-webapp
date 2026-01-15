@@ -217,6 +217,9 @@ export async function signOutUser() {
   }
 }
 
+
+
+
 // Check if user has a specific role
 export function hasRole(user: AuthUser | null, role: string): boolean {
   if (!user) return false;

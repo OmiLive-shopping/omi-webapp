@@ -229,4 +229,19 @@ export const API_ENDPOINTS = {
     validate: (code: string) => `/coupons/validate/${code}`,
     apply: '/coupons/apply',
   },
+
+  // newly added posts end point
+  posts: {
+    list: (username?: string) =>
+      username ? `/profiles/users/${username}/posts` : '/posts',
+    detail: (id: string) => `/posts/${id}`,
+    create: '/posts',
+    update: (id: string) => `/posts/${id}`,
+    delete: (id: string) => `/posts/${id}`,
+  },
+
+
+
+
+
 };
