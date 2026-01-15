@@ -100,6 +100,18 @@ export const Navigation: React.FC<NavigationProps> = ({
                 >
                   About
                 </Link>
+                <Link
+                  to="/community"
+                  className={clsx(
+                    "flex items-center h-full px-5 text-lg font-medium transition-colors border-b-3",
+                  isActiveLink('/community')
+                    ? "text-primary-600 dark:text-primary-400 border-primary-600 dark:border-primary-400"
+                    : "text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white border-transparent hover:border-gray-300"
+                  )}
+                >
+                  Community
+                </Link>
+
               </div>
             </div>
 

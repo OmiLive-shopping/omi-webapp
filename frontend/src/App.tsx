@@ -23,7 +23,8 @@ import {
   LoginPage,
   RegisterPage,
   LiveStreamsPage,
-  AboutPage
+  AboutPage,
+  CommunityPage
 } from '@/pages';
 import BrandDashboard from '@/pages/brand/BrandDashboard';
 import BrandProfileSettingsPage from '@/pages/brand/BrandProfileSettingsPage';
@@ -65,6 +66,7 @@ function App() {
               <Route path="login" element={<LoginPage />} />
               <Route path="register" element={<RegisterPage />} />
               <Route path="about" element={<AboutPage />} />
+              <Route path="community" element={<CommunityPage />} />
               <Route path="live-streams" element={<LiveStreamsPage />} />
               <Route path="products" element={<ProductsPage />} />
               <Route path="product/:id" element={<ProductDetailPage />} />

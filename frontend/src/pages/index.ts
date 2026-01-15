@@ -12,3 +12,4 @@ export { default as LoginPage } from './auth/LoginPage';
 export { default as RegisterPage } from './auth/RegisterPage';
 export { default as LiveStreamsPage } from './live-streams/LiveStreamsPage';
 export { default as AboutPage } from './about/AboutPage';
+export { default as CommunityPage } from './community/CommunityPage';
