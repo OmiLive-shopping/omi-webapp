@@ -12,21 +12,20 @@ export interface UserPost {
 }
 
 export function useCommunityPosts() {
-  const { user: authUser, isAuthenticated } = useAuthState();
+  const { isAuthenticated } = useAuthState();
   const [posts, setPosts] = useState<UserPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const fetchPosts = async () => {
-    if (!isAuthenticated || !authUser) return;
+    if (!isAuthenticated) {
+      setLoading(false);
+      return;
+    }
 
     try {
       setLoading(true);
-      setError(null);
-
-      const response = await apiClient.get(
-        API_ENDPOINTS.posts.list(authUser.username)
-      );
+      const response = await apiClient.get(API_ENDPOINTS.posts.list());
 
       if (response.success && Array.isArray(response.data)) {
         setPosts(response.data);
@@ -34,7 +33,7 @@ export function useCommunityPosts() {
         setError(response.message || 'Failed to fetch posts');
       }
     } catch (err) {
-      console.error('Posts fetch error:', err);
+      console.error(err);
       setError('Failed to fetch posts');
     } finally {
       setLoading(false);
@@ -43,9 +42,7 @@ export function useCommunityPosts() {
 
   useEffect(() => {
     fetchPosts();
-  }, [authUser, isAuthenticated]);
+  }, [isAuthenticated]);
 
   return { posts, setPosts, loading, error, refetch: fetchPosts };
 }
-
-

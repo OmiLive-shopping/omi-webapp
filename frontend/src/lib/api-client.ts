@@ -230,18 +230,14 @@ export const API_ENDPOINTS = {
     apply: '/coupons/apply',
   },
 
-  // newly added posts end point
+  //new code to get posts
   posts: {
-    list: (username?: string) =>
-      username ? `/profiles/users/${username}/posts` : '/posts',
-    detail: (id: string) => `/posts/${id}`,
-    create: '/posts',
-    update: (id: string) => `/posts/${id}`,
-    delete: (id: string) => `/posts/${id}`,
-  },
-
-
-
+  list: () => '/posts', // no username needed
+  detail: (id: string) => `/posts/${id}`,
+  create: '/posts',
+  update: (id: string) => `/posts/${id}`,
+  delete: (id: string) => `/posts/${id}`,
+},
 
 
 };

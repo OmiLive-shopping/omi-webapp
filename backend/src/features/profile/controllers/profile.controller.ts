@@ -36,6 +36,8 @@ export class ProfileController {
     }
   };
 
+  
+
   /**
    * Get brand profile by slug
    * GET /v1/profiles/brands/:slug

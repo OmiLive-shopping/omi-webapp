@@ -56,6 +56,10 @@ router.get(
   profileController.checkBrandSlugAvailability,
 );
 
+
+
+
+
 // Protected routes - authentication required
 
 // Create brand profile (admin only - permission check in controller)
