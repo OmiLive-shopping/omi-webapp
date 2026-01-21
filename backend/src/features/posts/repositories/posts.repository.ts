@@ -1,24 +1,28 @@
-import { PrismaClient, Prisma, Post, Comment } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 
-export interface PostData {
+/**
+ * Repository-level data shape for a post
+ * (matches Prisma return types)
+ */
+export interface UserPost {
   id: string;
   userId: string;
   postDescription: string;
-  postImage: string | null;
+  postImage?: string | null;
   likes: number;
-  createdAt: Date;
+  createdAt: string; // JSON string
   user: {
     id: string;
     username: string;
     name: string | null;
     avatarUrl: string | null;
   };
-  comments?: {
+  comments: {
     id: string;
     userId: string;
     comment: string;
     likes: number;
-    createdAt: Date;
+    createdAt: string;
     user: {
       id: string;
       username: string;
@@ -27,6 +31,7 @@ export interface PostData {
     };
   }[];
 }
+
 
 export class PostsRepository {
   private prisma: PrismaClient;
@@ -37,11 +42,9 @@ export class PostsRepository {
 
   /**
    * Fetch all posts for the community page
-   * @param limit Optional number of posts to return (for pagination)
-   * @param skip Optional number of posts to skip (for pagination)
    */
-  async getAllPosts(limit?: number, skip?: number): Promise<PostData[]> {
-    const posts = await this.prisma.post.findMany({
+  async getAllPosts(limit?: number, skip?: number): Promise<UserPost[]> {
+    return this.prisma.post.findMany({
       take: limit,
       skip,
       orderBy: {
@@ -63,10 +66,13 @@ export class PostsRepository {
           },
         },
         comments: {
+          orderBy: {
+            createdAt: 'asc',
+          },
           select: {
             id: true,
             userId: true,
-            comment: true, // ✅ matches schema
+            comment: true,
             likes: true,
             createdAt: true,
             user: {
@@ -81,15 +87,17 @@ export class PostsRepository {
         },
       },
     });
-
-    return posts;
   }
 
   /**
-   * Optionally: fetch posts by a single user
+   * Fetch posts created by a specific user
    */
-  async getPostsByUser(userId: string, limit?: number, skip?: number): Promise<PostData[]> {
-    const posts = await this.prisma.post.findMany({
+  async getPostsByUser(
+    userId: string,
+    limit?: number,
+    skip?: number,
+  ): Promise<UserPost[]> {
+    return this.prisma.post.findMany({
       where: { userId },
       take: limit,
       skip,
@@ -112,10 +120,13 @@ export class PostsRepository {
           },
         },
         comments: {
+          orderBy: {
+            createdAt: 'asc',
+          },
           select: {
             id: true,
             userId: true,
-            comment: true, // ✅ matches schema
+            comment: true,
             likes: true,
             createdAt: true,
             user: {
@@ -130,7 +141,5 @@ export class PostsRepository {
         },
       },
     });
-
-    return posts;
   }
 }
