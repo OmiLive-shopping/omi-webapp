@@ -180,4 +180,5 @@ const CommunityPage: React.FC = () => {
   );
 };
 
+//need to add code to add posts, add comments and save those to backend tables using api
 export default CommunityPage;
