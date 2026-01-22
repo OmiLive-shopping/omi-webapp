@@ -230,11 +230,11 @@ export const API_ENDPOINTS = {
     apply: '/coupons/apply',
   },
 
-  //new code to get posts
+  ///new post api
   posts: {
-  list: () => '/posts', // no username needed
-  detail: (id: string) => `/posts/${id}`,
-  create: '/posts',
+  list: () => '/posts', // fetch all posts
+  //detail: (id: string) => `/posts/${id}`, // uncomment if needed
+  create: () => '/posts', // make consistent as a function
   update: (id: string) => `/posts/${id}`,
   delete: (id: string) => `/posts/${id}`,
 },

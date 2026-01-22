@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 import { PostsService } from '../services/posts.service.js';
 
-// Type for authenticated requests (if you later add auth)
+// Type for authenticated requests (extend later if needed)
 type AuthRequest = Request;
 
 export class PostsController {
@@ -18,28 +18,33 @@ export class PostsController {
    * GET /v1/posts
    * Optional query params: limit, skip
    */
-  getPosts = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  getPosts = async (
+    req: AuthRequest,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
-      // Validate query params with zod
+      // Validate and parse query params
       const querySchema = z.object({
         limit: z
           .string()
           .optional()
-          .transform((val) => (val ? parseInt(val, 10) : undefined)),
+          .transform((val) => (val ? Number(val) : undefined))
+          .refine((val) => val === undefined || !isNaN(val), {
+            message: 'limit must be a number',
+          }),
         skip: z
           .string()
           .optional()
-          .transform((val) => (val ? parseInt(val, 10) : undefined)),
+          .transform((val) => (val ? Number(val) : undefined))
+          .refine((val) => val === undefined || !isNaN(val), {
+            message: 'skip must be a number',
+          }),
       });
 
       const { limit, skip } = querySchema.parse(req.query);
 
       const result = await this.postsService.getAllPosts(limit, skip);
-
-      if (!result.success) {
-        res.status(404).json(result);
-        return;
-      }
 
       res.status(200).json(result);
     } catch (error) {
@@ -48,23 +53,34 @@ export class PostsController {
   };
 
   /**
-   * Optionally: get posts by a specific user
+   * Get posts by a specific user
    * GET /v1/posts/users/:userId
    */
-  getPostsByUser = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  getPostsByUser = async (
+    req: AuthRequest,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
-      const { userId } = req.params;
-      const { limit, skip } = req.query;
+      const paramsSchema = z.object({
+        userId: z.string().uuid(),
+      });
 
-      const parsedLimit = limit ? parseInt(limit as string, 10) : undefined;
-      const parsedSkip = skip ? parseInt(skip as string, 10) : undefined;
+      const querySchema = z.object({
+        limit: z
+          .string()
+          .optional()
+          .transform((val) => (val ? Number(val) : undefined)),
+        skip: z
+          .string()
+          .optional()
+          .transform((val) => (val ? Number(val) : undefined)),
+      });
 
-      const result = await this.postsService.getPostsByUser(userId, parsedLimit, parsedSkip);
+      const { userId } = paramsSchema.parse(req.params);
+      const { limit, skip } = querySchema.parse(req.query);
 
-      if (!result.success) {
-        res.status(404).json(result);
-        return;
-      }
+      const result = await this.postsService.getPostsByUser(userId, limit, skip);
 
       res.status(200).json(result);
     } catch (error) {

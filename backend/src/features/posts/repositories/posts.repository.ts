@@ -2,15 +2,15 @@ import { PrismaClient } from '@prisma/client';
 
 /**
  * Repository-level data shape for a post
- * (matches Prisma return types)
+ * (matches Prisma return types exactly)
  */
-export interface UserPost {
+export interface PostData {
   id: string;
   userId: string;
   postDescription: string;
-  postImage?: string | null;
+  postImage: string | null;
   likes: number;
-  createdAt: string; // JSON string
+  createdAt: Date;
   user: {
     id: string;
     username: string;
@@ -22,7 +22,7 @@ export interface UserPost {
     userId: string;
     comment: string;
     likes: number;
-    createdAt: string;
+    createdAt: Date;
     user: {
       id: string;
       username: string;
@@ -31,7 +31,6 @@ export interface UserPost {
     };
   }[];
 }
-
 
 export class PostsRepository {
   private prisma: PrismaClient;
@@ -43,7 +42,7 @@ export class PostsRepository {
   /**
    * Fetch all posts for the community page
    */
-  async getAllPosts(limit?: number, skip?: number): Promise<UserPost[]> {
+  async getAllPosts(limit?: number, skip?: number): Promise<PostData[]> {
     return this.prisma.post.findMany({
       take: limit,
       skip,
@@ -96,7 +95,7 @@ export class PostsRepository {
     userId: string,
     limit?: number,
     skip?: number,
-  ): Promise<UserPost[]> {
+  ): Promise<PostData[]> {
     return this.prisma.post.findMany({
       where: { userId },
       take: limit,

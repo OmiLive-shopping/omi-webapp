@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Heart, ThumbsUp } from 'lucide-react';
-import { useCommunityPosts } from '@/hooks/useCommunityPosts';
+import { useCommunityPosts, UserPost } from '@/hooks/useCommunityPosts';
 import { useProfile } from '@/hooks/useProfile';
-// import { apiClient } from '@/lib/api-client'; // Uncomment when ready to save
+// import { apiClient } from '@/lib/api-client'; // Uncomment if saving posts/comments to backend
 
 const CommunityPage: React.FC = () => {
   const { profile, loading: profileLoading } = useProfile();
@@ -11,11 +11,10 @@ const CommunityPage: React.FC = () => {
   const [newPostContent, setNewPostContent] = useState('');
   const [newCommentMap, setNewCommentMap] = useState<{ [postId: string]: string }>({});
 
-  // Add new post
   const handleAddPost = async () => {
     if (!newPostContent.trim() || !profile) return;
 
-    // Uncomment when backend ready
+    // For demo only; backend saving commented
     /*
     const response = await apiClient.post('/posts', {
       userId: profile.id,
@@ -27,10 +26,8 @@ const CommunityPage: React.FC = () => {
       setNewPostContent('');
     }
     */
-
-    // UI only for now
-    const fakePost = {
-      id: Date.now().toString(),
+    const tempPost: UserPost = {
+      id: Math.random().toString(),
       userId: profile.id,
       postDescription: newPostContent,
       postImage: null,
@@ -39,31 +36,29 @@ const CommunityPage: React.FC = () => {
       user: {
         id: profile.id,
         username: profile.username,
-        name: profile.name || '',
+        name: profile.name,
         avatarUrl: profile.avatarUrl || null,
       },
       comments: [],
     };
-    setPosts([fakePost, ...posts]);
+    setPosts([tempPost, ...posts]);
     setNewPostContent('');
   };
 
-  // Handle new comment input
   const handleCommentChange = (postId: string, value: string) => {
     setNewCommentMap(prev => ({ ...prev, [postId]: value }));
   };
 
-  // Add new comment
   const handleAddComment = async (postId: string) => {
     const commentContent = newCommentMap[postId]?.trim();
     if (!commentContent || !profile) return;
 
-    // Uncomment when backend ready
+    // For demo only; backend saving commented
     /*
     const response = await apiClient.post('/comments', {
       postId,
       userId: profile.id,
-      comment: commentContent,
+      content: commentContent,
     });
 
     if (response.success && response.data) {
@@ -75,31 +70,26 @@ const CommunityPage: React.FC = () => {
       setNewCommentMap(prev => ({ ...prev, [postId]: '' }));
     }
     */
+    const tempComment = {
+      id: Math.random().toString(),
+      userId: profile.id,
+      comment: commentContent,
+      likes: 0,
+      createdAt: new Date().toISOString(),
+      user: {
+        id: profile.id,
+        username: profile.username,
+        name: profile.name,
+        avatarUrl: profile.avatarUrl || null,
+      },
+    };
 
-    // UI only for now
     setPosts(posts.map(post =>
       post.id === postId
-        ? {
-            ...post,
-            comments: [
-              ...post.comments,
-              {
-                id: Date.now().toString(),
-                userId: profile.id,
-                comment: commentContent,
-                likes: 0,
-                createdAt: new Date().toISOString(),
-                user: {
-                  id: profile.id,
-                  username: profile.username,
-                  name: profile.name || '',
-                  avatarUrl: profile.avatarUrl || null,
-                },
-              },
-            ],
-          }
+        ? { ...post, comments: [...post.comments, tempComment] }
         : post
     ));
+
     setNewCommentMap(prev => ({ ...prev, [postId]: '' }));
   };
 
@@ -114,7 +104,7 @@ const CommunityPage: React.FC = () => {
       {/* Add Post */}
       <div className="mb-6">
         <textarea
-          className="w-full p-2 border rounded-md"
+          className="w-full p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white"
           placeholder="What's on your mind?"
           value={newPostContent}
           onChange={e => setNewPostContent(e.target.value)}
@@ -132,18 +122,17 @@ const CommunityPage: React.FC = () => {
         <p>No posts yet.</p>
       ) : (
         posts.map(post => (
-          <div key={post.id} className="mb-4 p-4 bg-white dark:bg-gray-800 rounded-md shadow-sm">
-            {/* Post content */}
-            <p className="font-medium">{post.user.username}</p>
-            <p>{post.postDescription}</p>
-
-            {/* Post likes & comments */}
-            <div className="flex space-x-4 mt-2 text-gray-500">
+          <div
+            key={post.id}
+            className="mb-4 p-4 bg-white dark:bg-gray-800 rounded-md shadow-sm"
+          >
+            <p className="mb-2">{post.postDescription}</p>
+            <div className="flex space-x-4 text-gray-500">
               <div className="flex items-center space-x-1">
-                <Heart size={16} /> <span>{post.likes}</span>
+                <Heart size={16} /> <span>{post.comments.length}</span>
               </div>
               <div className="flex items-center space-x-1">
-                <ThumbsUp size={16} /> <span>{post.comments.length}</span>
+                <ThumbsUp size={16} /> <span>{post.likes}</span>
               </div>
             </div>
 
@@ -168,7 +157,7 @@ const CommunityPage: React.FC = () => {
               <div className="mt-2 text-sm text-gray-600 dark:text-gray-300">
                 {post.comments.map(c => (
                   <p key={c.id}>
-                    <span className="font-semibold">{c.user.username}:</span> {c.comment}
+                    <strong>{c.user.username}:</strong> {c.comment}
                   </p>
                 ))}
               </div>

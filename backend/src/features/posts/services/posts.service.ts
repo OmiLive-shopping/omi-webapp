@@ -1,18 +1,72 @@
 import { PostsRepository, PostData } from '../repositories/posts.repository.js';
 
+interface CommunityPost {
+  id: string;
+  userId: string;
+  postDescription: string;
+  postImage: string | null;
+  likes: number;
+  createdAt: string;
+  user: {
+    id: string;
+    username: string;
+    name: string | null;
+    avatarUrl: string | null;
+  };
+  comments: {
+    id: string;
+    userId: string;
+    comment: string;
+    likes: number;
+    createdAt: string;
+    user: {
+      id: string;
+      username: string;
+      name: string | null;
+      avatarUrl: string | null;
+    };
+  }[];
+}
+
 export class PostsService {
   private postsRepository: PostsRepository;
 
   constructor(postsRepository: PostsRepository) {
-    this.postsRepository = postsRepository; // assign the instance correctly
+    this.postsRepository = postsRepository;
+  }
+
+  /**
+   * Convert repository PostData → API-safe JSON
+   */
+  private mapPostToResponse(post: PostData): CommunityPost {
+    return {
+      id: post.id,
+      userId: post.userId,
+      postDescription: post.postDescription,
+      postImage: post.postImage,
+      likes: post.likes,
+      createdAt: post.createdAt.toISOString(),
+      user: post.user,
+      comments: post.comments.map((comment) => ({
+        id: comment.id,
+        userId: comment.userId,
+        comment: comment.comment,
+        likes: comment.likes,
+        createdAt: comment.createdAt.toISOString(),
+        user: comment.user,
+      })),
+    };
   }
 
   /**
    * Get all posts for community page
    */
-  async getAllPosts(limit?: number, skip?: number): Promise<{
+  async getAllPosts(
+    limit?: number,
+    skip?: number,
+  ): Promise<{
     success: boolean;
-    data?: PostData[];
+    data?: CommunityPost[];
     message?: string;
   }> {
     try {
@@ -20,16 +74,14 @@ export class PostsService {
 
       if (!posts || posts.length === 0) {
         return {
-          success: false,
-          message: 'No posts found',
+          success: true,
+          data: [],
         };
       }
 
-      // Optionally, here you could filter content based on privacy or blocked users
-
       return {
         success: true,
-        data: posts,
+        data: posts.map(this.mapPostToResponse),
       };
     } catch (error) {
       console.error('Error fetching posts:', error);
@@ -41,7 +93,7 @@ export class PostsService {
   }
 
   /**
-   * Optionally: get posts for a specific user
+   * Get posts for a specific user
    */
   async getPostsByUser(
     userId: string,
@@ -49,7 +101,7 @@ export class PostsService {
     skip?: number,
   ): Promise<{
     success: boolean;
-    data?: PostData[];
+    data?: CommunityPost[];
     message?: string;
   }> {
     try {
@@ -57,14 +109,14 @@ export class PostsService {
 
       if (!posts || posts.length === 0) {
         return {
-          success: false,
-          message: 'No posts found for this user',
+          success: true,
+          data: [],
         };
       }
 
       return {
         success: true,
-        data: posts,
+        data: posts.map(this.mapPostToResponse),
       };
     } catch (error) {
       console.error(`Error fetching posts for user ${userId}:`, error);

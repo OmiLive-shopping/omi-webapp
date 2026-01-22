@@ -12,8 +12,4 @@ export { default as LoginPage } from './auth/LoginPage';
 export { default as RegisterPage } from './auth/RegisterPage';
 export { default as LiveStreamsPage } from './live-streams/LiveStreamsPage';
 export { default as AboutPage } from './about/AboutPage';
-<<<<<<< HEAD
-export { default as CommunityPage } from './community/CommunityPage_fixed';
-=======
-export { default as CommunityPage } from './community/CommunityPage';
->>>>>>> 1ebd541cce622c48c3d099d4a9f80d1c1e828e74
+export { default as CommunityPage} from './community/CommunityPage1';
