@@ -29,14 +29,9 @@ const postsController = new PostsController(postsService);
  */
 // Get all posts
 router.get('/', postsController.getPosts);
-// routes/posts.routes.ts
-router.get('/', postsController.getPosts);
-router.post('/', authenticate, postsController.createPost);
-router.patch('/:id/like', authenticate, postsController.likePost);
-
 
 // Get posts by a specific user
-//router.get('/users/:userId', postsController.getPostsByUser);
+router.get('/users/:userId', postsController.getPostsByUser);
 
 /**
  * Protected routes (optional, uncomment when implementing create/update/delete)

@@ -231,13 +231,26 @@ export const API_ENDPOINTS = {
   },
 
   ///new post api
-  posts: {
+  /*posts: {
   list: () => '/posts', // fetch all posts
   //detail: (id: string) => `/posts/${id}`, // uncomment if needed
   create: () => '/posts', // make consistent as a function
   update: (id: string) => `/posts/${id}`,
   delete: (id: string) => `/posts/${id}`,
+},*/
+
+posts: {
+  list: () => '/posts',
+  create: () => '/posts',
+  like: (id: string) => `/posts/${id}/like`,
 },
+comments: {
+  create: () => '/comments',
+  like: (id: string) => `/comments/${id}/like`,
+},
+
+
+
 
 
 };

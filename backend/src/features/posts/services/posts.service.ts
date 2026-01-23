@@ -1,129 +1,30 @@
-import { PostsRepository, PostData } from '../repositories/posts.repository.js';
-
-interface CommunityPost {
-  id: string;
-  userId: string;
-  postDescription: string;
-  postImage: string | null;
-  likes: number;
-  createdAt: string;
-  user: {
-    id: string;
-    username: string;
-    name: string | null;
-    avatarUrl: string | null;
-  };
-  comments: {
-    id: string;
-    userId: string;
-    comment: string;
-    likes: number;
-    createdAt: string;
-    user: {
-      id: string;
-      username: string;
-      name: string | null;
-      avatarUrl: string | null;
-    };
-  }[];
-}
-
+// services/posts.service.ts
 export class PostsService {
-  private postsRepository: PostsRepository;
+  constructor(private repo: any) {}
 
-  constructor(postsRepository: PostsRepository) {
-    this.postsRepository = postsRepository;
-  }
-
-  /**
-   * Convert repository PostData → API-safe JSON
-   */
-  private mapPostToResponse(post: PostData): CommunityPost {
+  map(post: any) {
     return {
-      id: post.id,
-      userId: post.userId,
-      postDescription: post.postDescription,
-      postImage: post.postImage,
-      likes: post.likes,
+      ...post,
       createdAt: post.createdAt.toISOString(),
-      user: post.user,
-      comments: post.comments.map((comment) => ({
-        id: comment.id,
-        userId: comment.userId,
-        comment: comment.comment,
-        likes: comment.likes,
-        createdAt: comment.createdAt.toISOString(),
-        user: comment.user,
+      comments: post.comments.map((c: any) => ({
+        ...c,
+        createdAt: c.createdAt.toISOString(),
       })),
     };
   }
 
-  /**
-   * Get all posts for community page
-   */
-  async getAllPosts(
-    limit?: number,
-    skip?: number,
-  ): Promise<{
-    success: boolean;
-    data?: CommunityPost[];
-    message?: string;
-  }> {
-    try {
-      const posts = await this.postsRepository.getAllPosts(limit, skip);
-
-      if (!posts || posts.length === 0) {
-        return {
-          success: true,
-          data: [],
-        };
-      }
-
-      return {
-        success: true,
-        data: posts.map(this.mapPostToResponse),
-      };
-    } catch (error) {
-      console.error('Error fetching posts:', error);
-      return {
-        success: false,
-        message: 'Failed to fetch posts',
-      };
-    }
+  async getAllPosts(limit?: number, skip?: number) {
+    const posts = await this.repo.getAllPosts(limit, skip);
+    return { success: true, data: posts.map(this.map) };
   }
 
-  /**
-   * Get posts for a specific user
-   */
-  async getPostsByUser(
-    userId: string,
-    limit?: number,
-    skip?: number,
-  ): Promise<{
-    success: boolean;
-    data?: CommunityPost[];
-    message?: string;
-  }> {
-    try {
-      const posts = await this.postsRepository.getPostsByUser(userId, limit, skip);
+  async createPost(userId: string, postDescription: string, postImage?: string) {
+    const post = await this.repo.createPost(userId, postDescription, postImage);
+    return { success: true, data: this.map({ ...post, comments: [] }) };
+  }
 
-      if (!posts || posts.length === 0) {
-        return {
-          success: true,
-          data: [],
-        };
-      }
-
-      return {
-        success: true,
-        data: posts.map(this.mapPostToResponse),
-      };
-    } catch (error) {
-      console.error(`Error fetching posts for user ${userId}:`, error);
-      return {
-        success: false,
-        message: 'Failed to fetch posts for this user',
-      };
-    }
+  async likePost(postId: string) {
+    const result = await this.repo.likePost(postId);
+    return { success: true, data: result };
   }
 }
