@@ -1,27 +1,26 @@
 import { Router } from 'express';
-import { z } from 'zod';
 import { authenticate } from '../../../middleware/auth.middleware.js';
-
 import { PrismaService } from '../../../config/prisma.config.js';
 import { CommentsRepository } from '../repositories/comments.repository.js';
 import { CommentsService } from '../services/comments.service.js';
 import { CommentsController } from '../controllers/comments.controller.js';
+import { PostsRepository } from '../../posts/repositories/posts.repository.js';
 
 const router = Router();
 
-/** Dependency Injection */
 const prismaService = PrismaService.getInstance();
 const prisma = prismaService.client;
 
-const commentsRepository = new CommentsRepository(prisma);
-const commentsService = new CommentsService(commentsRepository);
+const commentsRepo = new CommentsRepository(prisma);
+const postsRepo = new PostsRepository(prisma);
+
+const commentsService = new CommentsService(commentsRepo, postsRepo);
 const commentsController = new CommentsController(commentsService);
 
-/** Routes */
-// Create a comment
+// CREATE comment
 router.post('/', authenticate, commentsController.createComment);
 
-// Like a comment
+// LIKE comment
 router.patch('/:commentId/like', authenticate, commentsController.likeComment);
 
 export default router;

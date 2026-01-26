@@ -1,8 +1,35 @@
-// repositories/posts.repository.ts
 import { PrismaClient } from '@prisma/client';
 
+export interface PostData {
+  id: string;
+  userId: string;
+  postDescription: string;
+  postImage: string | null;
+  likes: number;
+  createdAt: Date;
+  user: {
+    id: string;
+    username: string;
+    name: string | null;
+    avatarUrl: string | null;
+  };
+  comments: {
+    id: string;
+    userId: string;
+    comment: string;
+    likes: number;
+    createdAt: Date;
+    user: {
+      id: string;
+      username: string;
+      name: string | null;
+      avatarUrl: string | null;
+    };
+  }[];
+}
+
 export class PostsRepository {
-  constructor(private prisma: PrismaClient) {}
+  constructor(private readonly prisma: PrismaClient) {}
 
   getAllPosts(limit?: number, skip?: number) {
     return this.prisma.post.findMany({
@@ -46,11 +73,53 @@ export class PostsRepository {
     });
   }
 
-  createPost(userId: string, postDescription: string, postImage?: string | null) {
-    return this.prisma.post.create({
-      data: { userId, postDescription, postImage },
-      include: { user: true, comments: true },
+  getPostById(postId: string) {
+    return this.prisma.post.findUnique({
+      where: { id: postId },
+      select: {
+        id: true,
+        userId: true,
+        postDescription: true,
+        postImage: true,
+        likes: true,
+        createdAt: true,
+        user: {
+          select: {
+            id: true,
+            username: true,
+            name: true,
+            avatarUrl: true,
+          },
+        },
+        comments: {
+          orderBy: { createdAt: 'asc' },
+          select: {
+            id: true,
+            userId: true,
+            comment: true,
+            likes: true,
+            createdAt: true,
+            user: {
+              select: {
+                id: true,
+                username: true,
+                name: true,
+                avatarUrl: true,
+              },
+            },
+          },
+        },
+      },
     });
+  }
+
+  async createPost(userId: string, postDescription: string, postImage?: string | null) {
+    await this.prisma.post.create({
+      data: { userId, postDescription, postImage },
+    });
+
+    // return normalized post list item
+    return this.getAllPosts(1, 0).then(posts => posts[0]);
   }
 
   likePost(postId: string) {
@@ -61,3 +130,4 @@ export class PostsRepository {
     });
   }
 }
+

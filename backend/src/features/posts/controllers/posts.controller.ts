@@ -1,20 +1,51 @@
-// controllers/posts.controller.ts
+import { Request, Response } from 'express';
+import { PostsService } from '../services/posts.service.js';
+import { User } from '@prisma/client';
+
+/**
+ * Request type guaranteed to have user
+ */
+type AuthenticatedRequest = Request & {
+  user: User;
+};
+
 export class PostsController {
-  constructor(private service: any) {}
+  constructor(private readonly service: PostsService) {}
 
-  getPosts = async (req, res) => {
+  getPosts = async (req: Request, res: Response) => {
     const { limit, skip } = req.query;
-    res.json(await this.service.getAllPosts(Number(limit), Number(skip)));
-  };
 
-  createPost = async (req, res) => {
-    const { postDescription, postImage } = req.body;
-    res.status(201).json(
-      await this.service.createPost(req.user.id, postDescription, postImage)
+    const posts = await this.service.getAllPosts(
+      limit ? Number(limit) : undefined,
+      skip ? Number(skip) : undefined
     );
+
+    res.json(posts);
   };
 
-  likePost = async (req, res) => {
-    res.json(await this.service.likePost(req.params.id));
+  createPost = async (req: Request, res: Response) => {
+    // Runtime guard
+    if (!req.user) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    const authReq = req as AuthenticatedRequest;
+
+    const { postDescription, postImage } = authReq.body;
+
+    const post = await this.service.createPost(
+      authReq.user.id,
+      postDescription,
+      postImage
+    );
+
+    res.status(201).json(post);
+  };
+
+  likePost = async (req: Request, res: Response) => {
+    const { postId } = req.params;
+
+    const result = await this.service.likePost(postId);
+    res.json(result);
   };
 }

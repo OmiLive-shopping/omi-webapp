@@ -1,30 +1,20 @@
-// services/posts.service.ts
+import { PostsRepository } from '../repositories/posts.repository.js';
+
 export class PostsService {
-  constructor(private repo: any) {}
+  constructor(private readonly postsRepo: PostsRepository) {}
 
-  map(post: any) {
-    return {
-      ...post,
-      createdAt: post.createdAt.toISOString(),
-      comments: post.comments.map((c: any) => ({
-        ...c,
-        createdAt: c.createdAt.toISOString(),
-      })),
-    };
+  getAllPosts(limit?: number, skip?: number) {
+    return this.postsRepo.getAllPosts(limit, skip);
   }
 
-  async getAllPosts(limit?: number, skip?: number) {
-    const posts = await this.repo.getAllPosts(limit, skip);
-    return { success: true, data: posts.map(this.map) };
+  createPost(userId: string, postDescription: string, postImage?: string | null) {
+    return this.postsRepo.createPost(userId, postDescription, postImage);
   }
 
-  async createPost(userId: string, postDescription: string, postImage?: string) {
-    const post = await this.repo.createPost(userId, postDescription, postImage);
-    return { success: true, data: this.map({ ...post, comments: [] }) };
-  }
-
-  async likePost(postId: string) {
-    const result = await this.repo.likePost(postId);
-    return { success: true, data: result };
+  likePost(postId: string) {
+    if (!postId) {
+      throw new Error('Post ID is required');
+    }
+    return this.postsRepo.likePost(postId);
   }
 }

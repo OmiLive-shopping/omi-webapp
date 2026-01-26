@@ -9,8 +9,14 @@ import brandProductRoutes from './features/product/routes/brand-product.routes.j
 import productRoutes from './features/product/routes/product.routes.js';
 import profileRoutes from './features/profile/routes/profile.routes.js';
 import streamRoutes from './features/stream/routes/stream.routes.js';
+
 //adding new posts route
-import postRoutes from './features/posts/routes/posts.routes.js';
+//import postRoutes from './features/posts/routes/posts.routes.js';
+
+//adding new posts and comments route
+import postsRoutes from './features/posts/routes/posts.routes.js';
+import commentsRoutes from './features/comments/routes/comments.routes.js';
+
 // import streamTestRoutes from './features/stream/routes/stream-test.routes.js'; // Disabled temporarily
 import userRoutes from './features/user/routes/user.routes.js';
 import { apiErrorHandler, unmatchedRoutes } from './middleware/api-error.middleware.js';
@@ -133,7 +139,11 @@ app.use('/api/v1/brands/products', brandProductRoutes); // Brand-specific produc
 
 //adding new post app.use
 // Mount the posts router
-app.use('/api/v1/posts', postRoutes);
+//app.use('/api/v1/posts', postRoutes);
+
+//app use posts and comments
+app.use('/api/v1/posts', postsRoutes);
+app.use('/api/v1/comments', commentsRoutes);
 
 // app.use('/api/v1/streams/test', streamTestRoutes); // Disabled temporarily - Test/simulation endpoints
 app.use('/api/v1/streams', streamRoutes);
