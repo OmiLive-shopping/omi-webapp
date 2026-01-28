@@ -129,5 +129,51 @@ export class PostsRepository {
       select: { likes: true },
     });
   }
+
+  async getPostsByIds(postIds: string[]) {
+  const posts = await this.prisma.post.findMany({
+    where: {
+      id: { in: postIds },
+    },
+    select: {
+      id: true,
+      userId: true,
+      postDescription: true,
+      postImage: true,
+      likes: true,
+      createdAt: true,
+      user: {
+        select: {
+          id: true,
+          username: true,
+          name: true,
+          avatarUrl: true,
+        },
+      },
+      comments: {
+        orderBy: { createdAt: 'asc' },
+        select: {
+          id: true,
+          userId: true,
+          comment: true,
+          likes: true,
+          createdAt: true,
+          user: {
+            select: {
+              id: true,
+              username: true,
+              name: true,
+              avatarUrl: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  // Preserve semantic ranking
+  return postIds.map(id => posts.find(p => p.id === id)).filter(Boolean);
+}
+
 }
 
