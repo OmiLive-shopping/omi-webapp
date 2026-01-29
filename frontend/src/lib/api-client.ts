@@ -255,7 +255,8 @@ comments: {
     list: () => `/posts`,
     create: () => `/posts`,
     like: (id: string) => `/posts/${id}/like`,
-    search: (query: string) => `/posts/search?q=${encodeURIComponent(query)}`, // NEW
+    search: (query: string) =>
+    `/api/v1/posts/search?q=${encodeURIComponent(query)}`, // explicit
   },
   comments: {
     create: () => `/comments`,

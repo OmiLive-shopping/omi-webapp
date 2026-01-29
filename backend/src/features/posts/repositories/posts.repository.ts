@@ -43,14 +43,7 @@ export class PostsRepository {
         postImage: true,
         likes: true,
         createdAt: true,
-        user: {
-          select: {
-            id: true,
-            username: true,
-            name: true,
-            avatarUrl: true,
-          },
-        },
+        user: { select: { id: true, username: true, name: true, avatarUrl: true } },
         comments: {
           orderBy: { createdAt: 'asc' },
           select: {
@@ -59,14 +52,7 @@ export class PostsRepository {
             comment: true,
             likes: true,
             createdAt: true,
-            user: {
-              select: {
-                id: true,
-                username: true,
-                name: true,
-                avatarUrl: true,
-              },
-            },
+            user: { select: { id: true, username: true, name: true, avatarUrl: true } },
           },
         },
       },
@@ -83,14 +69,7 @@ export class PostsRepository {
         postImage: true,
         likes: true,
         createdAt: true,
-        user: {
-          select: {
-            id: true,
-            username: true,
-            name: true,
-            avatarUrl: true,
-          },
-        },
+        user: { select: { id: true, username: true, name: true, avatarUrl: true } },
         comments: {
           orderBy: { createdAt: 'asc' },
           select: {
@@ -99,14 +78,7 @@ export class PostsRepository {
             comment: true,
             likes: true,
             createdAt: true,
-            user: {
-              select: {
-                id: true,
-                username: true,
-                name: true,
-                avatarUrl: true,
-              },
-            },
+            user: { select: { id: true, username: true, name: true, avatarUrl: true } },
           },
         },
       },
@@ -118,7 +90,7 @@ export class PostsRepository {
       data: { userId, postDescription, postImage },
     });
 
-    // return normalized post list item
+    // Return the latest post
     return this.getAllPosts(1, 0).then(posts => posts[0]);
   }
 
@@ -131,49 +103,31 @@ export class PostsRepository {
   }
 
   async getPostsByIds(postIds: string[]) {
-  const posts = await this.prisma.post.findMany({
-    where: {
-      id: { in: postIds },
-    },
-    select: {
-      id: true,
-      userId: true,
-      postDescription: true,
-      postImage: true,
-      likes: true,
-      createdAt: true,
-      user: {
-        select: {
-          id: true,
-          username: true,
-          name: true,
-          avatarUrl: true,
-        },
-      },
-      comments: {
-        orderBy: { createdAt: 'asc' },
-        select: {
-          id: true,
-          userId: true,
-          comment: true,
-          likes: true,
-          createdAt: true,
-          user: {
-            select: {
-              id: true,
-              username: true,
-              name: true,
-              avatarUrl: true,
-            },
+    const posts = await this.prisma.post.findMany({
+      where: { id: { in: postIds } },
+      select: {
+        id: true,
+        userId: true,
+        postDescription: true,
+        postImage: true,
+        likes: true,
+        createdAt: true,
+        user: { select: { id: true, username: true, name: true, avatarUrl: true } },
+        comments: {
+          orderBy: { createdAt: 'asc' },
+          select: {
+            id: true,
+            userId: true,
+            comment: true,
+            likes: true,
+            createdAt: true,
+            user: { select: { id: true, username: true, name: true, avatarUrl: true } },
           },
         },
       },
-    },
-  });
+    });
 
-  // Preserve semantic ranking
-  return postIds.map(id => posts.find(p => p.id === id)).filter(Boolean);
+    // Preserve semantic ranking from Chroma
+    return postIds.map(id => posts.find(p => p.id === id)).filter(Boolean);
+  }
 }
-
-}
-

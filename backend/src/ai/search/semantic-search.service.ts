@@ -19,16 +19,15 @@ export class SemanticSearchService {
     if (!query) return [];
 
     // 1️⃣ Generate embedding for query
-    const queryEmbedding = await generateEmbedding(query);
+    const queryEmbedding = await generateEmbedding(query); // number[]
 
     // 2️⃣ Query ChromaDB
     const collection = await getPostsCollection();
+
     const results = await collection.query({
-      queryEmbeddings: [queryEmbedding],
+      queryEmbeddings: [queryEmbedding], // must be array of embeddings
       nResults: limit,
-      includeMetadata: true,
-      includeDocuments: true,
-      includeIds: true,
+      include: ['ids'], // only request IDs
     });
 
     const ids = results[0]?.ids || [];

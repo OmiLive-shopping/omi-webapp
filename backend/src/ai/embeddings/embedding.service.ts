@@ -4,6 +4,7 @@
 
 // backend/src/ai/embeddings/embedding.service.ts
 // backend/src/ai/embeddings/embedding.service.ts
+// backend/src/ai/embeddings/embedding.service.ts
 import { pipeline } from '@xenova/transformers';
 
 let embedder: any = null;
@@ -24,8 +25,8 @@ async function getEmbedder() {
 export async function generateEmbedding(text: string): Promise<number[]> {
   const model = await getEmbedder();
   const result = await model(text);
-  // result is 2D array, flatten it
-  return (result[0] as number[]).flat();
+  // result[0] might already be an array of numbers
+  return Array.isArray(result[0]) ? (result[0] as number[]).flat() : (result[0] as number[]);
 }
 
 /**
@@ -36,7 +37,8 @@ export async function generateEmbeddings(texts: string[]): Promise<number[][]> {
   const embeddings: number[][] = [];
   for (const text of texts) {
     const result = await model(text);
-    embeddings.push((result[0] as number[]).flat());
+    embeddings.push(Array.isArray(result[0]) ? (result[0] as number[]).flat() : (result[0] as number[]));
   }
   return embeddings;
 }
+
