@@ -1,24 +1,21 @@
-// backend/src/features/posts/controllers/posts.controller.ts
 import { Request, Response } from 'express';
 import { PostsService } from '../services/posts.service.js';
 import { User } from '@prisma/client';
 
-/**
- * Authenticated request type (assumes auth middleware attaches `user`)
- */
 type AuthenticatedRequest = Request & { user: User };
 
 export class PostsController {
   constructor(private readonly service: PostsService) {}
 
-  // Get all posts
+  // Get all posts with pagination
   getPosts = async (req: Request, res: Response) => {
     try {
-      const { limit, skip } = req.query;
-      const posts = await this.service.getAllPosts(
-        limit ? Number(limit) : undefined,
-        skip ? Number(skip) : undefined
-      );
+      const limit = req.query.limit ? Number(req.query.limit) : 5;
+      const skip = req.query.skip ? Number(req.query.skip) : 0;
+
+      console.log('[PRISMA PAGINATION]', { limit, skip });
+
+      const posts = await this.service.getAllPosts(limit, skip);
       res.json(posts);
     } catch (err) {
       console.error('[GET POSTS ERROR]', err);
@@ -63,22 +60,6 @@ export class PostsController {
     } catch (err) {
       console.error('[LIKE POST ERROR]', err);
       res.status(500).json({ message: 'Failed to like post' });
-    }
-  };
-
-  // Search posts
-  searchPosts = async (req: Request, res: Response) => {
-    try {
-      const query = req.query.q?.toString() || '';
-      if (!query) {
-        return res.status(400).json({ message: 'Query parameter q is required' });
-      }
-
-      const posts = await this.service.searchPosts(query);
-      res.json(posts);
-    } catch (err) {
-      console.error('[SEARCH POSTS ERROR]', err);
-      res.status(500).json({ message: 'Failed to fetch posts' });
     }
   };
 }

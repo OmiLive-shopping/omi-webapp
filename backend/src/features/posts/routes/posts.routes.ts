@@ -25,6 +25,6 @@ router.post('/', authenticate, postsController.createPost);
 router.patch('/:id/like', authenticate, postsController.likePost);
 
 // SEARCH posts
-router.get('/search', postsController.searchPosts);
+//router.get('/search', postsController.searchPosts);
 
 export default router;

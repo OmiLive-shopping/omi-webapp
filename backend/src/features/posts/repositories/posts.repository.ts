@@ -1,3 +1,4 @@
+// backend/src/features/posts/repositories/posts.repository.ts
 import { PrismaClient } from '@prisma/client';
 
 export interface PostData {
@@ -31,44 +32,20 @@ export interface PostData {
 export class PostsRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
-  getAllPosts(limit?: number, skip?: number) {
+  getAllPosts(limit: number = 5, skip: number = 0) {
+    console.log('[PRISMA PAGINATION]', { limit, skip });
+
     return this.prisma.post.findMany({
       take: limit,
       skip,
       orderBy: { createdAt: 'desc' },
       select: {
         id: true,
-        userId: true,
         postDescription: true,
-        postImage: true,
-        likes: true,
         createdAt: true,
-        user: { select: { id: true, username: true, name: true, avatarUrl: true } },
-        comments: {
-          orderBy: { createdAt: 'asc' },
-          select: {
-            id: true,
-            userId: true,
-            comment: true,
-            likes: true,
-            createdAt: true,
-            user: { select: { id: true, username: true, name: true, avatarUrl: true } },
-          },
-        },
-      },
-    });
-  }
-
-  getPostById(postId: string) {
-    return this.prisma.post.findUnique({
-      where: { id: postId },
-      select: {
-        id: true,
         userId: true,
-        postDescription: true,
-        postImage: true,
         likes: true,
-        createdAt: true,
+        postImage: true,
         user: { select: { id: true, username: true, name: true, avatarUrl: true } },
         comments: {
           orderBy: { createdAt: 'asc' },
@@ -86,12 +63,19 @@ export class PostsRepository {
   }
 
   async createPost(userId: string, postDescription: string, postImage?: string | null) {
-    await this.prisma.post.create({
+    return this.prisma.post.create({
       data: { userId, postDescription, postImage },
+      select: {
+        id: true,
+        postDescription: true,
+        createdAt: true,
+        userId: true,
+        likes: true,
+        postImage: true,
+        user: { select: { id: true, username: true, name: true, avatarUrl: true } },
+        comments: true,
+      },
     });
-
-    // Return the latest post
-    return this.getAllPosts(1, 0).then(posts => posts[0]);
   }
 
   likePost(postId: string) {
@@ -127,7 +111,6 @@ export class PostsRepository {
       },
     });
 
-    // Preserve semantic ranking from Chroma
     return postIds.map(id => posts.find(p => p.id === id)).filter(Boolean);
   }
 }
