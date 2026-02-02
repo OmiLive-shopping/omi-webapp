@@ -1,7 +1,5 @@
-// src/hooks/useCommunityPosts.ts
-import { useState, useEffect, useCallback } from 'react';
-import {apiClient} from '../lib/api-Client'; // Your existing API client
-import { API_ENDPOINTS } from '../api/endpoints';
+import { useState, useEffect, useCallback } from "react";
+import { apiClient } from "@/lib/api-client";
 
 export interface User {
   id: string;
@@ -35,57 +33,62 @@ export const useCommunityPosts = (loggedInUserId?: string) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [skip, setSkip] = useState(0);
+
   const limit = 5;
 
+  // Fetch posts (reset = true means start from page 1)
   const fetchPosts = useCallback(
     async (reset = false) => {
-      if (!loggedInUserId) {
-        setPosts([]);
-        setError('User not logged in');
-        setLoading(false);
-        return;
-      }
+      if (!loggedInUserId) return;
 
       try {
         setLoading(true);
+
         const currentSkip = reset ? 0 : skip;
 
-        const response = await apiClient.get<Post[]>(
-          API_ENDPOINTS.posts.list(limit, currentSkip)
-        );
+        const newPosts = await apiClient.get<Post[]>("/posts", {
+          params: { limit, skip: currentSkip }
+        });
 
-        if (!Array.isArray(response)) {
-          throw new Error('Invalid response from server');
-        }
-
-        // If reset, replace posts; otherwise append and prevent duplicates
+        // Merge posts correctly
         setPosts(prev =>
           reset
-            ? response
-            : [
-                ...prev,
-                ...response.filter(r => !prev.some(p => p.id === r.id)),
-              ]
+            ? newPosts
+            : [...prev, ...newPosts.filter(p => !prev.some(x => x.id === p.id))]
         );
 
-        setSkip(currentSkip + response.length);
+        // Update skip only based on new posts
+        setSkip(currentSkip + newPosts.length);
         setError(null);
       } catch (err: any) {
-        console.error('[FETCH POSTS ERROR]', err);
-        setError(err.message || 'Failed to fetch posts');
+        setError(err.message || "Failed to fetch posts");
       } finally {
         setLoading(false);
       }
     },
-    [loggedInUserId, skip]
+    [loggedInUserId] // ❗ skip removed to prevent infinite resets
   );
 
-  // Fetch initial posts
+  // Fetch posts when user logs in or changes
   useEffect(() => {
-    fetchPosts(true);
-  }, [fetchPosts]);
+    if (loggedInUserId) {
+      setPosts([]);   // clear old posts
+      setSkip(0);     // reset pagination
+      fetchPosts(true);
+    }
+  }, [loggedInUserId, fetchPosts]);
 
+  // Load more posts
   const loadMore = () => fetchPosts(false);
 
-  return { posts, loading, error, loadMore };
+  // Determine if more posts exist
+  const hasMore = posts.length > 0 && posts.length % limit === 0;
+
+  return {
+    posts,
+    loading,
+    error,
+    loadMore,
+    hasMore
+  };
 };

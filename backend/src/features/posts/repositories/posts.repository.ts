@@ -32,10 +32,10 @@ export interface PostData {
 export class PostsRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
-  getAllPosts(limit: number = 5, skip: number = 0) {
+  async getAllPosts(limit: number = 5, skip: number = 0) {
     console.log('[PRISMA PAGINATION]', { limit, skip });
 
-    return this.prisma.post.findMany({
+    const posts = await this.prisma.post.findMany({
       take: limit,
       skip,
       orderBy: { createdAt: 'desc' },
@@ -60,6 +60,10 @@ export class PostsRepository {
         },
       },
     });
+
+    console.log('[PRISMA RETURNED POST IDS]', posts.map(p => p.id));
+
+    return posts;
   }
 
   async createPost(userId: string, postDescription: string, postImage?: string | null) {
@@ -84,33 +88,5 @@ export class PostsRepository {
       data: { likes: { increment: 1 } },
       select: { likes: true },
     });
-  }
-
-  async getPostsByIds(postIds: string[]) {
-    const posts = await this.prisma.post.findMany({
-      where: { id: { in: postIds } },
-      select: {
-        id: true,
-        userId: true,
-        postDescription: true,
-        postImage: true,
-        likes: true,
-        createdAt: true,
-        user: { select: { id: true, username: true, name: true, avatarUrl: true } },
-        comments: {
-          orderBy: { createdAt: 'asc' },
-          select: {
-            id: true,
-            userId: true,
-            comment: true,
-            likes: true,
-            createdAt: true,
-            user: { select: { id: true, username: true, name: true, avatarUrl: true } },
-          },
-        },
-      },
-    });
-
-    return postIds.map(id => posts.find(p => p.id === id)).filter(Boolean);
   }
 }

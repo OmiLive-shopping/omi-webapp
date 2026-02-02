@@ -142,7 +142,14 @@ app.use('/api/v1/brands/products', brandProductRoutes); // Brand-specific produc
 //app.use('/api/v1/posts', postRoutes);
 
 //app use posts and comments
-app.use('/api/v1/posts', postsRoutes);
+//app.use('/api/v1/posts', postsRoutes);
+app.use('/api/v1/posts', (req, res, next) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
+  res.set('Surrogate-Control', 'no-store');
+  next();
+}, postsRoutes);
 app.use('/api/v1/comments', commentsRoutes);
 
 // app.use('/api/v1/streams/test', streamTestRoutes); // Disabled temporarily - Test/simulation endpoints

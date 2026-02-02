@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import React from "react";   //React import
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Layout from '@/components/layouts/Layout';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
@@ -37,6 +38,8 @@ import StreamLayoutDemo from '@/components/stream/StreamLayoutDemo';
 import VdoNinjaTestPage from '@/pages/debug/VdoNinjaTestPage';
 import WebSocketTestPage from '@/pages/debug/WebSocketTestPage';
 import WebSocketChatTest from '@/pages/test/WebSocketChatTest';
+//added new line
+const MemoizedLayout = React.memo(Layout);
 
 function App() {
   useEffect(() => {
@@ -60,7 +63,9 @@ function App() {
           <SuspenseWrapper fullScreen message="Loading application...">
             <PWAInstallPrompt />
             <Routes>
-            <Route path="/" element={<Layout type="responsive" />}>
+            {/* <Route path="/" element={<Layout type="responsive" />}> */}
+
+            <Route path="/" element={<MemoizedLayout type="responsive" />}>
               {/* Public Routes */}
               <Route index element={<HomePage />} />
               <Route path="login" element={<LoginPage />} />

@@ -31,9 +31,12 @@ class ApiClient {
     options: RequestOptions = {}
   ): Promise<T> {
     const { params, token, ...requestOptions } = options;
+    
 
     // Build URL with query params
     let url = `${this.baseUrl}${endpoint}`;
+    console.log("REQUEST() CALLED");
+
     if (params) {
       const searchParams = new URLSearchParams();
       Object.entries(params).forEach(([key, value]) => {
@@ -108,8 +111,15 @@ class ApiClient {
 
   // HTTP methods
   async get<T>(endpoint: string, options?: RequestOptions): Promise<T> {
+    console.log("GET() CALLED WITH OPTIONS:", options);
+
     return this.request<T>(endpoint, { ...options, method: 'GET' });
   }
+
+   /* get<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
+  return this.request<T>(endpoint, { ...options, method: "GET" });
+}*/
+
 
   async post<T>(endpoint: string, data?: any, options?: RequestOptions): Promise<T> {
     return this.request<T>(endpoint, {
@@ -252,7 +262,7 @@ comments: {
 // existing imports & code...
 
   posts: {
-    list: (limit = 10, skip = 0) => `/posts?limit=${limit}&skip=${skip}`, // just return /posts, no query params,
+    list: (limit = 5, skip = 0) => `/posts?limit=${limit}&skip=${skip}`, // just return /posts, no query params,
     create: () => `/posts`,
     like: (id: string) => `/posts/${id}/like`,
     search: (query: string) =>
@@ -268,17 +278,10 @@ comments: {
 // Exported API functions
 // -------------------------
 
-export async function searchPosts(query: string) {
-  const response = await fetch(API_ENDPOINTS.posts.search(query));
-  if (!response.ok) {
-    throw new Error('Failed to search posts');
-  }
-  return response.json();
-}
+/*
 
 
-
-
+*/
 
 
 
