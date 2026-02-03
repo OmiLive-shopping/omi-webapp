@@ -601,6 +601,7 @@ model Post {
   postImage       String?
   likes           Int      @default(0)
   createdAt       DateTime @default(now())
+  embedding Unsupported("vector(384)")
 
   user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   comments Comment[]

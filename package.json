@@ -27,13 +27,15 @@
     "clean": "rm -rf backend/node_modules backend/dist frontend/node_modules frontend/dist"
   },
   "devDependencies": {
+    "@prisma/client": "^5.14.0",
     "@tsconfig/node22": "^22.0.2",
     "@vitejs/plugin-react": "^5.1.0",
     "concurrently": "^8.2.2",
-    "nodemon": "^3.1.11"
+    "nodemon": "^3.1.11",
+    "prisma": "^5.14.0"
   },
   "engines": {
-    "node": ">=22.0.0"
+    "node": ">=20.0.0 <21.0.0"
   },
   "dependencies": {
     "@langchain/community": "^1.1.9",
