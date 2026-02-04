@@ -99,7 +99,11 @@ docker run --name omi-postgres \
   -e POSTGRES_PASSWORD=your_password \
   -e POSTGRES_DB=dev_db \
   -p 5432:5432 \
-  -d postgres:15
+  -d postgres:15 \
+  
+  
+  ####-d pgvector/pgvector:pg15
+
 
 # Create shadow database (required for Prisma migrations)
 docker exec omi-postgres psql -U postgres -c "CREATE DATABASE dev_db_shadow;"
@@ -341,7 +345,8 @@ docker run --name omi-postgres \
   -e POSTGRES_PASSWORD=postgresql \
   -e POSTGRES_DB=dev_db \
   -p 5432:5432 \
-  -d postgres:15
+  ##-d postgres:15
+  -d pgvector/pgvector:pg15
 
 # Verify connection
 docker exec -it omi-postgres psql -U postgres -d dev_db

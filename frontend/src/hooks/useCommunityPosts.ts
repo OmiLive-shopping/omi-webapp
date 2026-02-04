@@ -36,7 +36,6 @@ export const useCommunityPosts = (loggedInUserId?: string) => {
 
   const limit = 5;
 
-  // Fetch posts (reset = true means start from page 1)
   const fetchPosts = useCallback(
     async (reset = false) => {
       if (!loggedInUserId) return;
@@ -50,14 +49,12 @@ export const useCommunityPosts = (loggedInUserId?: string) => {
           params: { limit, skip: currentSkip }
         });
 
-        // Merge posts correctly
         setPosts(prev =>
           reset
             ? newPosts
             : [...prev, ...newPosts.filter(p => !prev.some(x => x.id === p.id))]
         );
 
-        // Update skip only based on new posts
         setSkip(currentSkip + newPosts.length);
         setError(null);
       } catch (err: any) {
@@ -66,22 +63,19 @@ export const useCommunityPosts = (loggedInUserId?: string) => {
         setLoading(false);
       }
     },
-    [loggedInUserId] // ❗ skip removed to prevent infinite resets
+    [loggedInUserId, skip]
   );
 
-  // Fetch posts when user logs in or changes
   useEffect(() => {
     if (loggedInUserId) {
-      setPosts([]);   // clear old posts
-      setSkip(0);     // reset pagination
+      setPosts([]);
+      setSkip(0);
       fetchPosts(true);
     }
   }, [loggedInUserId, fetchPosts]);
 
-  // Load more posts
   const loadMore = () => fetchPosts(false);
 
-  // Determine if more posts exist
   const hasMore = posts.length > 0 && posts.length % limit === 0;
 
   return {
@@ -89,6 +83,7 @@ export const useCommunityPosts = (loggedInUserId?: string) => {
     loading,
     error,
     loadMore,
-    hasMore
+    hasMore,
+    fetchPosts
   };
 };

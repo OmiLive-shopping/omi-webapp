@@ -1,4 +1,3 @@
-// backend/ai/embedding/index.ts
 import { pipeline } from "@xenova/transformers";
 
 let embedder: any = null;

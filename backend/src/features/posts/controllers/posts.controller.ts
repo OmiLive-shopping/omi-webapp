@@ -41,4 +41,19 @@ export class PostsController {
       next(error);
     }
   };
+
+  searchPosts = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const query = req.query.q as string;
+    if (!query) {
+      return res.status(400).json({ error: "Missing search query" });
+    }
+
+    const results = await this.postsService.searchPosts(query);
+    res.status(200).json(results);
+  } catch (error) {
+    next(error);
+  }
+};
+
 }
