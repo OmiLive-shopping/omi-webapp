@@ -1,5 +1,5 @@
 // backend/ai/vectordb/index.ts
-import { prisma } from "../../prisma";
+#import { prisma } from "../../prisma";
 import type { Post } from "@prisma/client";
 
 export async function savePostToDB(

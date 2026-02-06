@@ -101,8 +101,12 @@ docker run --name omi-postgres \
   -p 5432:5432 \
   -d postgres:15 \
   
-  
-  ####-d pgvector/pgvector:pg15
+  # Start PostgreSQL (example using Docker with pgvector extension for embedding)
+###docker run --name omi-postgres \
+###-e POSTGRES_PASSWORD=your_password \
+###-e POSTGRES_DB=dev_db \
+###-p 5432:5432 \
+####-d pgvector/pgvector:pg15
 
 
 # Create shadow database (required for Prisma migrations)
