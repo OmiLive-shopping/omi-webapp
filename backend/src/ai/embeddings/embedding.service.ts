@@ -17,3 +17,10 @@ export async function embedText(text: string): Promise<number[]> {
   const output = await extractor(text, { pooling: "mean", normalize: true });
   return Array.from(output.data as Float32Array);
 }
+
+
+export async function generateEmbedding(text: string): Promise<number[]> {
+  const extractor = await loadEmbedder();
+  const output = await extractor(text, { pooling: "mean", normalize: true });
+  return Array.from(output.data as Float32Array);
+}

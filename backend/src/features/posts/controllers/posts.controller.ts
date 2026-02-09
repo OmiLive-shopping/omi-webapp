@@ -1,59 +1,62 @@
-import { Request, Response, NextFunction } from 'express';
-import { PostsService } from '../services/posts.service.js';
+import { Request, Response, NextFunction } from "express";
+import { PostsService } from "../services/posts.service.js";
+
+// Define AuthUser inline
+interface AuthUser {
+  id: string;
+  username: string;
+  isAdmin: boolean;
+  role: string;
+  createdAt: string;
+  updatedAt: string;
+  avatarUrl?: string | null;
+  name?: string | null;
+}
+
+// Extend Request with AuthUser
+interface AuthRequest extends Request {
+  user?: AuthUser;
+}
 
 export class PostsController {
-  constructor(private readonly postsService: PostsService) {}
+  constructor(private postsService: PostsService) {}
 
+  // Get all posts
   getPosts = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const limit = parseInt(req.query.limit as string) || 5;
-      const skip = parseInt(req.query.skip as string) || 0;
-
-      const posts = await this.postsService.getAllPosts(limit, skip);
-
-      res.status(200).json(posts);
-    } catch (error) {
-      next(error);
+      const result = await this.postsService.getAllPosts();
+      res.status(200).json(result);
+    } catch (err) {
+      next(err);
     }
   };
 
-  createPost = async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const { postDescription, postImage } = req.body;
-      const userId = req.user!.id;
-
-      const post = await this.postsService.createPost(userId, postDescription, postImage);
-
-      res.status(201).json(post);
-    } catch (error) {
-      next(error);
-    }
-  };
-
-  likePost = async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const { id } = req.params;
-
-      const updated = await this.postsService.likePost(id);
-
-      res.status(200).json(updated);
-    } catch (error) {
-      next(error);
-    }
-  };
-
+  // Search posts
   searchPosts = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const query = req.query.q as string;
-    if (!query) {
-      return res.status(400).json({ error: "Missing search query" });
+    try {
+      const query = String(req.query.q || "");
+      const result = await this.postsService.searchPosts(query);
+      res.status(200).json(result);
+    } catch (err) {
+      next(err);
     }
+  };
 
-    const results = await this.postsService.searchPosts(query);
-    res.status(200).json(results);
-  } catch (error) {
-    next(error);
-  }
-};
+  // Create post (requires auth)
+  createPost = async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      if (!req.user)
+        return res.status(401).json({ success: false, message: "Unauthorized" });
 
+      const { postDescription, postImage } = req.body;
+      const result = await this.postsService.createPost(
+        req.user.id,
+        postDescription,
+        postImage || null
+      );
+      res.status(201).json(result);
+    } catch (err) {
+      next(err);
+    }
+  };
 }

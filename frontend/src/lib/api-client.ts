@@ -262,7 +262,7 @@ comments: {
 // existing imports & code...
 
   posts: {
-    list: (limit = 5, skip = 0) => `/posts?limit=${limit}&skip=${skip}`, // just return /posts, no query params,
+    list: () => `/posts`, // just return /posts, no query params,
     create: () => `/posts`,
     like: (id: string) => `/posts/${id}/like`,
     search: (query: string) =>

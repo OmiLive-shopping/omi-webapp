@@ -1,45 +1,31 @@
-// backend/src/features/posts/services/posts.service.ts
-import { PostsRepository } from '../repositories/posts.repository.js';
-import { generateEmbedding } from '../../../ai/embeddings/embedding.service.js';
-import { getPostsCollection } from '../../../ai/vector-db/chroma.client.js';
+import { PostsRepository, PostData } from "../repositories/posts.repository.js";
 
 export class PostsService {
-  constructor(private readonly postsRepo: PostsRepository) {}
+  constructor(private postsRepository: PostsRepository) {}
 
-  getAllPosts(limit: number = 5, skip: number = 0) {
-    return this.postsRepo.getAllPosts(limit, skip);
+  private map(post: PostData) {
+    return {
+      ...post,
+      createdAt: post.createdAt.toISOString(),
+      comments: post.comments.map(c => ({
+        ...c,
+        createdAt: c.createdAt.toISOString(),
+      })),
+    };
   }
 
-  async createPost(userId: string, postDescription: string, postImage?: string | null) {
-    const post = await this.postsRepo.createPost(userId, postDescription, postImage);
-
-    // Optional AI embedding
-    const embedding = await generateEmbedding(postDescription);
-    const collection = await getPostsCollection();
-    await collection.add({
-      ids: [post.id],
-      embeddings: [embedding],
-      documents: [postDescription],
-      metadatas: [{ userId, createdAt: post.createdAt.toISOString() }],
-    });
-
-    return post;
-  }
-
-  async likePost(postId: string) {
-    return this.postsRepo.likePost(postId);
+  async getAllPosts() {
+    const posts = await this.postsRepository.getAllPosts();
+    return { success: true, data: posts.map(this.map) };
   }
 
   async searchPosts(query: string) {
-    const collection = await getPostsCollection();
-    const embedding = await generateEmbedding(query);
+    const posts = await this.postsRepository.searchPosts(query);
+    return { success: true, data: posts.map(this.map) };
+  }
 
-    const results = await collection.query({
-      queryEmbeddings: [embedding],
-      nResults: 10,
-    });
-
-    const postIds: string[] = results.ids[0] ?? [];
-    return this.postsRepo.getPostsByIds(postIds);
+  async createPost(userId: string, postDescription: string, postImage?: string) {
+    const post = await this.postsRepository.createPost(userId, postDescription, postImage);
+    return { success: true, data: this.map(post) };
   }
 }
