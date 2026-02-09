@@ -1,3 +1,4 @@
+// repositories/posts.repository.ts
 import { PrismaClient } from '@prisma/client';
 
 export interface PostData {
@@ -43,14 +44,7 @@ export class PostsRepository {
         postImage: true,
         likes: true,
         createdAt: true,
-        user: {
-          select: {
-            id: true,
-            username: true,
-            name: true,
-            avatarUrl: true,
-          },
-        },
+        user: { select: { id: true, username: true, name: true, avatarUrl: true } },
         comments: {
           orderBy: { createdAt: 'asc' },
           select: {
@@ -59,54 +53,7 @@ export class PostsRepository {
             comment: true,
             likes: true,
             createdAt: true,
-            user: {
-              select: {
-                id: true,
-                username: true,
-                name: true,
-                avatarUrl: true,
-              },
-            },
-          },
-        },
-      },
-    });
-  }
-
-  getPostById(postId: string) {
-    return this.prisma.post.findUnique({
-      where: { id: postId },
-      select: {
-        id: true,
-        userId: true,
-        postDescription: true,
-        postImage: true,
-        likes: true,
-        createdAt: true,
-        user: {
-          select: {
-            id: true,
-            username: true,
-            name: true,
-            avatarUrl: true,
-          },
-        },
-        comments: {
-          orderBy: { createdAt: 'asc' },
-          select: {
-            id: true,
-            userId: true,
-            comment: true,
-            likes: true,
-            createdAt: true,
-            user: {
-              select: {
-                id: true,
-                username: true,
-                name: true,
-                avatarUrl: true,
-              },
-            },
+            user: { select: { id: true, username: true, name: true, avatarUrl: true } },
           },
         },
       },
@@ -114,12 +61,9 @@ export class PostsRepository {
   }
 
   async createPost(userId: string, postDescription: string, postImage?: string | null) {
-    await this.prisma.post.create({
-      data: { userId, postDescription, postImage },
-    });
-
-    // return normalized post list item
-    return this.getAllPosts(1, 0).then(posts => posts[0]);
+    await this.prisma.post.create({ data: { userId, postDescription, postImage } });
+    const posts = await this.getAllPosts(1, 0);
+    return posts[0];
   }
 
   likePost(postId: string) {
@@ -129,5 +73,32 @@ export class PostsRepository {
       select: { likes: true },
     });
   }
-}
 
+  // ✅ New: search posts by description
+  getPostsBySearch(query: string) {
+    return this.prisma.post.findMany({
+      where: { postDescription: { contains: query, mode: 'insensitive' } },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        userId: true,
+        postDescription: true,
+        postImage: true,
+        likes: true,
+        createdAt: true,
+        user: { select: { id: true, username: true, name: true, avatarUrl: true } },
+        comments: {
+          orderBy: { createdAt: 'asc' },
+          select: {
+            id: true,
+            userId: true,
+            comment: true,
+            likes: true,
+            createdAt: true,
+            user: { select: { id: true, username: true, name: true, avatarUrl: true } },
+          },
+        },
+      },
+    });
+  }
+}

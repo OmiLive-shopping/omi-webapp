@@ -1,3 +1,4 @@
+// services/posts.service.ts
 import { PostsRepository } from '../repositories/posts.repository.js';
 
 export class PostsService {
@@ -12,9 +13,13 @@ export class PostsService {
   }
 
   likePost(postId: string) {
-    if (!postId) {
-      throw new Error('Post ID is required');
-    }
+    if (!postId) throw new Error('Post ID is required');
     return this.postsRepo.likePost(postId);
+  }
+
+  // ✅ New: search posts
+  searchPosts(query: string) {
+    if (!query || !query.trim()) return [];
+    return this.postsRepo.getPostsBySearch(query.trim());
   }
 }
