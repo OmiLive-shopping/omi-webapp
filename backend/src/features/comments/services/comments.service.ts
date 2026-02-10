@@ -1,3 +1,4 @@
+// services/comments.service.ts
 import { CommentsRepository } from '../repositories/comments.repository.js';
 import { PostsRepository, PostData } from '../../posts/repositories/posts.repository.js';
 
@@ -21,23 +22,16 @@ export class CommentsService {
     await this.commentsRepo.createComment(postId, userId, comment);
 
     const post = await this.postsRepo.getPostById(postId);
-    if (!post) {
-      throw new Error('Post not found');
-    }
+    if (!post) throw new Error('Post not found');
 
     return post;
   }
 
-  async likeComment(
-    commentId: string,
-    postId: string
-  ): Promise<PostData> {
+  async likeComment(commentId: string, postId: string): Promise<PostData> {
     await this.commentsRepo.likeComment(commentId);
 
     const post = await this.postsRepo.getPostById(postId);
-    if (!post) {
-      throw new Error('Post not found');
-    }
+    if (!post) throw new Error('Post not found');
 
     return post;
   }

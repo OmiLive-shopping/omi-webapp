@@ -14,7 +14,6 @@ const CommunityPage: React.FC = () => {
     likePost,
     addComment,
     likeComment,
-    refetch,
     searchPosts,
   } = useCommunityPosts();
 
@@ -24,34 +23,31 @@ const CommunityPage: React.FC = () => {
 
   /** ---------------- Add a new post ---------------- */
   const handleAddPost = async () => {
-    if (!profile || !newPostContent.trim()) return;
-    await addPost(newPostContent, undefined, profile.id);
+    if (!profile) return;
+    await addPost(newPostContent);
     setNewPostContent('');
   };
 
   /** ---------------- Add a comment ---------------- */
   const handleAddComment = async (postId: string) => {
-    if (!profile) return;
     const commentContent = newCommentMap[postId]?.trim();
     if (!commentContent) return;
-
-    await addComment(postId, commentContent, profile.id);
+    await addComment(postId, commentContent);
     setNewCommentMap(prev => ({ ...prev, [postId]: '' }));
   };
 
   /** ---------------- Search posts ---------------- */
   const handleSearch = async () => {
-    if (!searchQuery.trim()) return;
     await searchPosts(searchQuery);
   };
 
   if (loading || profileLoading) return <p>Loading...</p>;
-  if (error) return <p className="text-red-500">{error}</p>;
-  if (!profile) return <p>User not logged in.</p>;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
       <h1 className="text-2xl font-bold mb-4">Community Page</h1>
+
+      {error && <p className="text-red-500 mb-2">{error}</p>}
 
       {/* Search Bar */}
       <div className="mb-4 flex space-x-2">
