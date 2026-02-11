@@ -1,4 +1,3 @@
-// pages/community/CommunityPage.tsx
 import React, { useState } from 'react';
 import { Heart, ThumbsUp } from 'lucide-react';
 import { useCommunityPosts, UserPost } from '@/hooks/useCommunityPosts';
@@ -15,6 +14,7 @@ const CommunityPage: React.FC = () => {
     addComment,
     likeComment,
     searchPosts,
+    refetch,
   } = useCommunityPosts();
 
   const [newPostContent, setNewPostContent] = useState('');
@@ -23,30 +23,49 @@ const CommunityPage: React.FC = () => {
 
   /** ---------------- Add a new post ---------------- */
   const handleAddPost = async () => {
-    if (!profile) return;
+    if (!profile) return; // safeguard
     await addPost(newPostContent);
     setNewPostContent('');
   };
 
   /** ---------------- Add a comment ---------------- */
-  const handleAddComment = async (postId: string) => {
+ /* const handleAddComment = async (postId: string) => {
     const commentContent = newCommentMap[postId]?.trim();
     if (!commentContent) return;
     await addComment(postId, commentContent);
     setNewCommentMap(prev => ({ ...prev, [postId]: '' }));
+  };*/
+
+  const handleAddComment = async (postId: string) => {
+  const commentContent = newCommentMap[postId]?.trim();
+  await addComment(postId, commentContent);
+  setNewCommentMap(prev => ({ ...prev, [postId]: '' }));
   };
+
 
   /** ---------------- Search posts ---------------- */
   const handleSearch = async () => {
     await searchPosts(searchQuery);
   };
 
+  // --- Show loading state
   if (loading || profileLoading) return <p>Loading...</p>;
+
+  // --- Show message if user not logged in
+  if (!profile) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
+        <h1 className="text-2xl font-bold mb-4">Community Page</h1>
+        <p className="text-red-500">User not logged in</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
       <h1 className="text-2xl font-bold mb-4">Community Page</h1>
 
+      {/* Display any error messages */}
       {error && <p className="text-red-500 mb-2">{error}</p>}
 
       {/* Search Bar */}

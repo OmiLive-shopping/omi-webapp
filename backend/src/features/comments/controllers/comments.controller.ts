@@ -1,47 +1,34 @@
-// src/features/comments/controllers/comments.controller.ts
-import { Request, Response, NextFunction } from 'express';
+// src/modules/comments/controllers/comments.controller.ts
+import { Request, Response } from 'express';
 import { CommentsService } from '../services/comments.service.js';
+import { User } from '@prisma/client';
+
+type AuthenticatedRequest = Request & { user: User };
 
 export class CommentsController {
-  private readonly commentsService: CommentsService;
+  constructor(private readonly service: CommentsService) {}
 
-  constructor(commentsService: CommentsService) {
-    this.commentsService = commentsService;
-  }
+  createComment = async (req: Request, res: Response) => {
+    if (!req.user) return res.status(401).json({ message: 'Unauthorized' });
 
-  createComment = async (
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ) => {
+    const authReq = req as AuthenticatedRequest;
+    const { postId, comment } = authReq.body;
+
     try {
-      const { postId, comment } = req.body;
-      const userId = req.user!.id; // authenticate middleware guarantees this
-
-      const createdComment =
-        await this.commentsService.createComment(postId, userId, comment);
-
-      // ✅ return ONLY the created comment
-      res.status(201).json(createdComment);
-    } catch (error) {
-      next(error);
+      const newComment = await this.service.createComment(authReq.user.id, postId, comment);
+      res.status(201).json(newComment);
+    } catch (err: any) {
+      res.status(400).json({ message: err.message || 'Failed to add comment' });
     }
   };
 
-  likeComment = async (
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ) => {
+  likeComment = async (req: Request, res: Response) => {
+    const { id } = req.params;
     try {
-      const { commentId } = req.params;
-
-      const updatedComment =
-        await this.commentsService.likeComment(commentId);
-
-      res.status(200).json(updatedComment);
-    } catch (error) {
-      next(error);
+      const result = await this.service.likeComment(id);
+      res.json(result);
+    } catch (err: any) {
+      res.status(400).json({ message: err.message || 'Failed to like comment' });
     }
   };
 }

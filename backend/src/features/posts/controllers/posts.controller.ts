@@ -1,4 +1,3 @@
-// controllers/posts.controller.ts
 import { Request, Response } from 'express';
 import { PostsService } from '../services/posts.service.js';
 import { User } from '@prisma/client';
@@ -19,10 +18,18 @@ export class PostsController {
 
   createPost = async (req: Request, res: Response) => {
     if (!req.user) return res.status(401).json({ message: 'Unauthorized' });
+
     const authReq = req as AuthenticatedRequest;
     const { postDescription, postImage } = authReq.body;
-    const post = await this.service.createPost(authReq.user.id, postDescription, postImage);
-    res.status(201).json(post);
+
+    try {
+      const post = await this.service.createPost(authReq.user.id, postDescription, postImage);
+      res.status(201).json(post);
+    } catch (err: any) {
+      res.status(400).json({
+        message: err.message || 'Failed to add post'
+      });
+    }
   };
 
   likePost = async (req: Request, res: Response) => {
@@ -31,7 +38,6 @@ export class PostsController {
     res.json(result);
   };
 
-  // ✅ New: search posts
   searchPosts = async (req: Request, res: Response) => {
     const query = req.query.q as string;
     if (!query) return res.status(400).json({ message: 'Query parameter is required' });

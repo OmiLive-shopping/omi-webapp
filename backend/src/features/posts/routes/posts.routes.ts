@@ -1,3 +1,4 @@
+// posts.route.ts
 import { Router } from 'express';
 import { authenticate } from '../../../middleware/auth.middleware.js';
 import { validationMiddleware } from '../../../middleware/validation.middleware.js';
@@ -15,9 +16,9 @@ const postsRepo = new PostsRepository(prisma);
 const postsService = new PostsService(postsRepo);
 const postsController = new PostsController(postsService);
 
-// Search posts by query
+// ---------------- Search Posts ----------------
 const searchPostsQuerySchema = z.object({
-  q: z.string().min(1, "Search query cannot be empty"), // <-- must match req.query.q
+  q: z.string().min(1, 'Search query cannot be empty'),
 });
 
 router.get(
@@ -26,18 +27,30 @@ router.get(
   postsController.searchPosts
 );
 
-// GET all posts
+// ---------------- Get All Posts ----------------
 router.get('/', postsController.getPosts);
 
-// CREATE post with validation
+// ---------------- Create Post ----------------
 router.post(
   '/',
-  authenticate,
+  authenticate, // must attach req.user
   validationMiddleware(createPostSchema, 'body'),
-  postsController.createPost
+  async (req, res, next) => {
+    try {
+      await postsController.createPost(req, res);
+    } catch (err) {
+      next(err);
+    }
+  }
 );
 
-// LIKE post
-router.patch('/:id/like', authenticate, postsController.likePost);
+// ---------------- Like Post ----------------
+router.patch('/:id/like', authenticate, async (req, res, next) => {
+  try {
+    await postsController.likePost(req, res);
+  } catch (err) {
+    next(err);
+  }
+});
 
 export default router;

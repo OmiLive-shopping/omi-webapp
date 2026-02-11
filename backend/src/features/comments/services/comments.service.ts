@@ -1,38 +1,15 @@
 // services/comments.service.ts
 import { CommentsRepository } from '../repositories/comments.repository.js';
-import { PostsRepository, PostData } from '../../posts/repositories/posts.repository.js';
 
 export class CommentsService {
-  private commentsRepo: CommentsRepository;
-  private postsRepo: PostsRepository;
+  constructor(private readonly repo: CommentsRepository) {}
 
-  constructor(
-    commentsRepo: CommentsRepository,
-    postsRepo: PostsRepository
-  ) {
-    this.commentsRepo = commentsRepo;
-    this.postsRepo = postsRepo;
+  createComment(userId: string, postId: string, comment: string) {
+    return this.repo.createComment(userId, postId, comment);
   }
 
-  async createComment(
-    postId: string,
-    userId: string,
-    comment: string
-  ): Promise<PostData> {
-    await this.commentsRepo.createComment(postId, userId, comment);
-
-    const post = await this.postsRepo.getPostById(postId);
-    if (!post) throw new Error('Post not found');
-
-    return post;
-  }
-
-  async likeComment(commentId: string, postId: string): Promise<PostData> {
-    await this.commentsRepo.likeComment(commentId);
-
-    const post = await this.postsRepo.getPostById(postId);
-    if (!post) throw new Error('Post not found');
-
-    return post;
+  likeComment(commentId: string) {
+    if (!commentId) throw new Error("Comment ID is required");
+    return this.repo.likeComment(commentId);
   }
 }
