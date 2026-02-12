@@ -21,12 +21,19 @@ async def moderate(request: TextRequest):
             "scores": {}
         }
 
-    results = model.predict(text)
-
-    toxicity_score = results["toxicity"]
+    try:
+        results = model.predict(text)
+        # Convert numpy values to float for JSON serialization
+        results = {k: float(v) for k, v in results.items()}
+        toxicity_score = results.get("toxicity", 0.0)
+    except Exception as e:
+        return {
+            "flagged": False,
+            "reason": f"Error processing text: {str(e)}",
+            "scores": {}
+        }
 
     threshold = 0.7
-
     flagged = toxicity_score > threshold
 
     return {
