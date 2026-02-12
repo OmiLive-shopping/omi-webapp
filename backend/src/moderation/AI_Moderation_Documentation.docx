@@ -61,6 +61,10 @@ Install OpenAI SDK:
 
 npm install openai
 
+OpenAI model = "model: "omni-moderation-latest""
+
+free alternatives - Google Perspective API
+
 
 Create a service for moderation:
 
