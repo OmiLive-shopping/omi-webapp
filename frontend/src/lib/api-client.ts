@@ -239,12 +239,22 @@ export const API_ENDPOINTS = {
   delete: (id: string) => `/posts/${id}`,
 },*/
 
-posts: {
+/*posts: {
     list: () => '/posts',
     create: () => '/posts',
     like: (id: string) => `/posts/${id}/like`,
     search: (query: string) => `/posts/search?q=${encodeURIComponent(query)}`, // new
-  },
+  },*/
+
+  posts: {
+  list: (limit?: number, skip?: number) =>
+    `/posts?limit=${limit ?? 10}&skip=${skip ?? 0}`,
+  create: () => '/posts',
+  like: (id: string) => `/posts/${id}/like`,
+  search: (query: string) =>
+    `/posts/search?q=${encodeURIComponent(query)}`,
+},
+
   comments: {
     create: () => '/comments',
     like: (id: string) => `/comments/${id}/like`,

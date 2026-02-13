@@ -1,4 +1,3 @@
-// posts.route.ts
 import { Router } from 'express';
 import { authenticate } from '../../../middleware/auth.middleware.js';
 import { validationMiddleware } from '../../../middleware/validation.middleware.js';
@@ -33,24 +32,12 @@ router.get('/', postsController.getPosts);
 // ---------------- Create Post ----------------
 router.post(
   '/',
-  authenticate, // must attach req.user
+  authenticate,
   validationMiddleware(createPostSchema, 'body'),
-  async (req, res, next) => {
-    try {
-      await postsController.createPost(req, res);
-    } catch (err) {
-      next(err);
-    }
-  }
+  postsController.createPost
 );
 
 // ---------------- Like Post ----------------
-router.patch('/:id/like', authenticate, async (req, res, next) => {
-  try {
-    await postsController.likePost(req, res);
-  } catch (err) {
-    next(err);
-  }
-});
+router.patch('/:id/like', authenticate, postsController.likePost);
 
 export default router;

@@ -2,19 +2,22 @@ import React, { useState } from 'react';
 import { Heart, ThumbsUp } from 'lucide-react';
 import { useCommunityPosts, UserPost } from '@/hooks/useCommunityPosts';
 import { useProfile } from '@/hooks/useProfile';
+import { Toaster, toast } from 'react-hot-toast';  // Import Toaster and toast
 
 const CommunityPage: React.FC = () => {
   const { profile, loading: profileLoading } = useProfile();
   const {
     posts,
     loading,
+    loadingMore,
     error,
     addPost,
     likePost,
     addComment,
     likeComment,
     searchPosts,
-    refetch,
+    loadMore,
+    hasMore,
   } = useCommunityPosts();
 
   const [newPostContent, setNewPostContent] = useState('');
@@ -24,24 +27,26 @@ const CommunityPage: React.FC = () => {
   /** ---------------- Add a new post ---------------- */
   const handleAddPost = async () => {
     if (!profile) return; // safeguard
-    await addPost(newPostContent);
-    setNewPostContent('');
+    try {
+      await addPost(newPostContent);
+      toast.success('Post added successfully!'); // Show success toast
+      setNewPostContent(''); // reset post content
+    } catch (err) {
+      toast.error('Failed to add post'); // Show error toast
+    }
   };
 
   /** ---------------- Add a comment ---------------- */
- /* const handleAddComment = async (postId: string) => {
-    const commentContent = newCommentMap[postId]?.trim();
-    if (!commentContent) return;
-    await addComment(postId, commentContent);
-    setNewCommentMap(prev => ({ ...prev, [postId]: '' }));
-  };*/
-
   const handleAddComment = async (postId: string) => {
-  const commentContent = newCommentMap[postId]?.trim();
-  await addComment(postId, commentContent);
-  setNewCommentMap(prev => ({ ...prev, [postId]: '' }));
+    const commentContent = newCommentMap[postId]?.trim();
+    try {
+      await addComment(postId, commentContent);
+      toast.success('Comment added successfully!'); // Show success toast
+      setNewCommentMap(prev => ({ ...prev, [postId]: '' })); // reset comment input
+    } catch (err) {
+      toast.error('Failed to add comment'); // Show error toast
+    }
   };
-
 
   /** ---------------- Search posts ---------------- */
   const handleSearch = async () => {
@@ -63,6 +68,8 @@ const CommunityPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
+      <Toaster position="top-right" /> {/* Place Toaster here for toast notifications */}
+
       <h1 className="text-2xl font-bold mb-4">Community Page</h1>
 
       {/* Display any error messages */}
@@ -167,6 +174,19 @@ const CommunityPage: React.FC = () => {
             )}
           </div>
         ))
+      )}
+
+      {/* Load More Button */}
+      {hasMore && (
+        <div className="text-center mt-4">
+          <button
+            className="bg-gray-200 px-4 py-2 rounded-md hover:bg-gray-300"
+            onClick={loadMore}
+            disabled={loadingMore}
+          >
+            {loadingMore ? 'Loading...' : 'Load More'}
+          </button>
+        </div>
       )}
     </div>
   );

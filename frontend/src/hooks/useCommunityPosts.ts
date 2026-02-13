@@ -1,5 +1,3 @@
-// src/hooks/useCommunityPosts.ts
-
 import { useState, useEffect, useCallback } from 'react';
 import { apiClient, API_ENDPOINTS } from '@/lib/api-client';
 
@@ -36,24 +34,51 @@ export interface UserPost {
 export function useCommunityPosts() {
   const [posts, setPosts] = useState<UserPost[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [skip, setSkip] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
 
-  const fetchPosts = useCallback(async () => {
+  const LIMIT = 5;
+
+  const fetchPosts = useCallback(async (reset = false) => {
     try {
-      setLoading(true);
+      reset ? setLoading(true) : setLoadingMore(true);
       setError(null);
-      const response = await apiClient.get<UserPost[]>(API_ENDPOINTS.posts.list());
-      setPosts(response);
+
+      const currentSkip = reset ? 0 : skip;
+
+      const response = await apiClient.get<UserPost[]>(
+        API_ENDPOINTS.posts.list(LIMIT, currentSkip)
+      );
+
+      if (reset) {
+        setPosts(response);
+      } else {
+        setPosts(prev => [...prev, ...response]);
+      }
+
+      if (response.length < LIMIT) {
+        setHasMore(false);
+      } else {
+        setHasMore(true);
+      }
+
+      setSkip(currentSkip + LIMIT);
     } catch (err: any) {
       setError(
         err?.response?.data?.message ||
-        err?.response?.data?.errors?.[0]?.message ||
         'Failed to fetch posts'
       );
     } finally {
-      setLoading(false);
+      reset ? setLoading(false) : setLoadingMore(false);
     }
-  }, []);
+  }, [skip]);
+
+  const loadMore = async () => {
+    if (!hasMore || loadingMore) return;
+    await fetchPosts(false);
+  };
 
   const searchPosts = async (query: string) => {
     if (!query.trim()) {
@@ -67,11 +92,11 @@ export function useCommunityPosts() {
         API_ENDPOINTS.posts.search(query)
       );
       setPosts(response);
+      setHasMore(false);
       setError(null);
     } catch (err: any) {
       setError(
         err?.response?.data?.message ||
-        err?.response?.data?.errors?.[0]?.message ||
         'Failed to search posts'
       );
     } finally {
@@ -80,40 +105,38 @@ export function useCommunityPosts() {
   };
 
   const addPost = async (postDescription: string, postImage?: string | null) => {
-  if (!postDescription.trim()) {
-    setError('Post content cannot be empty');
-    return;
-  }
+    if (!postDescription.trim()) {
+      setError('Post content cannot be empty');
+      return;
+    }
 
-  try {
-    const response = await apiClient.post<UserPost>(
-      API_ENDPOINTS.posts.create(),
-      { postDescription, postImage }
-    );
+    try {
+      const response = await apiClient.post<UserPost>(
+        API_ENDPOINTS.posts.create(),
+        { postDescription, postImage }
+      );
 
-    setPosts(prev => [response, ...prev]);
-    setError(null);
-
-  } catch (err: any) {
-    setError(
-      err?.response?.data?.errors?.[0]?.message || 
-      err?.response?.data?.message || 
-      'Failed to add post'
-    );
-  }
-};
+      setPosts(prev => [response, ...prev]);
+      setError(null);
+    } catch (err: any) {
+      setError(
+        err?.response?.data?.errors?.[0]?.message ||
+        err?.response?.data?.message ||
+        'Failed to add post'
+      );
+    }
+  };
 
   const addComment = async (postId: string, comment: string) => {
-  // Frontend empty check
-    if (!comment.trim()) {
+    if (!comment?.trim()) {
       setError('Comment cannot be empty');
       return;
     }
 
     try {
-    const response = await apiClient.post<UserComment>(
-      API_ENDPOINTS.comments.create(),
-      { postId, comment }
+      const response = await apiClient.post<UserComment>(
+        API_ENDPOINTS.comments.create(),
+        { postId, comment }
       );
 
       setPosts(prev =>
@@ -125,19 +148,14 @@ export function useCommunityPosts() {
       );
 
       setError(null);
-
     } catch (err: any) {
-    // Extract backend validation errors (Zod)
-      const backendErrors =
-        err?.response?.data?.errors?.map((e: any) => e.message).join(', ') ||
-        err?.response?.data?.message;
-
-      setError(backendErrors || 'Failed to add comment');
+      setError(
+        err?.response?.data?.errors?.[0]?.message ||
+        err?.response?.data?.message ||
+        'Failed to add comment'
+      );
     }
   };
-
-
-
 
   const likePost = async (postId: string) => {
     try {
@@ -151,14 +169,9 @@ export function useCommunityPosts() {
         )
       );
     } catch (err: any) {
-      setError(
-        err?.response?.data?.message ||
-        'Failed to like post'
-      );
+      setError(err?.response?.data?.message || 'Failed to like post');
     }
   };
-
-  
 
   const likeComment = async (postId: string, commentId: string) => {
     try {
@@ -179,22 +192,21 @@ export function useCommunityPosts() {
         )
       );
     } catch (err: any) {
-      setError(
-        err?.response?.data?.message ||
-        'Failed to like comment'
-      );
+      setError(err?.response?.data?.message || 'Failed to like comment');
     }
   };
 
   useEffect(() => {
-    fetchPosts();
-  }, [fetchPosts]);
+    fetchPosts(true);
+  }, []);
 
   return {
     posts,
     loading,
+    loadingMore,
+    hasMore,
     error,
-    refetch: fetchPosts,
+    loadMore,
     searchPosts,
     addPost,
     likePost,
