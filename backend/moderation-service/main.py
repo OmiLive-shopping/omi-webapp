@@ -1,43 +1,36 @@
 from fastapi import FastAPI
-from detoxify import Detoxify
 from pydantic import BaseModel
+from sentence_transformers import SentenceTransformer
+import numpy as np
 
 app = FastAPI()
 
-# Load model once (important)
-model = Detoxify('original')
+# Load model once
+model = SentenceTransformer('all-MiniLM-L6-v2')
 
 class TextRequest(BaseModel):
     text: str
 
-@app.post("/moderate")
-async def moderate(request: TextRequest):
-    text = request.text.strip()
+class SearchRequest(BaseModel):
+    query: str
+    embeddings_list: list[list[float]]  # List of embeddings from DB
+    top_k: int = 10
 
-    if not text:
-        return {
-            "flagged": False,
-            "reason": "Empty text",
-            "scores": {}
-        }
+@app.post("/embed")
+async def embed_text(request: TextRequest):
+    embedding = model.encode(request.text).tolist()
+    return {"embedding": embedding}
 
-    try:
-        results = model.predict(text)
-        # Convert numpy values to float for JSON serialization
-        results = {k: float(v) for k, v in results.items()}
-        toxicity_score = results.get("toxicity", 0.0)
-    except Exception as e:
-        return {
-            "flagged": False,
-            "reason": f"Error processing text: {str(e)}",
-            "scores": {}
-        }
+@app.post("/search")
+async def search_text(request: SearchRequest):
+    query_embedding = model.encode(request.query)
+    embeddings_array = np.array(request.embeddings_list)
+    
+    # Compute cosine similarity
+    dot_products = np.dot(embeddings_array, query_embedding)
+    norms = np.linalg.norm(embeddings_array, axis=1) * np.linalg.norm(query_embedding)
+    similarities = dot_products / norms
 
-    threshold = 0.7
-    flagged = toxicity_score > threshold
-
-    return {
-        "flagged": flagged,
-        "reason": "Toxic content detected" if flagged else None,
-        "scores": results
-    }
+    # Get top_k indices
+    top_indices = similarities.argsort()[::-1][:request.top_k]
+    return {"top_indices": top_indices.tolist(), "similarities": similarities[top_indices].tolist()}

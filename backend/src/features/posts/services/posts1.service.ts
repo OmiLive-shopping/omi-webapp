@@ -1,129 +1,64 @@
-import { PostsRepository, PostData } from '../repositories/posts.repository.js';
-
-interface CommunityPost {
-  id: string;
-  userId: string;
-  postDescription: string;
-  postImage: string | null;
-  likes: number;
-  createdAt: string;
-  user: {
-    id: string;
-    username: string;
-    name: string | null;
-    avatarUrl: string | null;
-  };
-  comments: {
-    id: string;
-    userId: string;
-    comment: string;
-    likes: number;
-    createdAt: string;
-    user: {
-      id: string;
-      username: string;
-      name: string | null;
-      avatarUrl: string | null;
-    };
-  }[];
-}
+import { PostsRepository } from '../repositories/posts.repository.js';
+import axios from 'axios';
 
 export class PostsService {
-  private postsRepository: PostsRepository;
+  constructor(private readonly postsRepo: PostsRepository) {}
 
-  constructor(postsRepository: PostsRepository) {
-    this.postsRepository = postsRepository;
+  // ---------------- Get All Posts ----------------
+  getAllPosts(limit?: number, skip?: number) {
+    return this.postsRepo.getAllPosts(limit, skip);
   }
 
-  /**
-   * Convert repository PostData → API-safe JSON
-   */
-  private mapPostToResponse(post: PostData): CommunityPost {
-    return {
-      id: post.id,
-      userId: post.userId,
-      postDescription: post.postDescription,
-      postImage: post.postImage,
-      likes: post.likes,
-      createdAt: post.createdAt.toISOString(),
-      user: post.user,
-      comments: post.comments.map((comment) => ({
-        id: comment.id,
-        userId: comment.userId,
-        comment: comment.comment,
-        likes: comment.likes,
-        createdAt: comment.createdAt.toISOString(),
-        user: comment.user,
-      })),
-    };
+  // ---------------- Keyword Search ----------------
+  searchPosts(query: string) {
+    if (!query || !query.trim()) return [];
+    return this.postsRepo.getPostsBySearch(query.trim());
   }
 
-  /**
-   * Get all posts for community page
-   */
-  async getAllPosts(
-    limit?: number,
-    skip?: number,
-  ): Promise<{
-    success: boolean;
-    data?: CommunityPost[];
-    message?: string;
-  }> {
-    try {
-      const posts = await this.postsRepository.getAllPosts(limit, skip);
-
-      if (!posts || posts.length === 0) {
-        return {
-          success: true,
-          data: [],
-        };
-      }
-
-      return {
-        success: true,
-        data: posts.map(this.mapPostToResponse),
-      };
-    } catch (error) {
-      console.error('Error fetching posts:', error);
-      return {
-        success: false,
-        message: 'Failed to fetch posts',
-      };
-    }
+  // ---------------- Like Post ----------------
+  likePost(postId: string) {
+    if (!postId) throw new Error('Post ID is required');
+    return this.postsRepo.likePost(postId);
   }
 
-  /**
-   * Get posts for a specific user
-   */
-  async getPostsByUser(
-    userId: string,
-    limit?: number,
-    skip?: number,
-  ): Promise<{
-    success: boolean;
-    data?: CommunityPost[];
-    message?: string;
-  }> {
-    try {
-      const posts = await this.postsRepository.getPostsByUser(userId, limit, skip);
+  // ---------------- Create Post with Embedding ----------------
+  async createPostWithEmbedding(userId: string, postDescription: string, postImage?: string | null) {
+    // Create post normally
+    const post = await this.postsRepo.createPost(userId, postDescription, postImage);
 
-      if (!posts || posts.length === 0) {
-        return {
-          success: true,
-          data: [],
-        };
-      }
+    // Generate embedding from Python semantic search module
+    const embedRes = await axios.post('http://localhost:8000/embed', { text: postDescription });
+    const embedding = embedRes.data.embedding as number[];
 
-      return {
-        success: true,
-        data: posts.map(this.mapPostToResponse),
-      };
-    } catch (error) {
-      console.error(`Error fetching posts for user ${userId}:`, error);
-      return {
-        success: false,
-        message: 'Failed to fetch posts for this user',
-      };
-    }
+    // Save embedding in DB
+    await this.postsRepo.savePostEmbedding(post.id, embedding);
+
+    return post;
+  }
+
+  // ---------------- Semantic Search ----------------
+  async semanticSearchPosts(query: string) {
+    // Fetch all posts with embeddings
+    const postsWithEmbeddings = await this.postsRepo.getAllPosts();
+    const embeddingsList = postsWithEmbeddings
+      .filter(p => p.contentEmbedding)
+      .map(p => p.contentEmbedding as number[]);
+
+    if (!embeddingsList.length) return [];
+
+    // Call Python semantic search API
+    const res = await axios.post('http://localhost:8000/search', {
+      query,
+      embeddings_list: embeddingsList,
+      top_k: 10,
+    });
+
+    const { top_indices } = res.data;
+
+    // Map indices to post IDs
+    const topPostIds = top_indices.map((i: number) => postsWithEmbeddings[i].id);
+
+    // Fetch full post data
+    return this.postsRepo.getPostsByIds(topPostIds);
   }
 }

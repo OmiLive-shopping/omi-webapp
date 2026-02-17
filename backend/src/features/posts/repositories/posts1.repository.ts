@@ -1,9 +1,5 @@
 import { PrismaClient } from '@prisma/client';
 
-/**
- * Repository-level data shape for a post
- * (matches Prisma return types exactly)
- */
 export interface PostData {
   id: string;
   userId: string;
@@ -11,6 +7,7 @@ export interface PostData {
   postImage: string | null;
   likes: number;
   createdAt: Date;
+  contentEmbedding?: number[]; // NEW: optional embedding
   user: {
     id: string;
     username: string;
@@ -33,22 +30,14 @@ export interface PostData {
 }
 
 export class PostsRepository {
-  private prisma: PrismaClient;
+  constructor(private readonly prisma: PrismaClient) {}
 
-  constructor(prisma: PrismaClient) {
-    this.prisma = prisma;
-  }
-
-  /**
-   * Fetch all posts for the community page
-   */
-  async getAllPosts(limit?: number, skip?: number): Promise<PostData[]> {
+  // ---------------- Get All Posts ----------------
+  getAllPosts(limit?: number, skip?: number) {
     return this.prisma.post.findMany({
-      take: limit,
-      skip,
-      orderBy: {
-        createdAt: 'desc',
-      },
+      take: limit ?? 10,
+      skip: skip ?? 0,
+      orderBy: { createdAt: 'desc' },
       select: {
         id: true,
         userId: true,
@@ -56,6 +45,7 @@ export class PostsRepository {
         postImage: true,
         likes: true,
         createdAt: true,
+        contentEmbedding: true, // Include embedding for semantic search
         user: {
           select: {
             id: true,
@@ -65,9 +55,7 @@ export class PostsRepository {
           },
         },
         comments: {
-          orderBy: {
-            createdAt: 'asc',
-          },
+          orderBy: { createdAt: 'asc' },
           select: {
             id: true,
             userId: true,
@@ -88,21 +76,37 @@ export class PostsRepository {
     });
   }
 
-  /**
-   * Fetch posts created by a specific user
-   */
-  async getPostsByUser(
+  // ---------------- Create Post ----------------
+  async createPost(
     userId: string,
-    limit?: number,
-    skip?: number,
-  ): Promise<PostData[]> {
+    postDescription: string,
+    postImage?: string | null
+  ) {
+    const post = await this.prisma.post.create({
+      data: { userId, postDescription, postImage },
+    });
+
+    // Return post with all fields including relations
+    const posts = await this.getAllPosts(1, 0);
+    return posts[0];
+  }
+
+  // ---------------- Like Post ----------------
+  likePost(postId: string) {
+    return this.prisma.post.update({
+      where: { id: postId },
+      data: { likes: { increment: 1 } },
+      select: { likes: true },
+    });
+  }
+
+  // ---------------- Keyword Search ----------------
+  getPostsBySearch(query: string) {
     return this.prisma.post.findMany({
-      where: { userId },
-      take: limit,
-      skip,
-      orderBy: {
-        createdAt: 'desc',
+      where: {
+        postDescription: { contains: query, mode: 'insensitive' },
       },
+      orderBy: { createdAt: 'desc' },
       select: {
         id: true,
         userId: true,
@@ -110,18 +114,12 @@ export class PostsRepository {
         postImage: true,
         likes: true,
         createdAt: true,
+        contentEmbedding: true,
         user: {
-          select: {
-            id: true,
-            username: true,
-            name: true,
-            avatarUrl: true,
-          },
+          select: { id: true, username: true, name: true, avatarUrl: true },
         },
         comments: {
-          orderBy: {
-            createdAt: 'asc',
-          },
+          orderBy: { createdAt: 'asc' },
           select: {
             id: true,
             userId: true,
@@ -129,13 +127,47 @@ export class PostsRepository {
             likes: true,
             createdAt: true,
             user: {
-              select: {
-                id: true,
-                username: true,
-                name: true,
-                avatarUrl: true,
-              },
+              select: { id: true, username: true, name: true, avatarUrl: true },
             },
+          },
+        },
+      },
+    });
+  }
+
+  // ---------------- Save Embedding ----------------
+  async savePostEmbedding(postId: string, embedding: number[]) {
+    return this.prisma.post.update({
+      where: { id: postId },
+      data: { contentEmbedding: embedding },
+    });
+  }
+
+  // ---------------- Get Posts by IDs ----------------
+  async getPostsByIds(ids: string[]) {
+    return this.prisma.post.findMany({
+      where: { id: { in: ids } },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        userId: true,
+        postDescription: true,
+        postImage: true,
+        likes: true,
+        createdAt: true,
+        contentEmbedding: true,
+        user: {
+          select: { id: true, username: true, name: true, avatarUrl: true },
+        },
+        comments: {
+          orderBy: { createdAt: 'asc' },
+          select: {
+            id: true,
+            userId: true,
+            comment: true,
+            likes: true,
+            createdAt: true,
+            user: { select: { id: true, username: true, name: true, avatarUrl: true } },
           },
         },
       },

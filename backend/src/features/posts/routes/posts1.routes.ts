@@ -1,64 +1,29 @@
 import { Router } from 'express';
-
-import { PrismaService } from '../../../config/prisma.config.js';
 import { authenticate } from '../../../middleware/auth.middleware.js';
-import {
-  validateRequest,
-  validationMiddleware,
-} from '../../../middleware/validation.middleware.js';
-
-import { PostsController } from '../controllers/posts.controller.js';
+import { validationMiddleware } from '../../../middleware/validation.middleware.js';
+import { PrismaService } from '../../../config/prisma.config.js';
 import { PostsRepository } from '../repositories/posts.repository.js';
 import { PostsService } from '../services/posts.service.js';
-// import { createPostSchema, updatePostSchema } from '../schemas/posts.schema.js'; // uncomment if implementing create/update
+import { PostsController } from '../controllers/posts.controller.js';
+import { createPostSchema, searchPostsQuerySchema } from '../schemas/posts.schema.js';
+import { z } from 'zod';
 
 const router = Router();
-
-/**
- * Dependency Injection
- */
-const prismaService = PrismaService.getInstance();
-const prisma = prismaService.client;
-
-const postsRepository = new PostsRepository(prisma);
-const postsService = new PostsService(postsRepository);
+const prisma = PrismaService.getInstance().client;
+const postsRepo = new PostsRepository(prisma);
+const postsService = new PostsService(postsRepo);
 const postsController = new PostsController(postsService);
 
-/**
- * Public routes
- */
-// Get all posts
+// ---------------- Search Posts ----------------
+// NEW: optional mode (keyword/semantic)
+router.get(
+  '/search',
+  validationMiddleware(searchPostsQuerySchema, 'query'),
+  postsController.searchPosts
+);
+
 router.get('/', postsController.getPosts);
-
-// Get posts by a specific user
-router.get('/users/:userId', postsController.getPostsByUser);
-
-/**
- * Protected routes (optional, uncomment when implementing create/update/delete)
- */
-// Create a post
-// router.post(
-//   '/',
-//   authenticate,
-//   validationMiddleware(createPostSchema),
-//   validateRequest,
-//   postsController.createPost,
-// );
-
-// Update a post
-// router.put(
-//   '/:id',
-//   authenticate,
-//   validationMiddleware(updatePostSchema),
-//   validateRequest,
-//   postsController.updatePost,
-// );
-
-// Delete a post
-// router.delete(
-//   '/:id',
-//   authenticate,
-//   postsController.deletePost,
-// );
+router.post('/', authenticate, validationMiddleware(createPostSchema, 'body'), postsController.createPost);
+router.patch('/:id/like', authenticate, postsController.likePost);
 
 export default router;
