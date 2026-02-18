@@ -1,0 +1,196 @@
+AI Moderation Documentation
+1. What is AI Moderation?
+
+AI Moderation is the process of automatically reviewing user-generated content (UGC) like posts, comments, images, or text to:
+
+Detect offensive content (hate speech, harassment, explicit content, etc.)
+
+Detect spam or unwanted behavior
+
+Enforce platform guidelines automatically
+
+Provide real-time feedback to users before submission
+
+In your app, we will use OpenAI’s moderation endpoint (omni-moderation-latest) for text content.
+
+2️. Why Use AI Moderation?
+
+Prevent toxic content before it appears to other users
+
+Reduce manual moderation efforts
+
+Automatically enforce community standards
+
+Immediate feedback: users see why their post/comment was blocked
+
+3️. Supported Content Types
+
+Text: posts, comments, descriptions, messages
+
+Optional Future Expansion: images, videos (requires other AI models)
+
+4️. Integration Architecture
+
+Here’s a high-level flow:
+
+User Input (Post/Comment)
+          |
+          v
+   Validation Layer
+  (Empty, Length, Format)
+          |
+          v
+   AI Moderation Layer
+(OpenAI Moderation API)
+          |
+          v
+  Safe?   No -> Error Message to User
+  Yes      |
+          v
+  Save Content in DB
+          |
+          v
+Return Success Response
+
+5️. Step-by-Step Implementation
+Step 1: Setup OpenAI
+
+Sign up for OpenAI and get API key
+
+Install OpenAI SDK:
+
+npm install openai
+
+OpenAI model = "model: "omni-moderation-latest""
+
+free alternatives - Google Perspective API
+
+
+Create a service for moderation:
+
+import OpenAI from 'openai';
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
+
+Step 2: Create a Moderation Service
+
+This is a central place to check if content is safe.
+
+export class ModerationService {
+  async moderate(content: string): Promise<{ flagged: boolean; categories: any }> {
+    const response = await openai.moderations.create({
+      model: 'omni-moderation-latest',
+      input: content,
+    });
+
+    const result = response.results?.[0];
+    return {
+      flagged: result?.flagged || false,
+      categories: result?.categories,
+    };
+  }
+}
+
+
+flagged → true if content violates rules
+
+categories → detailed breakdown of why it was flagged
+
+Step 3: Integrate With Posts
+
+Before saving a post:
+
+const result = await moderation.moderate(postDescription);
+
+if (result.flagged) {
+  throw new Error('Post contains inappropriate content and cannot be added.');
+}
+
+
+If safe → save post in DB.
+
+Step 4: Integrate With Comments
+
+Before saving a comment:
+
+const result = await moderation.moderate(comment);
+
+if (result.flagged) {
+  throw new Error('Comment contains inappropriate content and cannot be added.');
+}
+
+
+If safe → save comment in DB.
+
+Step 5: Combine With Validation
+
+Before AI moderation, always validate input:
+
+Post: minimum 5 characters
+
+Comment: minimum 3 characters
+
+Not empty
+
+Example:
+
+if (!comment || comment.trim().length < 3) {
+  throw new Error('Comment must be at least 3 characters');
+}
+
+
+Order is important:
+
+1️. Validate locally → length, empty
+2️. AI moderation → offensive content
+3️. Save to DB
+
+Step 6: Handle Errors at Frontend
+
+Send clear error messages from backend:
+
+"Comment must be at least 3 characters"
+
+"Comment contains inappropriate content"
+
+Frontend should display the message in UI instead of generic "Failed to add comment"
+
+Step 7: Optional Enhancements
+
+Flag Instead of Block:
+
+Instead of rejecting, mark content as flagged = true in DB
+
+Show only to moderators
+
+Custom Rules:
+
+Combine AI moderation with custom word lists (slurs, banned words)
+
+Real-time Feedback:
+
+Check content while user types (optional, throttled requests to AI)
+
+Analytics:
+
+Track flagged posts/comments for reporting and moderation insights
+
+6️. Benefits
+
+Safe community → reduces toxic behavior
+
+Automatic enforcement → fewer moderators required
+
+Better UX → users understand why content was rejected
+
+7. Summary
+
+Validation first, then AI moderation, then DB save
+
+Clear error messages sent to frontend
+
+Can handle posts, comments, and any UGC
+
+Extendable to flagging, reporting, analytics

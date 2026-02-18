@@ -602,6 +602,9 @@ model Post {
   likes           Int      @default(0)
   createdAt       DateTime @default(now())
 
+  // New: semantic search embedding
+  contentEmbedding Float[]?
+
   user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   comments Comment[]
 
