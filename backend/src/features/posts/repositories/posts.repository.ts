@@ -1,32 +1,4 @@
-import { PrismaClient } from '@prisma/client';
-
-export interface PostData {
-  id: string;
-  userId: string;
-  postDescription: string;
-  postImage: string | null;
-  likes: number;
-  createdAt: Date;
-  user: {
-    id: string;
-    username: string;
-    name: string | null;
-    avatarUrl: string | null;
-  };
-  comments: {
-    id: string;
-    userId: string;
-    comment: string;
-    likes: number;
-    createdAt: Date;
-    user: {
-      id: string;
-      username: string;
-      name: string | null;
-      avatarUrl: string | null;
-    };
-  }[];
-}
+import { PrismaClient, Prisma } from '@prisma/client';
 
 export class PostsRepository {
   constructor(private readonly prisma: PrismaClient) {}
@@ -37,40 +9,7 @@ export class PostsRepository {
       take: limit ?? 10,
       skip: skip ?? 0,
       orderBy: { createdAt: 'desc' },
-      select: {
-        id: true,
-        userId: true,
-        postDescription: true,
-        postImage: true,
-        likes: true,
-        createdAt: true,
-        user: {
-          select: {
-            id: true,
-            username: true,
-            name: true,
-            avatarUrl: true,
-          },
-        },
-        comments: {
-          orderBy: { createdAt: 'asc' },
-          select: {
-            id: true,
-            userId: true,
-            comment: true,
-            likes: true,
-            createdAt: true,
-            user: {
-              select: {
-                id: true,
-                username: true,
-                name: true,
-                avatarUrl: true,
-              },
-            },
-          },
-        },
-      },
+      select: this.postSelect(),
     });
   }
 
@@ -78,13 +17,15 @@ export class PostsRepository {
   async createPost(
     userId: string,
     postDescription: string,
-    postImage?: string | null
+    postImage?: string | null,
+    contentEmbedding?: number[]
   ) {
     await this.prisma.post.create({
       data: {
         userId,
         postDescription,
         postImage,
+        contentEmbedding: contentEmbedding ?? [],
       },
     });
 
@@ -101,7 +42,7 @@ export class PostsRepository {
     });
   }
 
-  // ---------------- Search Posts ----------------
+  // ---------------- Keyword Search ----------------
   getPostsBySearch(query: string) {
     return this.prisma.post.findMany({
       where: {
@@ -111,81 +52,55 @@ export class PostsRepository {
         },
       },
       orderBy: { createdAt: 'desc' },
-      select: {
-        id: true,
-        userId: true,
-        postDescription: true,
-        postImage: true,
-        likes: true,
-        createdAt: true,
-        user: {
-          select: {
-            id: true,
-            username: true,
-            name: true,
-            avatarUrl: true,
-          },
-        },
-        comments: {
-          orderBy: { createdAt: 'asc' },
-          select: {
-            id: true,
-            userId: true,
-            comment: true,
-            likes: true,
-            createdAt: true,
-            user: {
-              select: {
-                id: true,
-                username: true,
-                name: true,
-                avatarUrl: true,
-              },
-            },
-          },
-        },
-      },
+      select: this.postSelect(),
     });
   }
 
-  // ---------------- Get Post By ID ----------------
-  getPostById(postId: string) {
-    return this.prisma.post.findUnique({
-      where: { id: postId },
-      select: {
-        id: true,
-        userId: true,
-        postDescription: true,
-        postImage: true,
-        likes: true,
-        createdAt: true,
-        user: {
-          select: {
-            id: true,
-            username: true,
-            name: true,
-            avatarUrl: true,
-          },
+  // ---------------- Get All For Semantic ----------------
+  getAllForSemantic() {
+    return this.prisma.post.findMany({
+      select: this.postSelect(true),
+    });
+  }
+
+  // ---------------- Shared Select ----------------
+  private postSelect(includeEmbedding = false): Prisma.PostSelect {
+    return {
+      id: true,
+      userId: true,
+      postDescription: true,
+      postImage: true,
+      likes: true,
+      createdAt: true,
+      ...(includeEmbedding && { contentEmbedding: true }),
+      user: {
+        select: {
+          id: true,
+          username: true,
+          name: true,
+          avatarUrl: true,
         },
-        comments: {
-          orderBy: { createdAt: 'asc' },
-          select: {
-            id: true,
-            userId: true,
-            comment: true,
-            likes: true,
-            createdAt: true,
-            user: {
-              select: {
-                id: true,
-                username: true,
-                name: true,
-                avatarUrl: true,
-              },
+      },
+      comments: {
+        orderBy: {
+          createdAt: 'asc', // ✅ Now properly typed
+        },
+        select: {
+          id: true,
+          userId: true,
+          comment: true,
+          likes: true,
+          createdAt: true,
+          user: {
+            select: {
+              id: true,
+              username: true,
+              name: true,
+              avatarUrl: true,
             },
           },
         },
       },
-    });
+    };
   }
 }

@@ -251,8 +251,8 @@ export const API_ENDPOINTS = {
     `/posts?limit=${limit ?? 10}&skip=${skip ?? 0}`,
   create: () => '/posts',
   like: (id: string) => `/posts/${id}/like`,
-  search: (query: string) =>
-    `/posts/search?q=${encodeURIComponent(query)}`,
+  search: (query: string, mode: 'keyword' | 'semantic' = 'keyword') =>
+    `/posts/search?q=${encodeURIComponent(query)}&mode=${mode}`,
 },
 
   comments: {

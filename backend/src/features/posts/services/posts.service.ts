@@ -1,4 +1,8 @@
 import { PostsRepository } from '../repositories/posts.repository.js';
+import {
+  textToVector,
+  cosineSimilarity,
+} from '../../../utils/semantic.util.js';
 
 export class PostsService {
   constructor(private readonly postsRepo: PostsRepository) {}
@@ -9,12 +13,19 @@ export class PostsService {
   }
 
   // ---------------- Create Post ----------------
-  createPost(
+  async createPost(
     userId: string,
     postDescription: string,
     postImage?: string | null
   ) {
-    return this.postsRepo.createPost(userId, postDescription, postImage);
+    const embedding = textToVector(postDescription);
+
+    return this.postsRepo.createPost(
+      userId,
+      postDescription,
+      postImage,
+      embedding
+    );
   }
 
   // ---------------- Like Post ----------------
@@ -23,9 +34,32 @@ export class PostsService {
     return this.postsRepo.likePost(postId);
   }
 
-  // ---------------- Search Posts ----------------
+  // ---------------- Keyword Search ----------------
   searchPosts(query: string) {
-    if (!query || !query.trim()) return [];
+    if (!query?.trim()) return [];
     return this.postsRepo.getPostsBySearch(query.trim());
+  }
+
+  // ---------------- Semantic Search ----------------
+  async semanticSearchPosts(query: string) {
+    if (!query?.trim()) return [];
+
+    const queryVector = textToVector(query);
+
+    const posts = await this.postsRepo.getAllForSemantic();
+
+    const scored = posts.map((post: any) => {
+      const similarity = cosineSimilarity(
+        queryVector,
+        post.contentEmbedding || []
+      );
+
+      return { ...post, similarity };
+    });
+
+    return scored
+      .filter(p => p.similarity > 0.1)
+      .sort((a, b) => b.similarity - a.similarity)
+      .map(({ similarity, ...post }) => post);
   }
 }
