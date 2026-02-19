@@ -603,7 +603,7 @@ model Post {
   createdAt       DateTime @default(now())
 
   // New: semantic search embedding
-  contentEmbedding Float[]?
+  contentEmbedding Float[]
 
   user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   comments Comment[]
