@@ -175,3 +175,5 @@ Backend ensures safe query execution via Prisma ORM.
 Conclusion
 
 The Community Page combines traditional CRUD operations with advanced semantic search, delivering both standard keyword filtering and intelligent meaning-based search while preserving performance, scalability, and user experience.
+
+For community page, comment recommendation can be added
